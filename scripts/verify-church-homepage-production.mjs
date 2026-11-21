@@ -51,13 +51,17 @@ export async function verifyChurchInlineProduction({
   requireMarkup(sources.home,/data-church-inline-manage="notices"[^>]*\shidden(?=[\s>])/,'default-hidden notices manager button');
   requireMarkup(sources.home,/data-church-inline-manage="schedule"[^>]*\shidden(?=[\s>])/,'default-hidden schedule manager button');
   requireMarkup(sources.home,/data-church-public-manage\b[^>]*data-church-home-manage\b[^>]*\shidden(?=[\s>])/,'default-hidden home editor panel');
+  requireMarkup(sources.home,/data-church-role-diagnostic\b[^>]*\shidden(?=[\s>])/,'default-hidden self-role diagnostic');
   requireMarkup(sources.home,/src="church-public-updates\.js"/,'homepage authorized editor runtime');
   requireMarkup(sources.home,/data-church-shared-schedules\b/,'shared Church/Mission calendar');
   requireMarkup(sources.home,/href="\/ekodichurch\/notices\/"/,'canonical notices link');
   requireMarkup(sources.home,/href="\/ekodichurch\/schedule\/"/,'canonical schedule link');
   requireMarkup(sources.notices,/data-church-public-page="notices"/,'notices direct route');
   requireMarkup(sources.schedule,/data-church-public-page="schedule"/,'schedule direct route');
-  requireMarkup(sources.editor,/result\.authenticated!==true\|\|result\.manage!==true/,'server verified authentication and management');
+  requireMarkup(sources.editor,/result\.authenticated!==true/,'server verified authentication');
+  requireMarkup(sources.editor,/result\.manage!==true/,'server verified management');
+  requireMarkup(sources.editor,/function explainRole\(kind=''/,'non-escalating self-role diagnostic');
+  requireMarkup(sources.editor,/explainRole\('unauthorized'\)/,'member permission explanation');
   requireMarkup(sources.editor,/\['owner','admin','moderator'\]/,'board manager role allowlist');
   requireMarkup(sources.editor,/church:public-content-updated/,'post-write public content refresh');
   requireMarkup(sources.editor,/function revokeEditor\(\)/,'revocation guard');
@@ -69,7 +73,7 @@ export async function verifyChurchInlineProduction({
     ok:true,mode:'production-read-only-source-and-guest-markup',
     origin,sourceRepository:marker.sourceRepository,
     verifiedSourceSha:marker.sourceSha,releaseContract:marker.contract,
-    checks:['exact-release-source','homepage-manager-default-hidden','official-routes','server-role-allowlist',
+    checks:['exact-release-source','homepage-manager-default-hidden','self-role-diagnostic-default-hidden','official-routes','server-role-allowlist',
       'church-owned-edit-scope','cross-institution-read-only-federation','public-refresh-signal'],
     realUserAuthenticated:false,dataMutations:false,loggedInCrudVerified:false,
     inspectedAt:now(),reads
