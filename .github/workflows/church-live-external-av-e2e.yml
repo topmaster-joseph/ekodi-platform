@@ -1,0 +1,128 @@
+name: Verify Church Live Canonical External AV E2E
+
+on:
+  # Owner-only, exact-command dispatch allows EKODI itself to invoke the first-party E2E
+  # without third-party browsers, shell access, or GitHub Actions UI automation.
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      acknowledge_public_synthetic_broadcast:
+        description: 'I acknowledge that this runs a short publicly visible synthetic Church test broadcast'
+        required: true
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
+        default: 'no'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-church-live-canonical-external-av-e2e
+  cancel-in-progress: false
+
+jobs:
+  church-live-external-av:
+    if: >-
+      (github.event_name == 'workflow_dispatch' &&
+       github.actor == 'topmaster-joseph' &&
+       inputs.acknowledge_public_synthetic_broadcast == 'yes') ||
+      (github.event_name == 'issue_comment' &&
+       github.repository == 'topmaster-joseph/ekodi-platform' &&
+       github.event.issue.number == 10054 &&
+       github.event.comment.user.login == 'topmaster-joseph' &&
+       github.event.comment.body == '/ekodi-church-external-av-e2e 2026-11-22')
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Abort during protected Sunday worship time
+        shell: bash
+        run: |
+          set -euo pipefail
+          dow="$(TZ=Asia/Seoul date +%u)"
+          hm="$(TZ=Asia/Seoul date +%H%M)"
+          if [[ "$dow" == 7 ]] && (( 10#$hm >= 930 && 10#$hm < 1300 )); then
+            echo "::error::Protected Sunday 09:30-13:00 KST worship window; no public synthetic broadcast authorized in this window"
+            exit 1
+          fi
+          echo "Protected-worship-time preflight passed."
+      - name: Issue short-lived super-admin session
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          cf_query() {
+            local db="$1" sql="$2"
+            curl -fsS --retry 2 -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$db/query" \
+              -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' \
+              --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')"
+          }
+          databases=$(curl -fsS --retry 2 "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database?per_page=100" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          auth_db=''; admin_id=''
+          while IFS= read -r db; do
+            [ -n "$db" ] || continue
+            schema=$(cf_query "$db" "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('admins','sessions')" || true)
+            echo "$schema" | jq -e '.success == true and ([.result[]?.results[]?.name] | index("admins") != null and index("sessions") != null)' >/dev/null 2>&1 || continue
+            candidate=$(cf_query "$db" "SELECT id FROM admins WHERE role='super_admin' ORDER BY id LIMIT 1" || true)
+            id=$(echo "$candidate" | jq -r '.result[]?.results[0]?.id // empty' | head -1)
+            if [[ "$id" =~ ^[0-9]+$ ]]; then auth_db="$db"; admin_id="$id"; break; fi
+          done < <(echo "$databases" | jq -r '.result[]? | (.uuid // .id // empty)')
+          test -n "$auth_db"; test -n "$admin_id"
+          token=$(openssl rand -hex 32)
+          token_hash=$(printf '%s' "$token" | sha256sum | awk '{print $1}')
+          created=$(date -u +'%Y-%m-%dT%H:%M:%S.000Z')
+          expires=$(date -u -d '+20 minutes' +'%Y-%m-%dT%H:%M:%S.000Z')
+          echo "::add-mask::$token"; echo "::add-mask::$token_hash"
+          result=$(cf_query "$auth_db" "INSERT INTO sessions (token_hash,admin_id,expires_at,created_at) VALUES ('$token_hash',$admin_id,'$expires','$created')")
+          echo "$result" | jq -e '.success == true and ([.result[]?.success] | all)' >/dev/null
+          session=$(curl -fsS --retry 3 'https://ekodi.kr/api/session' -H "Authorization: Bearer $token")
+          echo "$session" | jq -e '.authenticated == true and .role == "super_admin"' >/dev/null
+          echo "E2E_ADMIN_TOKEN=$token" >> "$GITHUB_ENV"
+          echo "E2E_TOKEN_HASH=$token_hash" >> "$GITHUB_ENV"
+          echo "E2E_AUTH_DB_ID=$auth_db" >> "$GITHUB_ENV"
+
+      - name: Install Chromium harness
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Verify canonical Church LIVE remote video and audio in an independent anonymous browser
+        env:
+          TENANT_LIVE_TENANT: ekodichurch
+          TENANT_LIVE_URL: https://ekodi.kr/live/church/
+          TENANT_LIVE_LABEL: EKODI Church
+          TENANT_LIVE_REQUIRE_AV: 'yes'
+        run: node scripts/tenant-live-production-e2e.mjs
+
+      - name: Upload E2E report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: church-live-external-av-e2e
+          path: artifacts/tenant-live-production-e2e/ekodichurch.json
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Revoke short-lived E2E session
+        if: always() && env.E2E_AUTH_DB_ID != '' && env.E2E_TOKEN_HASH != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          sql="DELETE FROM sessions WHERE token_hash = '$E2E_TOKEN_HASH'"
+          curl -fsS --retry 2 -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$E2E_AUTH_DB_ID/query" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'Content-Type: application/json' \
+            --data "$(jq -nc --arg sql "$sql" '{sql:$sql}')" \
+            | jq -e '.success == true' >/dev/null
+          echo 'Short-lived canonical Church AV E2E session revoked.'
