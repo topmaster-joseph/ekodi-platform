@@ -80,6 +80,7 @@ import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './
 import { applyContentProtection, contentProtectionAssetResponse } from './content-protection-policy.js';
 import { handleMediaShieldRequest, isMediaShieldPath, mediaShieldPlayerResponse } from './ekodi-media-shield.js';
 import { mediaShieldPageResponse } from './ekodi-media-shield-pages.js';
+import { applyCspReportOnly, handleCspReport, isCspReportPath } from './csp-report-policy.js';
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
 import { ensureFooterTraffic } from './footer-traffic-guarantee.js';
 import { withPublicEdgeCache } from './public-edge-cache.js';
@@ -796,6 +797,8 @@ export default {
     // self-hosted DRM API are answered before any tenant routing so no route can bypass them.
     const protectionAsset=contentProtectionAssetResponse(request)||mediaShieldPlayerResponse(request);
     if(protectionAsset)return applyPlatformSecurityHeaders(protectionAsset,request);
+    // EKODI-CSP-REPORT-001: browser CSP violation reports (report-only stage). Answered before tenant routing.
+    if(isCspReportPath(new URL(request.url).pathname))return applyPlatformSecurityHeaders(await handleCspReport(request),request);
     // EKODI-MEDIA-SHIELD-002: protected-video studio (/admin/media-shield) and viewer (/my/media/<id>).
     const mediaShieldPage=mediaShieldPageResponse(request);
     if(mediaShieldPage)return applyContentProtection(mediaShieldPage,request,env).then(response=>applyPlatformSecurityHeaders(response,request));
@@ -813,7 +816,8 @@ export default {
       // FOOTER-TRAFFIC-GUARANTEE: every public HTML page leaving the Shared Site shows footer visit stats.
       try{response=ensureFooterTraffic(response,request)}catch(error){console.error('footer traffic guarantee skipped',error)}
       // EKODI-CONTENT-PROTECTION-001: admin·member·reader documents get the copy/capture deterrent + forensic trace.
-      return applyContentProtection(response,request,env).then(response=>applyPlatformSecurityHeaders(response,request));
+      // EKODI-CSP-REPORT-001: sampled report-only CSP on documents that ship no enforcing policy.
+      return applyContentProtection(response,request,env).then(response=>applyPlatformSecurityHeaders(applyCspReportOnly(response,request,env),request));
     };
     const incomingUrl=new URL(request.url);
     const retiredBbq=resolvedHost(request,env)===PUBLIC_HOST?retiredBbqRouteResponse(request):null;
