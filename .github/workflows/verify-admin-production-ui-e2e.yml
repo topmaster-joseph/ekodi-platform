@@ -34,7 +34,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium
       - name: Run three-screen read-only source fixture at five viewports
         shell: bash
@@ -72,7 +72,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm install --no-save --no-package-lock playwright
+          npm install --no-save --no-package-lock playwright@1.65.1
           npx playwright install --with-deps chromium
       - name: Verify production Admin menu paths
         if: ${{ github.event_name != 'pull_request' }}

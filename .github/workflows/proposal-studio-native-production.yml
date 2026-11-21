@@ -39,7 +39,7 @@ jobs:
           node --test test/proposal-studio*.test.mjs
       - name: Install isolated EKODI Chromium harness
         run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium
       - name: Check live proposal with EKODI-owned browser worker
         run: node scripts/verify-proposal-native-production.mjs
