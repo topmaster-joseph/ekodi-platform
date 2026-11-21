@@ -120,6 +120,12 @@ const CHAT_ERRORS={
 const CHAT_PROVIDER_LABELS={'gemini-free':'무료 AI','openrouter-free':'무료 AI','groq-free':'무료 AI','huggingface-free-credit':'무료 AI','cloudflare-workers-ai':'무료 AI','openai-api':'GPT','anthropic-api':'Claude',ollama:'Ollama',auto:'자동',gpt:'GPT',claude:'Claude'};
 function chatProviderLabel(provider){return CHAT_PROVIDER_LABELS[provider]||'EKODI AI'}
 function chatStatus(message){$('chatStatus').textContent=message}
+const WEB_SOURCE_LABELS={naver:'네이버',google:'구글뉴스',bing:'Bing뉴스',wiki:'위키'};
+function webStatusText(status){
+  if(!status||typeof status!=='object')return'';
+  const parts=Object.entries(status).filter(([key])=>WEB_SOURCE_LABELS[key]).map(([key,value])=>WEB_SOURCE_LABELS[key]+' '+(String(value).startsWith('ok:')?String(value).slice(3)+'건':value==='not_configured'?'미연결':String(value).slice(0,12)));
+  return parts.length?' ('+parts.join(' · ')+')':'';
+}
 function chatStore(){try{return window.sessionStorage}catch{return null}}
 function saveChat(){try{chatStore()?.setItem(CHAT_STORE_KEY,JSON.stringify({history:chatState.history.slice(-8),task:$('chatTask')?.value||'general'}))}catch{}}
 function clearChatStore(){try{chatStore()?.removeItem(CHAT_STORE_KEY)}catch{}}
@@ -284,7 +290,7 @@ async function sendChat(message,existingBubble=null){
     const sources=(Array.isArray(response.sources)?response.sources:[]).filter(item=>item&&item.title&&/^https:\/\//.test(String(item.url||''))).slice(0,6);
     typing.remove();chatBubble('assistant',result.reply,result.provider||mode,sources);
     rememberChat(message,result.reply,sources);
-    chatStatus('응답 완료 · '+chatProviderLabel(result.provider||mode)+(web?(sources.length?' · 웹 출처 '+sources.length+'건':' · 웹 검색 결과 없음'):''));
+    chatStatus('응답 완료 · '+chatProviderLabel(result.provider||mode)+(web?(sources.length?' · 웹 출처 '+sources.length+'건':' · 웹 검색 결과 없음'+webStatusText(response.webStatus)):''));
   }catch(error){
     typing.remove();
     const text=CHAT_ERRORS[error.message]||(
