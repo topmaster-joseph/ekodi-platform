@@ -1,0 +1,27 @@
+name: EKODI HSTS Preload Readiness (read-only)
+
+# EKODI-HSTS-PRELOAD-PREP-001: reports whether ekodi.kr meets hstspreload.org requirements.
+# Read-only: no secrets, no deployment, no submission. Never schedules itself.
+on:
+  pull_request:
+    paths:
+      - 'scripts/check-hsts-preload-readiness.mjs'
+      - '.github/workflows/hsts-preload-readiness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Check readiness
+        run: node scripts/check-hsts-preload-readiness.mjs ekodi.kr
