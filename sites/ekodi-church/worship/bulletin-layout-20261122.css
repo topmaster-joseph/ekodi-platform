@@ -21,3 +21,18 @@
  .bp-pages[data-worship-layout="2026-11-22"] .bp-order{break-inside:avoid}
  .bp-pages[data-worship-layout="2026-11-22"] .bp-order table td,.bp-pages[data-worship-layout="2026-11-22"] .bp-order table th{padding:4px 3px}
 }
+
+/* 4-column bilingual order, weekly hymn lines and preservice timing */
+.bp-pages[data-worship-layout="2026-11-22"] .bp-order .bp-worship-table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:10.5px;line-height:1.32}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-worship-table .bp-order-ko{width:21%;color:#173b30;font-weight:700}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-worship-table .bp-order-en{width:31%;font-weight:600;overflow-wrap:normal;hyphens:auto}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-worship-table .bp-order-detail{width:36%;font-size:10.8px;font-weight:500}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-worship-table .bp-order-actor{width:12%;font-size:10px;text-align:right;white-space:nowrap}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-order .bp-worship-table td{padding:5px 2px;vertical-align:middle;overflow-wrap:break-word}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-order .bp-worship-table td:first-child{width:21%}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-order .bp-worship-table td:last-child{width:12%;font-size:10px}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-order-line{display:block}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-praise-time{display:block;font-size:9px;color:#607568;font-weight:500}
+.bp-visually-hidden{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-week-label{display:block;font-size:9px;font-weight:500}
+@media print{.bp-pages[data-worship-layout="2026-11-22"] .bp-order .bp-worship-table td{padding:4px 2px}}
