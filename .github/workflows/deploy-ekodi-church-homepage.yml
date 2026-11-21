@@ -117,7 +117,7 @@ jobs:
           # The verifier accepts only the original legacy header or the exact new
           # first-level menu with all contextual worship/Together routes preserved.
           node .ekodi-control/scripts/verify-church-header-navigation.mjs \
-            --html church/index.html --subnav church/church-section-nav.js
+            --html church/index.html --subnav church/church-section-nav.js --expect-qtin
           grep -Fq 'online-triad--broadcast' church/index.html
           grep -Fq 'href="/live/church/"' church/index.html
           grep -Fq 'body:has(main :target) .hero{display:none!important}' church/church-homepage-layout.css
@@ -142,8 +142,16 @@ jobs:
           grep -Fq "dataset.liveStatus='stale'" church/church-online-status.js
           grep -Fq '에코디선교회' church/index.html
           grep -Fq '__EKODI_CHURCH_LIFE_HUB_I18N__' church/church-life-hub-i18n.js
-          grep -Fq 'href="/ekodichurch/my/' church/index.html
-          grep -Fq "href: '/ekodichurch/my/'" church/script.js
+          grep -Fq 'href="/qtin/church">큐티인 신청</a>' church/index.html
+          grep -Fq "name.href = '/ekodichurch/my/'" church/church-account-header.js
+          # Church source PR #192: translate dynamic account controls in all nine locales.
+          # A member's own name is user content, never translated or used to fail an i18n proof.
+          grep -Fq "'로그인':{en:'Sign in'" church/church-i18n.js
+          grep -Fq "'로그아웃':{en:'Sign out'" church/church-i18n.js
+          grep -Fq "add('로그인'," church/church-i18n-extended.js
+          grep -Fq "add('로그아웃'," church/church-i18n-extended.js
+          grep -Fq "name.dataset.ekodiUserContent = ''" church/church-account-header.js
+          grep -Fq "href: '/qtin/church', label: '큐티인 신청'" church/script.js
           grep -Fq 'data-ekodi-header-actions' church/my/index.html
           grep -Fq 'EKODI CHURCH · MY PAGE' church/my/index.html
           if grep -Fq 'https://ekodi.kr/my/' church/my/index.html || grep -Eq '내 EKODI|MY EKODI|다른 EKODI 활동' church/my/index.html; then
@@ -175,7 +183,7 @@ jobs:
           # All reviewed Church public subpages share one six-menu Shell.
           for page in devotion notices schedule; do
             node .ekodi-control/scripts/verify-church-header-navigation.mjs \
-              --subpage "church/$page/index.html" --kind "$page"
+              --subpage "church/$page/index.html" --kind "$page" --expect-qtin
           done
           grep -Fq '<script type="module" src="/bible/devotion.js"></script>' church/devotion/index.html
           grep -Fq 'href="/ekodichurch/devotion/">매일묵상</a>' church/index.html
@@ -266,9 +274,9 @@ jobs:
               && grep -Eq '<h1>(에코디 )?오늘의 매일묵상</h1>' /tmp/church-devotion.html \
               && grep -Fq 'class="site-header church-devotion-header"' /tmp/church-devotion.html \
               && grep -Fq 'data-ekodi-devotion' /tmp/church-devotion.html \
-              && node .ekodi-control/scripts/verify-church-header-navigation.mjs --subpage /tmp/church-devotion.html --kind devotion \
-              && node .ekodi-control/scripts/verify-church-header-navigation.mjs --subpage /tmp/church-verify-notices.html --kind notices \
-              && node .ekodi-control/scripts/verify-church-header-navigation.mjs --subpage /tmp/church-verify-schedule.html --kind schedule \
+              && node .ekodi-control/scripts/verify-church-header-navigation.mjs --subpage /tmp/church-devotion.html --kind devotion --expect-qtin \
+              && node .ekodi-control/scripts/verify-church-header-navigation.mjs --subpage /tmp/church-verify-notices.html --kind notices --expect-qtin \
+              && node .ekodi-control/scripts/verify-church-header-navigation.mjs --subpage /tmp/church-verify-schedule.html --kind schedule --expect-qtin \
               && grep -Fq 'data-tab' /tmp/devotion-renderer.js \
               && grep -Fq '"activitySource":"curated"' /tmp/devotion-api.json; then
               echo 'Church devotion page verified.'
@@ -465,27 +473,64 @@ jobs:
           try{
             const page=await browser.newPage();
             await page.setViewport({width:1440,height:1100});
+            // A detached body.cloneNode(true).innerText is actually textContent in Chromium:
+            // it includes hidden overlays, templates and Korean inside <script> source.
+            // Observe ONLY rendered text nodes on the actual live DOM; keep strict Hangul rejection.
+            await page.evaluateOnNewDocument(()=>{
+              window.__EKODI_CHURCH_RENDERED_TEXT__=()=>{
+                const excluded='script,style,noscript,template,[data-ekodi-language-control],[data-ekodi-user-content],[hidden],[aria-hidden="true"]';
+                const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+                const range=document.createRange(),parts=[];
+                let node;
+                while((node=walker.nextNode())){
+                  const value=(node.nodeValue||'').trim();
+                  if(!value)continue;
+                  let element=node.parentElement;
+                  if(!element||element.closest(excluded))continue;
+                  range.selectNodeContents(node);
+                  if(range.getClientRects().length===0)continue;
+                  let rendered=true;
+                  while(element){
+                    const style=getComputedStyle(element);
+                    if(style.display==='none'||style.visibility==='hidden'||style.visibility==='collapse'||style.contentVisibility==='hidden'||style.opacity==='0'){
+                      rendered=false;break;
+                    }
+                    if(element===document.body)break;
+                    element=element.parentElement;
+                  }
+                  if(rendered)parts.push(value);
+                }
+                return parts.join(' ');
+              };
+            });
             for(const locale of locales){
               await page.goto(`https://ekodi.kr/ekodichurch/?lang=${encodeURIComponent(locale)}&release=${release}`,{waitUntil:'domcontentloaded',timeout:30000});
               await page.waitForFunction(expected=>document.documentElement.lang===expected&&window.__EKODI_CHURCH_LIFE_HUB_I18N__===true&&document.querySelector('a[href="/ekodichurch/devotion/"]'),{timeout:25000},locale);
               if(extended.has(locale)) await page.waitForFunction(expected=>window.EKODIChurchExtendedI18n?.getLocale?.()===expected,{timeout:20000},locale);
               if(locale!=='ko-KR'){
-                await page.waitForFunction(expected=>{
-                  if(document.documentElement.lang!==expected)return false;
-                  const clone=document.body.cloneNode(true);
-                  clone.querySelectorAll('[data-ekodi-language-control],[data-ekodi-user-content]').forEach(node=>node.remove());
-                  return !/[가-힣]/.test(clone.innerText);
-                },{timeout:20000,polling:'raf'},locale);
+                try{
+                  await page.waitForFunction(expected=>{
+                    if(document.documentElement.lang!==expected)return false;
+                    return !/[가-힣]/.test(window.__EKODI_CHURCH_RENDERED_TEXT__());
+                  },{timeout:20000,polling:'raf'},locale);
+                }catch(error){
+                  // Diagnostic only. Preserve strict failure, but name the untranslated visible text.
+                  const residual=await page.evaluate(()=>{
+                    const visible=window.__EKODI_CHURCH_RENDERED_TEXT__();
+                    const korean=[...visible.matchAll(/.{0,35}[가-힣].{0,35}/g)].slice(0,30).map(x=>x[0]);
+                    return {lang:document.documentElement.lang,visibleLength:visible.length,korean,qtin:document.querySelector('a[href="/qtin/church"]')?.textContent?.trim()||''};
+                  });
+                  console.error('Church nine-language residual diagnostic '+JSON.stringify({locale,...residual}));
+                  throw error;
+                }
                 await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
               }
               const snapshot=await page.evaluate(()=>{
-                const clone=document.body.cloneNode(true);
-                clone.querySelectorAll('[data-ekodi-language-control],[data-ekodi-user-content]').forEach(node=>node.remove());
                 return {
                   lang:document.documentElement.lang,
                   hero:document.querySelector('.hero h1')?.innerText||'',
                   devotion:!!document.querySelector('a[href="/ekodichurch/devotion/"]'),
-                  body:clone.innerText,
+                  body:window.__EKODI_CHURCH_RENDERED_TEXT__(),
                   options:[...document.querySelectorAll('[data-ekodi-language-control] select option')].map(o=>o.value)
                 };
               });
@@ -552,8 +597,8 @@ jobs:
                     sharedLive:!!document.querySelector('a[href="/live/church/"]'),
                     giving:!!document.querySelector('.giving-strip'),
                     // The shared shell wraps My Page in the central login (/auth/?…return_to=…/ekodichurch/my/).
-                    member:[...document.querySelectorAll('.site-header a')].some(a=>{const h=a.getAttribute('href')||'';try{const u=new URL(h,location.origin);return u.pathname==='/ekodichurch/my/'||(u.pathname.startsWith('/auth')&&new URL(u.searchParams.get('return_to')||'/',location.origin).pathname==='/ekodichurch/my/')}catch{return false}}),
-                    qtin:!!document.querySelector('.site-header a[href="/qtin/church"]'),
+                    member:!!document.querySelector('#main-nav a[href="/ekodichurch/my/"]'),
+                    qtin:!!document.querySelector('#main-nav a[href="/qtin/church"]'),
                     canonicalDevotion:!!document.querySelector('a[href="/ekodichurch/devotion/"]'),
                     overflow:document.documentElement.scrollWidth>innerWidth+1,
                     mobileGreetingGap:(()=>{
@@ -568,7 +613,8 @@ jobs:
                 assert.equal(initial.heroVisible,true,'hero should only show on home');
                 assert.equal(initial.weeklyHidden,true,'weekly panel hidden until selected');
                 assert.equal(initial.sharedLive,true,'shared EKODI Live link retained');
-                assert.equal(initial.member,true,'site-local member navigation retained');
+                assert.equal(initial.member,false,'My Page must not be a public primary menu shortcut');
+                assert.equal(initial.qtin,true,'QTIN must be a direct primary menu shortcut');
                 // Old headers expose QTIN directly. Six-item headers keep it in Together.
                 // Verify the actual rendered submenu in every viewport and locale.
                 if(!initial.qtin){
