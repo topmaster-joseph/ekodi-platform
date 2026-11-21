@@ -176,7 +176,7 @@ test('anonymous course catalog exposes learning content but not instructor or ow
  assert.equal(safety.studyUrl,'/edu/study/cold-safety-2026/');
  assert.ok(safety.syllabus.length>0);
  const fact=data.courses.find(c=>c.id==='mnu-factchat-2026');
- assert.ok(fact.resources.some(r=>r.url.startsWith('/study/live/')));
+ assert.ok(fact.resources.some(r=>r.url.startsWith('/edu/study/live/')));
  assert.ok(!fact.resources.some(r=>r.url.startsWith('https://')));
  const head=await call('/courses/catalog.json',env,{method:'HEAD'});
  assert.equal(head.status,200);assert.equal(await head.text(),'');
