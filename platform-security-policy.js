@@ -148,7 +148,7 @@ export function sameOriginFrameCsp(csp=''){
 
 // EKODI-HSTS-PRELOAD-PREP-001 (owner decision 2026-11-21: 준비까지만).
 // Browser HSTS preload inclusion is effectively irreversible for months and binds every
-// *.ekodi.kr host to HTTPS. Turning HSTS_PRELOAD_ENABLED on is the only change left; it
+// subdomain host of the apex to HTTPS. Turning HSTS_PRELOAD_ENABLED on is the only change left; it
 // must not be flipped until scripts/check-hsts-preload-readiness.mjs reports no errors
 // and the owner approves the hstspreload.org submission.
 export const HSTS_PRELOAD_ENABLED=false;
