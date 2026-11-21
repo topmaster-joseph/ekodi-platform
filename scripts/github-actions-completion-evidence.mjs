@@ -175,7 +175,14 @@ export async function collectAuthenticatedCompletionEvidence({github,owner='topm
   const pr=(pulls.data||[])
     .filter(item=>item?.merged_at&&item?.head?.ref===branch&&item?.base?.ref==='main')
     .sort((a,b)=>String(b.merged_at).localeCompare(String(a.merged_at)))[0];
-  if(!pr)return {verified:false,reason:'merged_pr_not_found'};
+  if(!pr){
+    // Report whether any worker ever touched the branch, so the reconciler can
+    // park long-unclaimed tasks. The endpoint re-verifies before parking.
+    const anyPulls=await github.rest.pulls.list({owner,repo,state:'all',head:`${owner}:${branch}`,per_page:5});
+    let branchExists=true;
+    try{await github.rest.repos.getBranch({owner,repo,branch});}catch(error){if(Number(error?.status)===404)branchExists=false;}
+    return {verified:false,reason:'merged_pr_not_found',unclaimed:!(anyPulls.data||[]).length&&!branchExists};
+  }
   const mergeSha=text(pr.merge_commit_sha,80);
   if(!/^[a-f0-9]{40}$/i.test(mergeSha))return {verified:false,reason:'merge_commit_missing'};
 
