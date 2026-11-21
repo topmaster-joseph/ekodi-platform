@@ -74,58 +74,58 @@ export async function syncApprovedChurchMonthlyNotices(env,instance,at=new Date(
   if(!publications.length)return {published:0,updated:0};
   const DB=env.DB;
   await DB.batch([
-    DB.prepare(\`CREATE UNIQUE INDEX IF NOT EXISTS idx_ekodi_board_church_monthly_news
+    DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_ekodi_board_church_monthly_news
       ON ekodi_board_posts(board_id,author_person_id)
-      WHERE author_person_id GLOB 'system:church-monthly-news:*'\`),
-    DB.prepare(\`CREATE TABLE IF NOT EXISTS ekodi_board_auto_news_sources(
+      WHERE author_person_id GLOB 'system:church-monthly-news:*'`),
+    DB.prepare(`CREATE TABLE IF NOT EXISTS ekodi_board_auto_news_sources(
       board_id TEXT NOT NULL,
       source_key TEXT NOT NULL,
       post_id INTEGER NOT NULL,
       last_published_body TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       PRIMARY KEY(board_id,source_key)
-    )\`)
+    )`)
   ]);
   const stamp=at.toISOString();
   const boardId=instance.board_id;
-  await DB.prepare(\`INSERT OR IGNORE INTO ekodi_board_categories
+  await DB.prepare(`INSERT OR IGNORE INTO ekodi_board_categories
     (board_id,category_id,name,sort_order,status,created_at,updated_at)
-    VALUES (?,'notice','공지사항',10,'active',?,?)\`).bind(boardId,stamp,stamp).run();
+    VALUES (?,'notice','공지사항',10,'active',?,?)`).bind(boardId,stamp,stamp).run();
   let published=0,updated=0;
   for(const item of publications){
     const sourceKey='church-monthly-news:'+item.sourceKey;
     const author=CHURCH_NEWS_PUBLISHER+':'+item.sourceKey;
-    const old=await DB.prepare(\`SELECT id,body,status FROM ekodi_board_posts
-      WHERE board_id=? AND author_person_id=? LIMIT 1\`).bind(boardId,author).first();
+    const old=await DB.prepare(`SELECT id,body,status FROM ekodi_board_posts
+      WHERE board_id=? AND author_person_id=? LIMIT 1`).bind(boardId,author).first();
     if(!old){
-      const result=await DB.prepare(\`INSERT OR IGNORE INTO ekodi_board_posts
+      const result=await DB.prepare(`INSERT OR IGNORE INTO ekodi_board_posts
         (board_id,author_person_id,author_email,title,body,status,created_at,updated_at)
-        VALUES (?,?,'',?,?,'published',?,?)\`).bind(boardId,author,item.title,item.body,stamp,stamp).run();
+        VALUES (?,?,'',?,?,'published',?,?)`).bind(boardId,author,item.title,item.body,stamp,stamp).run();
       if(Number(result?.meta?.changes||0)>0)published++;
     }
-    const post=await DB.prepare(\`SELECT id,body,status FROM ekodi_board_posts
-      WHERE board_id=? AND author_person_id=? LIMIT 1\`).bind(boardId,author).first();
+    const post=await DB.prepare(`SELECT id,body,status FROM ekodi_board_posts
+      WHERE board_id=? AND author_person_id=? LIMIT 1`).bind(boardId,author).first();
     // Deleting a post by a human editor must not be silently reversed.
     if(!post||post.status!=='published')continue;
-    await DB.prepare(\`INSERT OR IGNORE INTO ekodi_board_post_categories
-      (board_id,post_id,category_id) VALUES (?,?,'notice')\`).bind(boardId,post.id).run();
-    const tracked=await DB.prepare(\`SELECT last_published_body FROM ekodi_board_auto_news_sources
-      WHERE board_id=? AND source_key=? LIMIT 1\`).bind(boardId,sourceKey).first();
+    await DB.prepare(`INSERT OR IGNORE INTO ekodi_board_post_categories
+      (board_id,post_id,category_id) VALUES (?,?,'notice')`).bind(boardId,post.id).run();
+    const tracked=await DB.prepare(`SELECT last_published_body FROM ekodi_board_auto_news_sources
+      WHERE board_id=? AND source_key=? LIMIT 1`).bind(boardId,sourceKey).first();
     if(!tracked){
       if(post.body===item.body){
-        await DB.prepare(\`INSERT OR IGNORE INTO ekodi_board_auto_news_sources
-          (board_id,source_key,post_id,last_published_body,updated_at) VALUES (?,?,?,?,?)\`)
+        await DB.prepare(`INSERT OR IGNORE INTO ekodi_board_auto_news_sources
+          (board_id,source_key,post_id,last_published_body,updated_at) VALUES (?,?,?,?,?)`)
           .bind(boardId,sourceKey,post.id,item.body,stamp).run();
       }
       continue;
     }
     if(tracked.last_published_body===item.body||post.body!==tracked.last_published_body)continue;
-    const change=await DB.prepare(\`UPDATE ekodi_board_posts SET body=?,updated_at=?
-      WHERE board_id=? AND id=? AND status='published' AND body=?\`)
+    const change=await DB.prepare(`UPDATE ekodi_board_posts SET body=?,updated_at=?
+      WHERE board_id=? AND id=? AND status='published' AND body=?`)
       .bind(item.body,stamp,boardId,post.id,tracked.last_published_body).run();
     if(Number(change?.meta?.changes||0)<1)continue;
-    await DB.prepare(\`UPDATE ekodi_board_auto_news_sources SET last_published_body=?,updated_at=?
-      WHERE board_id=? AND source_key=? AND post_id=?\`)
+    await DB.prepare(`UPDATE ekodi_board_auto_news_sources SET last_published_body=?,updated_at=?
+      WHERE board_id=? AND source_key=? AND post_id=?`)
       .bind(item.body,stamp,boardId,sourceKey,post.id).run();
     updated++;
   }
