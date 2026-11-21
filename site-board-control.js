@@ -1,4 +1,5 @@
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
+import { syncApprovedChurchWeeklyNotices } from './church-monthly-official-news.js';
 
 const CENTRAL_SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const CENTRAL_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -12,6 +13,7 @@ export function churchOfficialCategoryRequiresManager(siteId,categoryId){
   return siteId==='ekodichurch'&&['notice','schedule'].includes(safeCategoryId(categoryId));
 }
 const MISSION_OFFICIAL_CATEGORIES=Object.freeze(['mission-notice','mission-schedule']);
+const ALL_OFFICIAL_CATEGORY_IDS=new Set(['mission-notice','mission-schedule','notice','schedule']);
 const isMissionOfficialCategory=(instance,categoryId)=>instance.site_id==='ekodimission'&&MISSION_OFFICIAL_CATEGORIES.includes(categoryId);
 const isChurchOfficialCategory=(instance,categoryId)=>churchOfficialCategoryRequiresManager(instance.site_id,categoryId);
 const isPublicOfficialCategory=(instance,categoryId)=>isMissionOfficialCategory(instance,categoryId)||isChurchOfficialCategory(instance,categoryId);
@@ -304,6 +306,9 @@ const boardJson=(instance,data,status=200)=>json(data,status,{'x-ekodi-board-id'
 async function parseBody(request){try{return await request.json()}catch{return null}}
 
 async function listPosts(env,instance,categoryId=''){
+  // An official category from another tenant must never fall back to that
+  // board's unrelated public posts, even after this board acquires news.
+  if(ALL_OFFICIAL_CATEGORY_IDS.has(categoryId)&&!isPublicOfficialCategory(instance,categoryId))return [];
   const selected=isPublicOfficialCategory(instance,categoryId)?categoryId:'';
   const rows=selected
     ?await env.DB.prepare(`SELECT p.id,p.title,p.body,p.created_at,p.updated_at,pc.category_id
@@ -812,6 +817,23 @@ export async function handleSiteBoardRequest(request,env){
     return boardJson(instance,{ok:true});
   }
 
+  // The Church's reviewed, dated Sunday public-news source is an internal publisher:
+  // first-party GET refreshes only the Church notice category, idempotently, with
+  // an audit-friendly system identity. HTTP write authorization is unchanged.
+  const requestedOfficialCategory=method==='GET'&&(sub==='/'||sub==='/api/posts')
+    ?safeCategoryId(new URL(request.url).searchParams.get('category')):'';
+  // Explicit foreign official categories must never expose another tenant's notices:
+  // /ekodichurch/board/api/posts?category=mission-notice is an empty scoped result.
+  if(requestedOfficialCategory&&ALL_OFFICIAL_CATEGORY_IDS.has(requestedOfficialCategory)&&
+     !isPublicOfficialCategory(instance,requestedOfficialCategory)){
+    return sub==='/api/posts'
+      ?boardJson(instance,{boardId:instance.board_id,categoryId:null,items:[]})
+      :page(route,[],'');
+  }
+  if(method==='GET'&&route.siteId==='ekodichurch'&&(sub==='/'||sub==='/api/posts')&&
+     (!requestedOfficialCategory||requestedOfficialCategory==='notice')){
+    await syncApprovedChurchWeeklyNotices(env,instance);
+  }
   if(method==='GET'&&sub==='/'){
     const categoryId=safeCategoryId(new URL(request.url).searchParams.get('category'));
     const selected=isPublicOfficialCategory(instance,categoryId)?categoryId:'';
