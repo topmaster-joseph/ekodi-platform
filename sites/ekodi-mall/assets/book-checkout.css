@@ -22,3 +22,7 @@
 .bc-policy article{background:#fffaf4;border:1px solid #eadfd2;border-radius:16px;padding:16px;font-size:13px;color:#555;line-height:1.6}
 .bc-policy h3{font-size:14px;margin:0 0 6px;color:#173f35}
 @media (max-width:860px){.bc-grid{grid-template-columns:1fr}.bc-cover{max-width:180px}}
+/* MALL-BOOKS-CHECKOUT-HIDDEN-FIX-20261121: 표시 규칙(display:block 등)이 hidden 속성을 덮지 않게 한다.
+   이미 구매한 독자에게 결제 영역이, 미구매 독자에게 '이미 내 서재' 안내가 보이는 문제 방지. */
+.book-checkout-page [hidden]{display:none!important}
+.book-checkout-page .linklike{background:none;border:0;padding:0;margin-left:4px;color:#173f35;text-decoration:underline;font:inherit;cursor:pointer}
