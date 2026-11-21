@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {classifyPointsDevelopmentGuardPreflight,REQUIRED_FLAGS} from '../scripts/classify-points-development-guard-preflight.mjs';
 
 const wf=readFileSync(new URL('../.github/workflows/deploy-points-nonverified-development-guard.yml',import.meta.url),'utf8');
 const pre=readFileSync(new URL('../scripts/sql/points-nonverified-development-preflight.sql',import.meta.url),'utf8');
@@ -44,8 +45,9 @@ test('preflight requires all 20 earlier migrations, no balances and no legacy ru
     assert.ok(pre.includes(required),required);
   }
   assert.match(pre,/count\(\*\) = 20/);
+  assert.ok(wf.includes('node scripts/classify-points-development-guard-preflight.mjs'));
+  assert.ok(wf.includes('echo "mode=$mode" >> "$GITHUB_OUTPUT"'));
   assert.match(pre,/count\(\*\) = 0 from pg_constraint/);
-  assert.match(wf,/jq -e 'length == 1 and \(\.\[0\] \| all\(\.\[\]; \. == true\)\)'/);
   assert.doesNotMatch(pre,/\b(?:update|delete|insert|alter|drop|truncate|grant|revoke)\s+(?:into|table|from|public|supabase)/i);
 });
 test('postflight verifies both validated and complete CHECK constraints, true ledger receipt, zero economic credit',()=>{
@@ -55,4 +57,53 @@ test('postflight verifies both validated and complete CHECK constraints, true le
   assert.match(post,/rule_id <> ''active''::text/);
   assert.match(post,/adapter <> ''devotion_self_report''::text/);
   assert.doesNotMatch(post,/\b(?:update|delete|insert|alter|drop|truncate|grant|revoke)\s+(?:into|table|from|public|supabase)/i);
+});
+
+const common={
+  required_tables:true,previous_20_recorded:true,
+  active_credit_disabled:true,devotional_credit_disabled:true,
+  ledger_empty:true,wallets_zero:true,no_e2e_sites:true,
+};
+const fresh={...common,guard_not_recorded:true,guard_recorded:false,
+  no_partial_guard:true,guards_verified:false};
+const installed={...common,guard_not_recorded:false,guard_recorded:true,
+  no_partial_guard:false,guards_verified:true};
+
+test('owner-gated workflow accepts exactly fresh or fully verified installed guards',()=>{
+  assert.equal(REQUIRED_FLAGS.length,11);
+  assert.equal(classifyPointsDevelopmentGuardPreflight([fresh]),'fresh');
+  assert.equal(classifyPointsDevelopmentGuardPreflight([installed]),'already_applied');
+  assert.equal(wf.split("if: steps.preflight.outputs.mode == 'fresh'").length-1,2);
+  assert.ok(wf.includes('Verify development CHECK validity, migration history and zero economic credit'));
+});
+test('missing, weak, partial or economically unsafe DEV guard always blocks',()=>{
+  const installedInvalid=[
+    {guard_recorded:false},{guard_not_recorded:true},{no_partial_guard:true},
+    {guards_verified:false},{ledger_empty:false},{wallets_zero:false},
+    {active_credit_disabled:false},{devotional_credit_disabled:false},
+    {previous_20_recorded:false},{required_tables:false},{no_e2e_sites:false},
+  ];
+  for (const change of installedInvalid) {
+    assert.throws(()=>classifyPointsDevelopmentGuardPreflight([{...installed,...change}]),/POINTS_DEV_GUARD_/);
+  }
+  for(const change of [
+    {guard_recorded:true},{guard_not_recorded:false},
+    {no_partial_guard:false},{guards_verified:true},
+  ]) assert.throws(()=>classifyPointsDevelopmentGuardPreflight([{...fresh,...change}]),/POINTS_DEV_GUARD_/);
+  for(const malformed of [[],{},[fresh,installed],[{...installed,unexpected:true}],
+    [{...installed,guards_verified:'true'}]]) {
+    assert.throws(()=>classifyPointsDevelopmentGuardPreflight(malformed),/POINTS_DEV_GUARD_/);
+  }
+});
+test('read-only preflight recognizes only actual validated canonical checks, and keeps original migration pin',()=>{
+  for(const key of ['guard_recorded','guard_not_recorded','no_partial_guard','guards_verified'])
+    assert.ok(pre.includes(key),key);
+  assert.ok(pre.includes("version <> '20261108224500'"));
+  assert.ok(pre.includes("name = 'ekodi_points_nonverified_reward_guard'"));
+  assert.equal(pre.split("c.contype = 'c' and c.convalidated").length-1,2);
+  assert.equal(pre.split('pg_get_expr(c.conbin,c.conrelid)').length-1,2);
+  assert.match(pre,/count\(\*\) = 20/);
+  assert.match(wf,/MIGRATION_GIT_BLOB: 17a1003aa5968c4a7a4914684a144abf5b462ce6/);
+  assert.ok(wf.includes('OWNER_CONFIRMS_DEV_ONLY'));
+  assert.equal(wf.split('read_only:false').length-1,1);
 });
