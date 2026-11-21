@@ -55,8 +55,8 @@ jobs:
             echo "::notice::Points browser E2E is within its approved KST reservation window."
           fi
   verify:
-    needs: reservation_window
     if: github.ref == 'refs/heads/main' && needs.reservation_window.outputs.active == 'true'
+    needs: reservation_window
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: development
