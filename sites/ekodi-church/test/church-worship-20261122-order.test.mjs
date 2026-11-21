@@ -50,7 +50,7 @@ test('Nov 22 draft bulletin is two-sheet, sanitized and guarded', () => {
   const manifest = JSON.parse(readFileSync(new URL('../worship/2026-11-22/materials.json', import.meta.url), 'utf8'));
   const weekly = JSON.parse(readFileSync(new URL('../worship/weekly.json', import.meta.url), 'utf8'));
   assert.equal((html.match(/class="bp-sheet"/g) || []).length, 2);
-  assert.equal((html.match(/<tr><td>경배찬양<\/td>/g) || []).length, 1);
+  assert.equal((html.match(/<tr><td class="bp-order-ko">경배찬양/g) || []).length, 1);
   assert.equal((html.match(/<li>성령께서 내게/g) || []).length, 1);
   assert.match(html, /\.\.\/bulletin-data\.js\?v=20261122a/);
   assert.match(html, /\.\.\/review-gate\.js/);
@@ -69,10 +69,47 @@ test('worship source and dated presentation agree about repentance, liturgy, and
  const second=html.slice(html.indexOf('aria-label="주보 2면"'));
  const order=second.indexOf('class="bp-order"'), committee=second.indexOf('data-b="committee"'),sponsors=second.indexOf('data-b="sponsors"'),question=second.indexOf('data-b="questions"');
  assert.ok(order>=0 && committee>order && sponsors>committee && question>sponsors);
- assert.match(html, /회개찬송<\/td><th>Hymn of Repentance/);
+ assert.match(html, /회개찬송<\/td><td class="bp-order-en">Hymn of Repentance/);
  assert.doesNotMatch(html, /헌금찬송|Offertory Hymn/);
  const slideBlock=stage.match(/const slides = ([\s\S]*?);\n\n  const storageKey/)[1];
  const slides=JSON.parse(slideBlock);
  assert.deepEqual(slides.slice(1).map(x=>x.title),expected);
  assert.equal(slides.find(x=>x.title==='회개찬송').kicker,'Hymn of Repentance');
+});
+
+test('four aligned columns present songs, passage, title and audience roles',()=>{
+ const html=readFileSync(new URL('../worship/2026-11-22/index.html',import.meta.url),'utf8');
+ const manifest=JSON.parse(readFileSync(new URL('../worship/2026-11-22/materials.json',import.meta.url),'utf8'));
+ const table=html.match(/<table class="bp-worship-table">([\s\S]*?)<\/table>/)?.[1];
+ assert.ok(table);
+ assert.equal((table.match(/<tr><td class="bp-order-ko">/g)||[]).length,14);
+ assert.equal((table.match(/class="bp-order-detail"/g)||[]).length,14);
+ assert.equal((table.match(/class="bp-order-actor"/g)||[]).length,14);
+ for(const song of ['은혜','날구원하신주','지금까지','거룩하신 하나님','나 주님의 기쁨되기','아 하나님의 은혜로','성령이여 강림하사','주 안에 우린 하나']){
+   assert.ok(table.includes(song),'missing hymn '+song);
+ }
+ assert.ok(table.includes('고린도전서 12:1–11'));
+ assert.ok(table.includes('공동의 유익을 위한 은사'));
+ assert.ok(table.includes('예배 15분 전'));
+ assert.deepEqual(manifest.worship_details['경배찬양'],['은혜','날구원하신주','지금까지']);
+ const stage=readFileSync(new URL('../worship/2026-11-22/worship.js',import.meta.url),'utf8');
+ for(const song of ['은혜','날구원하신주','지금까지','거룩하신 하나님','나 주님의 기쁨되기','아 하나님의 은혜로','성령이여 강림하사','주 안에 우린 하나']) assert.ok(stage.includes(song));
+});
+test('annual worship committee displays this week in second date and date edits require admin',()=>{
+ const controller=readFileSync(new URL('../worship/bulletin-data.js',import.meta.url),'utf8');
+ const admin=readFileSync(new URL('../mypage/app.js',import.meta.url),'utf8');
+ const adminHtml=readFileSync(new URL('../mypage/index.html',import.meta.url),'utf8');
+ const annual=JSON.parse(readFileSync(new URL('../worship/committee-2026.json',import.meta.url),'utf8'));
+ const sql=readFileSync(new URL('../../../supabase/migrations/20261122020000_church_annual_worship_committee.sql',import.meta.url),'utf8');
+ assert.match(controller,/\[-7, 0, 7, 14, 21\]/);
+ assert.match(controller,/i === 1 \? ' class="bp-now"/);
+ assert.match(controller,/church_worship_committee_assignments/);
+ assert.match(admin,/annualSundayValid/);
+ assert.match(admin,/current_site_access/);
+ assert.match(admin,/resolution=merge-duplicates/);
+ assert.match(adminHtml,/연간 예배위원 관리/);
+ assert.match(sql,/enable row level security/);
+ assert.match(sql,/tenant_admin/);
+ assert.equal(annual.records.find(x=>x.date==='2026-11-22')?.prayer_leader,'두본요');
+ assert.equal(annual.roles[0].title,'경배찬양');
 });
