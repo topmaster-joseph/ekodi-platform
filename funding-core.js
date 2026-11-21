@@ -170,7 +170,17 @@ textarea{min-height:110px}.cols{display:grid;grid-template-columns:2fr 1fr;gap:2
 .story{white-space:pre-wrap}table{width:100%;border-collapse:collapse;background:#fff}th,td{border-bottom:1px solid var(--line);padding:8px;text-align:left;font-size:14px;vertical-align:top}
 footer.biz{border-top:1px solid var(--line);background:#fff;padding:22px 0;font-size:13px;color:var(--muted)}footer.biz p{margin:4px 0}
 .tabs{display:flex;gap:8px;margin:14px 0;overflow-x:auto;padding-bottom:4px}.tabs button,th,.nowrap{white-space:nowrap}
-.problems{margin:8px 0 0;padding-left:20px}.next{font-weight:700}.next.err{color:var(--red)}.next.ok{color:var(--brand)}
+.problems{margin:8px 0 0;padding-left:20px}
+.studio .notice{margin:10px 0}.mine-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0}.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:99px;padding:6px 12px;font-weight:600;font-size:14px}.chip.on{border-color:var(--brand);box-shadow:0 0 0 2px #cfe5da}.chip small{color:var(--muted);font-weight:500;margin-left:6px}.chip small.err{color:var(--red)}
+.ptabs{margin:12px 0 4px;border-bottom:1px solid var(--line);padding-bottom:8px}.ptabs .dot{display:inline-block;min-width:18px;padding:0 5px;border-radius:99px;background:var(--red);color:#fff;font-size:12px;line-height:18px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:0 16px}.span2{grid-column:1/-1}
+@media(max-width:640px){.grid2,.grid3{grid-template-columns:1fr}}
+.rw-head,.rw{display:grid;grid-template-columns:3fr 1.2fr 1.3fr .8fr auto;gap:8px;align-items:start}.rw-head{font-size:13px;color:var(--muted);font-weight:700;padding:4px 0}
+.rw{border-bottom:1px solid var(--line);padding:8px 0}.rw input,.rw select{padding:7px 8px}.rw .sub{display:grid;gap:6px}.rw .del{background:#fff;color:var(--red);border:1px solid #e6c9c9;padding:7px 10px}
+@media(max-width:640px){.rw-head{display:none}.rw{grid-template-columns:1fr 1fr}.rw .sub{grid-column:1/-1}}
+.actionbar{position:sticky;bottom:0;z-index:3;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:#fff;border-top:1px solid var(--line);margin:16px -18px -18px;padding:12px 18px;border-radius:0 0 14px 14px}
+.ab-msg{flex:1;min-width:220px;font-size:14px}.ab-msg.err{color:var(--red)}.ab-msg.ok{color:var(--brand)}.ab-msg .problems{margin:4px 0 0;font-size:13px}.ab-btns{display:flex;gap:8px}.next{font-weight:700}.next.err{color:var(--red)}.next.ok{color:var(--brand)}
 @media(max-width:640px){table.list,table.list tbody,table.list tr,table.list td{display:block;width:100%}table.list tr:first-child{display:none}table.list tr{border-bottom:1px solid var(--line);padding:8px 0}table.list td{border:0;padding:3px 8px}}.tabs button{background:#fff;color:var(--ink);border:1px solid var(--line)}.tabs .count{display:inline-block;min-width:22px;margin-left:4px;padding:0 6px;border-radius:99px;background:#e7f1ec;color:var(--brand);font-size:13px;line-height:20px}.tabs button.on .count{background:#fff}.tabs button.empty .count{background:#eceeed;color:var(--muted)}.tabs button.on{background:var(--brand);color:#fff}
 .hide{display:none!important}`;
 
@@ -333,9 +343,11 @@ function studioClient(cfg) {
     return d;
   }
   function say(t, type = '', items = []) {
-    for (const id of ['state', 'stateBottom']) {
+    const editorOpen = $('editor') && !$('editor').classList.contains('hide');
+    $('state').classList.toggle('hide', editorOpen);
+    for (const id of editorOpen ? ['stateBottom'] : ['state']) {
       const box = $(id); if (!box) continue;
-      box.className = 'notice ' + type; box.textContent = t;
+      box.className = (id === 'stateBottom' ? 'ab-msg ' : 'notice ') + type; box.textContent = t;
       if (items.length) { const ul = document.createElement('ul'); ul.className = 'problems'; items.forEach(i => { const li = document.createElement('li'); li.textContent = i; ul.appendChild(li); }); box.appendChild(ul); }
     }
   }
@@ -344,15 +356,27 @@ function studioClient(cfg) {
     return ({ review: ['', '운영자 심사 대기'], waiting_payout: ['', '정산대행 준비 후 공개'], live: ['ok', '모금 중'], closed: ['', '종료'] })[c.status] || ['', ''];
   }
   function rewardRow(r = {}) {
-    const div = document.createElement('div'); div.className = 'reward';
-    div.innerHTML = `<div class="cols"><div><label>이름</label><input data-k="title" maxlength="80" value="${esc(r.title)}"><label>설명</label><input data-k="description" maxlength="400" value="${esc(r.description)}"></div>
-<div><label>금액(원)</label><input data-k="amount" type="number" min="1000" step="1000" value="${esc(r.amount)}"><label>전달 방식</label><select data-k="delivery">${Object.entries(cfg.delivery).map(([k, v]) => `<option value="${k}"${r.delivery === k ? ' selected' : ''}>${k === 'digital' && !cfg.digital ? v + ' (무형 결제 상점 승인 후 가능)' : v}</option>`).join('')}</select>
-<label>수량 한정(0=무제한)</label><input data-k="limit" type="number" min="0" value="${esc(r.limit || 0)}"><label>예상 전달 시기</label><input data-k="estimatedDelivery" maxlength="80" value="${esc(r.estimatedDelivery)}"></div></div>
-<input type="hidden" data-k="id" value="${esc(r.id)}"><button type="button" class="ghost" data-del>삭제</button>`;
+    const div = document.createElement('div'); div.className = 'rw reward-row';
+    const opts = Object.entries(cfg.delivery).map(([k, v]) => `<option value="${k}"${r.delivery === k ? ' selected' : ''}>${k === 'digital' && !cfg.digital ? v + ' (승인 후)' : v}</option>`).join('');
+    div.innerHTML = `<div class="sub"><input data-k="title" maxlength="80" placeholder="이름 (예: 종이책 1권)" value="${esc(r.title)}"><input data-k="description" maxlength="400" placeholder="설명" value="${esc(r.description)}"></div>
+<div class="sub"><input data-k="amount" type="number" min="1000" step="1000" placeholder="금액" value="${esc(r.amount)}"><input data-k="estimatedDelivery" maxlength="80" placeholder="전달 시기" value="${esc(r.estimatedDelivery)}"></div>
+<select data-k="delivery">${opts}</select><input data-k="limit" type="number" min="0" title="0=무제한" placeholder="0=무제한" value="${esc(r.limit || 0)}">
+<input type="hidden" data-k="id" value="${esc(r.id)}"><button type="button" class="del" data-del title="삭제">✕</button>`;
     div.querySelector('[data-del]').onclick = () => div.remove();
     $('rewards').appendChild(div);
   }
-  function fill(c = {}) {
+  const PANE_RULES = [['rewards', /리워드|후원 금액|선택지|디지털|기부형/], ['refund', /반환/], ['goal', /목표 금액|모금 기간|시작일|종료일|1,000만원|10,000,000/], ['story', /이야기|\[확인필요\]/], ['basic', /./]];
+  const paneOf = msg => PANE_RULES.find(([, re]) => re.test(msg))[0];
+  function showPane(k) {
+    document.querySelectorAll('[data-pane]').forEach(b => b.classList.toggle('on', b.dataset.pane === k));
+    document.querySelectorAll('.pane').forEach(p => p.classList.toggle('hide', p.dataset.for !== k));
+  }
+  function markPanes(problems = []) {
+    const counts = {}; problems.forEach(m => { const k = paneOf(m); counts[k] = (counts[k] || 0) + 1; });
+    document.querySelectorAll('[data-pane]').forEach(b => { const d = b.querySelector('.dot'); const n = counts[b.dataset.pane] || 0; d.textContent = n; d.classList.toggle('hide', !n); });
+    return counts;
+  }
+  function fill(c = {}, keepPane = false) {
     editing = c.id || null;
     for (const k of ['slug', 'title', 'summary', 'story', 'organizerName', 'contactEmail', 'goalAmount', 'startsOn', 'endsOn', 'refundPolicy']) $('f_' + k).value = c[k] ?? '';
     $('f_kind').value = c.kind || 'reward';
@@ -365,19 +389,21 @@ function studioClient(cfg) {
     $('reviewNote').textContent = c.reviewNote ? '심사 의견: ' + c.reviewNote : '';
     $('btnSubmit').classList.toggle('hide', !editing); $('btnWithdraw').classList.toggle('hide', c.status !== 'review');
     $('btnWithdraw').disabled = false; $('editor').classList.remove('hide');
+    const counts = markPanes(locked ? [] : (c.problems || []));
+    if (!keepPane) showPane(Object.keys(counts)[0] && !locked ? paneOf((c.problems || [])[0]) : 'basic');
     const [type, text] = nextStep(c);
     if (editing) say(c.problems?.length && !locked ? '심사 요청 전에 아래를 고쳐 주세요.' : `상태: ${cfg.status[c.status] || ''} — ${text}`, c.problems?.length && !locked ? 'err' : type, locked ? [] : (c.problems || []));
   }
   function collect() {
     const body = {}; for (const k of ['slug', 'title', 'summary', 'story', 'organizerName', 'contactEmail', 'goalAmount', 'startsOn', 'endsOn', 'refundPolicy', 'kind']) body[k] = $('f_' + k).value;
     body.goalAmount = Number(body.goalAmount);
-    body.rewards = [...document.querySelectorAll('#rewards .reward')].map(n => Object.fromEntries([...n.querySelectorAll('[data-k]')].map(i => [i.dataset.k, i.type === 'number' ? Number(i.value) : i.value])));
+    body.rewards = [...document.querySelectorAll('#rewards .reward-row')].map(n => Object.fromEntries([...n.querySelectorAll('[data-k]')].map(i => [i.dataset.k, i.type === 'number' ? Number(i.value) : i.value])));
     if (me?.isOperator) body.ownerOrg = $('f_ownerOrg').value;
     return body;
   }
   function render() {
-    $('mine').innerHTML = list.length ? `<table class="list"><tr><th>펀딩</th><th>상태</th><th>다음 할 일</th><th>목표 · 모금</th><th></th></tr>${list.map(c => { const [t, n] = nextStep(c); return `<tr><td><b>${esc(c.title)}</b><br><span class="muted">/funding/c/${esc(c.slug)}</span></td><td class="nowrap">${esc(cfg.status[c.status])}</td><td><span class="next ${t}">${esc(n)}</span></td><td class="nowrap">${wonf(c.goalAmount)} · ${wonf(c.raisedAmount)}</td><td><button class="ghost" data-open="${esc(c.id)}">열기</button></td></tr>`; }).join('')}</table>` : '<p class="muted">아직 만든 펀딩이 없습니다.</p>';
-    document.querySelectorAll('[data-open]').forEach(b => b.onclick = () => fill(list.find(c => c.id === b.dataset.open)));
+    $('mine').innerHTML = list.length ? list.map(c => { const [t, n] = nextStep(c); return `<button type="button" class="chip${c.id === editing ? ' on' : ''}" data-open="${esc(c.id)}">${esc(c.title)}<small>${esc(cfg.status[c.status])}</small>${n && n !== cfg.status[c.status] ? `<small class="${t}">${esc(n)}</small>` : ''}</button>`; }).join('') : '<span class="muted">아직 만든 펀딩이 없습니다.</span>';
+    document.querySelectorAll('[data-open]').forEach(b => b.onclick = () => { fill(list.find(c => c.id === b.dataset.open)); render(); });
   }
   async function load() { list = (await api('/studio/campaigns')).campaigns || []; render(); }
   async function save(e) {
@@ -385,17 +411,17 @@ function studioClient(cfg) {
     try {
       const body = collect();
       const d = editing ? await api('/studio/campaigns/' + editing, { method: 'PUT', body: JSON.stringify(body) }) : await api('/studio/campaigns', { method: 'POST', body: JSON.stringify(body) });
-      await load(); fill({ ...d.campaign, problems: d.warnings || [] });
+      await load(); fill({ ...d.campaign, problems: d.warnings || [] }, true); render();
       if (d.warnings?.length) say('저장했습니다. 다만 심사를 요청하려면 아래를 고쳐 주세요.', 'err', d.warnings);
       else say("저장했습니다. 이제 아래 '심사 요청' 버튼을 눌러 주세요.", 'ok');
       return true;
-    } catch (x) { say(x.message, 'err', x.data?.errors || []); return false; }
+    } catch (x) { const errs = x.data?.errors || []; markPanes(errs); if (errs.length) showPane(paneOf(errs[0])); say(x.message, 'err', errs); return false; }
   }
   async function act(path, confirmText) {
     if (confirmText && !confirm(confirmText)) return;
     try {
       if (path === 'submit' && !(await save())) return;
-      const d = await api(`/studio/campaigns/${editing}/${path}`, { method: 'POST', body: '{}' }); await load(); fill(d.campaign); say(d.message, 'ok');
+      const d = await api(`/studio/campaigns/${editing}/${path}`, { method: 'POST', body: '{}' }); await load(); fill(d.campaign, true); render(); say(d.message, 'ok');
     } catch (x) { say(x.message, 'err', x.data?.errors || []); }
   }
   (async () => {
@@ -405,10 +431,12 @@ function studioClient(cfg) {
       $('who').textContent = me.email + (me.isOperator ? ' · 운영자' : ' · 에코디 회원');
       $('ownerBox').classList.toggle('hide', !me.isOperator);
       $('f_ownerOrg').innerHTML = Object.entries(me.orgs).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
-      $('btnNew').onclick = () => fill({}); $('btnAddReward').onclick = () => rewardRow({}); $('form').onsubmit = save;
+      $('btnNew').onclick = () => { fill({}); render(); }; $('btnAddReward').onclick = () => rewardRow({}); $('form').onsubmit = save;
+      document.querySelectorAll('[data-pane]').forEach(b => b.onclick = () => showPane(b.dataset.pane));
       $('btnSubmit').onclick = () => act('submit', '저장하고 심사를 요청할까요? 심사 중에는 수정할 수 없습니다.');
       $('btnWithdraw').onclick = () => act('withdraw');
-      $('app').classList.remove('hide'); await load(); say('펀딩 계획서를 작성하고 심사를 요청할 수 있습니다.', 'ok');
+      $('app').classList.remove('hide'); await load();
+      if (list.length) { fill(list[0]); render(); } else say('새 펀딩을 눌러 계획서를 작성해 보세요.', 'ok');
     } catch (x) { say(x.message, 'err'); }
   })();
   $('loginBtn').onclick = () => auth.login();
@@ -473,24 +501,31 @@ ${['live', 'waiting_payout'].includes(c.status) ? `<button class="ghost" data-ac
 export function renderStudio({ digitalApproved = false } = {}) {
   const cfg = { api: API, delivery: DELIVERY, status: STATUS, refund: DEFAULT_REFUND_POLICY, digital: Boolean(digitalApproved) };
   const kindOptions = Object.entries(KINDS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('') + Object.entries(FUTURE_KINDS).map(([k, v]) => `<option value="${k}" disabled>${v} (3단계 준비 중)</option>`).join('');
-  return shell('펀딩 만들기 · 에코디 펀딩', `<main><h1>펀딩 만들기</h1><p class="lead">에코디 회원이면 누구나 펀딩을 계획하고 심사를 요청할 수 있습니다. <span id="who" class="muted"></span></p>
+  const panes = [['basic', '기본 정보'], ['story', '소개'], ['goal', '목표·기간'], ['rewards', '후원 선택지'], ['refund', '반환 정책']];
+  return shell('펀딩 만들기 · 에코디 펀딩', `<main class="studio"><div class="row"><h1 style="margin:0">펀딩 만들기</h1><span id="who" class="muted"></span></div>
 <div id="state" class="notice">로그인 상태를 확인하고 있습니다…</div><div id="loginBox" class="hide"><button id="loginBtn">에코디 계정으로 로그인</button></div>
-<div id="app" class="hide"><div class="row"><h2>내 펀딩</h2><button id="btnNew">새 펀딩 계획서</button></div><div id="mine"></div>
-<div id="editor" class="card hide" style="margin-top:18px"><h2 id="formTitle">새 펀딩 계획서</h2><p id="reviewNote" class="muted"></p>
-<form id="form"><div class="cols"><div>
-<label for="f_title">펀딩 제목</label><input id="f_title" maxlength="80" required>
-<label for="f_summary">한 줄 소개</label><input id="f_summary" maxlength="200">
-<label for="f_story">펀딩 이야기 (왜, 무엇을, 어떻게)</label><textarea id="f_story" maxlength="12000" style="min-height:220px"></textarea>
-<label for="f_refundPolicy">반환·환불 정책</label><textarea id="f_refundPolicy" maxlength="2000"></textarea></div><div>
-<label for="f_kind">펀딩 종류</label><select id="f_kind">${kindOptions}</select>
+<div id="app" class="hide"><div class="mine-bar"><b>내 펀딩</b><div id="mine" class="chips"></div><button id="btnNew" class="ghost">+ 새 펀딩</button></div>
+<div id="editor" class="card hide"><div class="row"><h2 id="formTitle" style="margin:0">새 펀딩 계획서</h2><span id="reviewNote" class="muted"></span></div>
+<form id="form"><div class="tabs ptabs">${panes.map(([k, v], i) => `<button type="button" data-pane="${k}"${i ? '' : ' class="on"'}>${v} <span class="dot hide"></span></button>`).join('')}</div>
+<section class="pane" data-for="basic"><div class="grid2">
+<div><label for="f_title">펀딩 제목</label><input id="f_title" maxlength="80" required></div>
+<div><label for="f_kind">펀딩 종류</label><select id="f_kind">${kindOptions}</select></div>
+<div class="span2"><label for="f_summary">한 줄 소개</label><input id="f_summary" maxlength="200"></div>
+<div><label for="f_slug">주소 이름 (ekodi.kr/funding/c/…)</label><input id="f_slug" maxlength="40" placeholder="예: new-book-2027"></div>
 <div id="ownerBox" class="hide"><label for="f_ownerOrg">모금 주체(운영자 전용)</label><select id="f_ownerOrg"></select></div>
-<label for="f_slug">주소 이름 (ekodi.kr/funding/c/…)</label><input id="f_slug" maxlength="40" placeholder="예: new-book-2027">
-<label for="f_goalAmount">목표 금액(원, ${won(GOAL_MAX)} 이하)</label><input id="f_goalAmount" type="number" min="${GOAL_MIN}" max="${GOAL_MAX}" step="10000">
-<label for="f_startsOn">시작일</label><input id="f_startsOn" type="date"><label for="f_endsOn">종료일 (최대 ${MAX_DAYS}일)</label><input id="f_endsOn" type="date">
-<label for="f_organizerName">개설자(단체) 이름</label><input id="f_organizerName" maxlength="60"><label for="f_contactEmail">문의 이메일</label><input id="f_contactEmail" type="email" maxlength="254"></div></div>
-<h3>후원 선택지</h3><div id="rewards"></div><button type="button" class="ghost" id="btnAddReward">선택지 추가</button>
-<div class="row" style="margin-top:16px;justify-content:flex-start"><button type="submit" class="ghost">저장</button><button type="button" id="btnSubmit" class="hide">저장하고 심사 요청</button><button type="button" id="btnWithdraw" class="ghost hide">심사 요청 취소</button></div><div id="stateBottom" class="notice hide"></div></form>
-<p class="muted">공개 모금은 펀딩마다 ${won(PUBLIC_CAP_KRW)} 미만입니다. 1단계에서는 에코디 소속 조직의 펀딩부터 결제가 열리고, 회원 펀딩은 심사 통과 후 정산대행 준비가 끝나는 대로 열립니다.</p></div></div></main>`,
+<div><label for="f_organizerName">개설자(단체) 이름</label><input id="f_organizerName" maxlength="60"></div>
+<div><label for="f_contactEmail">문의 이메일</label><input id="f_contactEmail" type="email" maxlength="254"></div></div></section>
+<section class="pane hide" data-for="story"><label for="f_story">펀딩 이야기 — 왜, 무엇을, 어떻게, 후원금은 어디에</label><textarea id="f_story" maxlength="12000" style="min-height:300px"></textarea></section>
+<section class="pane hide" data-for="goal"><div class="grid3">
+<div><label for="f_goalAmount">목표 금액(원)</label><input id="f_goalAmount" type="number" min="${GOAL_MIN}" max="${GOAL_MAX}" step="10000"><p class="muted">${won(GOAL_MIN)} ~ ${won(GOAL_MAX)}</p></div>
+<div><label for="f_startsOn">시작일</label><input id="f_startsOn" type="date"></div>
+<div><label for="f_endsOn">종료일</label><input id="f_endsOn" type="date"><p class="muted">최대 ${MAX_DAYS}일</p></div></div>
+<p class="muted">공개 모금은 펀딩마다 ${won(PUBLIC_CAP_KRW)} 미만입니다.</p></section>
+<section class="pane hide" data-for="rewards"><div class="rw-head"><span>이름 · 설명</span><span>금액(원)</span><span>전달 방식</span><span>수량</span><span></span></div><div id="rewards"></div>
+<button type="button" class="ghost" id="btnAddReward">+ 선택지 추가</button></section>
+<section class="pane hide" data-for="refund"><label for="f_refundPolicy">반환·환불 정책</label><textarea id="f_refundPolicy" maxlength="2000" style="min-height:200px"></textarea></section>
+<div class="actionbar"><div id="stateBottom" class="ab-msg"></div><div class="ab-btns"><button type="submit" class="ghost">저장</button><button type="button" id="btnSubmit" class="hide">저장하고 심사 요청</button><button type="button" id="btnWithdraw" class="ghost hide">심사 요청 취소</button></div></div></form>
+</div></div></main>`,
   { noindex: true, scripts: `${inline(studioClient, `{...${JSON.stringify(cfg)},helpers:${authClientHelpers.toString()}}`)}` });
 }
 
