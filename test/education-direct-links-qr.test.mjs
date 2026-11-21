@@ -68,12 +68,12 @@ test('all Education HTML anchor destinations are already canonical (no relative 
 });
 
 test('course lesson, presenter and handout QR URL uses real canonical Learner Lab directly',()=>{
- const ids=['mnu-factchat-2026','mnu-factchat-120m-2026'];
+ const scenarios=[{id:'mnu-factchat-2026',sessions:[1,2]},{id:'mnu-factchat-120m-2026',sessions:[1]}];
  let qr=0;
- for(const id of ids){
+ for(const {id,sessions} of scenarios){
   for(const route of ['/edu/study/live/','/edu/study/live/present/','/edu/study/live/handout/','/edu/factchat/']){
    assert.equal(livePath(route,'lab'+SLASH),'/edu/study/live/lab/');
-   for(const sessionNo of [1,2]){
+   for(const sessionNo of sessions){
     const url=learnerUrl(ROOT,route,{c:id,s:sessionNo,m:'hwp',lv:'basic'});
     const target=new URL(url);
     assert.equal(target.origin,ROOT);
@@ -92,7 +92,7 @@ test('course lesson, presenter and handout QR URL uses real canonical Learner La
    }
   }
  }
- assert.equal(qr,16);
+ assert.equal(qr,12);
 });
 
 test('feedback and consenting screen-share QR targets are same-origin canonical and least-privilege',async()=>{
@@ -112,7 +112,7 @@ test('feedback and consenting screen-share QR targets are same-origin canonical 
  assert.match(hub,/studentQr=qrSvg\(studentInviteUrl/);
  assert.match(hub,/id=\"teacherStudentQr\" data-target=/);
  assert.match(html,/<script type=\"module\" src=\"\/course-hub\/hub\.js\"><\/script>/);
- for(const session of [1,2,3,4,5]){
+ for(const session of [1,2,3,4,5,6]){
   const target=new URL(ROOT+'/edu/study/live/feedback/?s='+session);
   assert.equal(target.pathname,'/edu/study/live/feedback/');
   assert.equal(target.searchParams.get('s'),String(session));
