@@ -1,13 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import { readFile } from 'node:fs/promises';
 import {
-  decryptSegment, deriveContentKeyBytes, encryptSegment, handleMediaShieldRequest, unwrapContentKey,
-  MEDIA_SHIELD_PLAYER_SCRIPT, publicManifestView,
+  externalEmbedUrl, handleMediaShieldRequest, MEDIA_SHIELD_PLAYER_SCRIPT, parseExternalVideoUrl, publicManifestView,
 } from '../ekodi-media-shield.js';
 import { mediaShieldPageResponse, MEDIA_SHIELD_PAGE_SCRIPTS } from '../ekodi-media-shield-pages.js';
-import { MP4BOX_SOURCE, MP4BOX_VERSION } from '../vendor/mp4box/mp4box-source.js';
 
 const SECRET='t'.repeat(40);
 const MASTER='m'.repeat(48);
@@ -37,14 +34,6 @@ function makeEnv(){
 const req=(method,path,{token,body,raw}={})=>new Request('https://ekodi.kr/api/media-shield/'+path,{method,headers:{...(token?{authorization:'Bearer '+token}:{}),...(raw?{'content-type':'application/octet-stream'}:body!==undefined?{'content-type':'application/json'}:{})},body:raw||(body!==undefined?JSON.stringify(body):undefined)});
 const call=(env,...args)=>handleMediaShieldRequest(req(...args),env,{});
 
-async function adminKey(env,contentId){
-  const viewer=await crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'},false,['deriveBits']);
-  const pub=await crypto.subtle.exportKey('jwk',viewer.publicKey);
-  const res=await call(env,'POST','admin/key/'+contentId,{token:'admin',body:{publicKey:{kty:pub.kty,crv:pub.crv,x:pub.x,y:pub.y}}});
-  assert.equal(res.status,200);
-  return unwrapContentKey((await res.json()).envelope,viewer.privateKey);
-}
-
 test('admin API requires a real EKODI admin session',async()=>{
   const env=makeEnv();
   assert.equal((await call(env,'GET','admin/list')).status,401);
@@ -53,49 +42,61 @@ test('admin API requires a real EKODI admin session',async()=>{
   assert.equal((await call(env,'GET','admin/list',{token:'admin'})).status,200);
 });
 
-test('studio flow: new → key → encrypted parts → publish → member plays → delete',async()=>{
+test('owner policy: video files are never stored on EKODI',async()=>{
   const env=makeEnv();
-  const {contentId}=await (await call(env,'POST','admin/new',{token:'admin',body:{}})).json();
-  assert.match(contentId,/^ms-\d{8}-[0-9a-f]{8}$/);
-  const key=await adminKey(env,contentId);
-  // the admin browser key can only encrypt in practice; the viewer derives the same content key
-  const parts={'init.bin':new Uint8Array([0,0,0,8,1,2,3,4]),'s00001.bin':new Uint8Array(64).fill(7),'s00002.bin':new Uint8Array(64).fill(9)};
-  const keyBytes=await deriveContentKeyBytes(MASTER,contentId);
-  for(const [name,plain] of Object.entries(parts)){
-    const sealed=await encryptSegment(keyBytes,contentId,name,plain);
-    assert.equal((await call(env,'PUT',`admin/part/${contentId}/${name}`,{token:'admin',raw:sealed})).status,200);
+  for(const [method,path,opts] of [['POST','admin/new',{body:{}}],['POST','admin/key/ms-20261121-aaaabbbb',{body:{}}],['PUT','admin/part/ms-20261121-aaaabbbb/init.bin',{raw:new Uint8Array(64)}],['POST','admin/publish/ms-20261121-aaaabbbb',{body:{}}]]){
+    const res=await call(env,method,path,{token:'admin',...opts});
+    assert.equal(res.status,410,path);
+    assert.equal((await res.json()).code,'VIDEO_STORAGE_DISABLED');
   }
-  assert.equal((await call(env,'PUT',`admin/part/${contentId}/../x.bin`,{token:'admin',raw:new Uint8Array(64)})).status!==200,true);
-  assert.equal((await call(env,'PUT',`admin/part/${contentId}/evil.js`,{token:'admin',raw:new Uint8Array(64)})).status,400);
-  const tooFew=await call(env,'POST','admin/publish/'+contentId,{token:'admin',body:{title:'주일 말씀',mime:'video/mp4; codecs="avc1.4d401e, mp4a.40.2"',times:[0,10,20],duration:30,audience:'members'}});
-  assert.equal(tooFew.status,409,'missing s00003 must block publishing');
-  assert.equal((await call(env,'POST','admin/publish/'+contentId,{token:'admin',body:{title:'x',mime:'text/html',times:[0,10],duration:20,audience:'members'}})).status,400);
-  assert.equal((await call(env,'POST','admin/publish/'+contentId,{token:'admin',body:{title:'x',mime:'video/mp4; codecs="avc1.4d401e"',times:[0,10],duration:20,audience:'subjects',subjects:'not-an-email'}})).status,400);
-  const published=await call(env,'POST','admin/publish/'+contentId,{token:'admin',body:{title:'<b>주일 말씀</b>',mime:'video/mp4; codecs="avc1.4d401e, mp4a.40.2"',times:[0,10],duration:20,audience:'members'}});
-  assert.equal(published.status,200);
-  assert.equal((await published.json()).watchPath,'/my/media/'+contentId);
-  // immutable after publishing
-  assert.equal((await call(env,'PUT',`admin/part/${contentId}/s00001.bin`,{token:'admin',raw:new Uint8Array(64)})).status,409);
-  assert.equal((await call(env,'POST','admin/key/'+contentId,{token:'admin',body:{}})).status,409);
-  // listing
+  assert.equal(env.MEDIA_SHIELD_BUCKET.store.size,0);
+});
+
+test('external video URLs are parsed strictly',()=>{
+  assert.deepEqual(parseExternalVideoUrl('https://youtu.be/dQw4w9WgXcQ?t=90'),{provider:'youtube',videoId:'dQw4w9WgXcQ',start:90});
+  assert.deepEqual(parseExternalVideoUrl('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=1m5s'),{provider:'youtube',videoId:'dQw4w9WgXcQ',start:65});
+  assert.equal(parseExternalVideoUrl('https://m.youtube.com/shorts/dQw4w9WgXcQ').videoId,'dQw4w9WgXcQ');
+  assert.equal(parseExternalVideoUrl('https://www.youtube.com/live/dQw4w9WgXcQ').videoId,'dQw4w9WgXcQ');
+  assert.deepEqual(parseExternalVideoUrl('https://vimeo.com/123456789/abcdef1234'),{provider:'vimeo',videoId:'123456789',hash:'abcdef1234',start:0});
+  for(const bad of ['','javascript:alert(1)','https://evil.example/watch?v=dQw4w9WgXcQ','https://youtube.com/watch?v=short','https://youtube.com/watch?v=dQw4w9WgXcQ"><script>','ftp://youtu.be/dQw4w9WgXcQ'])
+    assert.equal(parseExternalVideoUrl(bad),null,bad);
+  assert.equal(externalEmbedUrl({provider:'youtube',videoId:'dQw4w9WgXcQ',start:90}),'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&modestbranding=1&playsinline=1&iv_load_policy=3&start=90');
+  assert.equal(externalEmbedUrl({provider:'vimeo',videoId:'123456789',hash:'abcdef1234'}),'https://player.vimeo.com/video/123456789?dnt=1&title=0&byline=0&portrait=0&h=abcdef1234');
+  assert.equal(externalEmbedUrl({provider:'youtube',videoId:'x"onload'}),'');
+});
+
+test('link flow: register → permitted member gets embed (never in HTML) → delete',async()=>{
+  const env=makeEnv();
+  assert.equal((await call(env,'POST','admin/link',{token:'member',body:{url:'https://youtu.be/dQw4w9WgXcQ',audience:'members'}})).status,403);
+  assert.equal((await call(env,'POST','admin/link',{token:'admin',body:{url:'https://example.com/v.mp4',audience:'members'}})).status,400);
+  assert.equal((await call(env,'POST','admin/link',{token:'admin',body:{url:'https://youtu.be/dQw4w9WgXcQ',audience:'subjects',subjects:'nope'}})).status,400);
+  const res=await call(env,'POST','admin/link',{token:'admin',body:{url:'https://youtu.be/dQw4w9WgXcQ',title:'<i>주일 말씀</i>',audience:'members'}});
+  assert.equal(res.status,200);
+  const {contentId,watchPath}=await res.json();
+  assert.equal(watchPath,'/my/media/'+contentId);
+  const stored=[...env.MEDIA_SHIELD_BUCKET.store.keys()];
+  assert.deepEqual(stored,[`media-shield/${contentId}/manifest.json`],'only metadata is stored');
   const list=await (await call(env,'GET','admin/list',{token:'admin'})).json();
-  assert.equal(list.items[0].contentId,contentId);
-  assert.equal(list.items[0].title,'b주일 말씀/b');
-  assert.doesNotMatch(list.items[0].title,/[<>]/);
-  // member signed in through the EKODI session plays it
-  const tok=await call(env,'POST','token',{token:'member',body:{contentId}});
-  assert.equal(tok.status,200);
-  const {token}=await tok.json();
-  const manifest=(await (await handleMediaShieldRequest(new Request(`https://ekodi.kr/api/media-shield/manifest/${contentId}?t=${token}`),env,{})).json()).manifest;
-  assert.deepEqual(manifest.times,[0,10]);
-  const seg=await handleMediaShieldRequest(new Request(`https://ekodi.kr/api/media-shield/segment/${contentId}/s00002.bin?t=${token}`),env,{});
-  // the key delivered (wrapped) to the admin browser is exactly the server-derived content key
-  assert.deepEqual(await decryptSegment(key,contentId,'s00002.bin',new Uint8Array(await seg.arrayBuffer())),parts['s00002.bin']);
-  assert.deepEqual(await decryptSegment(keyBytes,contentId,'s00002.bin',env.MEDIA_SHIELD_BUCKET.store.get(`media-shield/${contentId}/s00002.bin`)),parts['s00002.bin']);
-  // delete removes everything
-  const deleted=await (await call(env,'DELETE','admin/content/'+contentId,{token:'admin'})).json();
-  assert.equal(deleted.deleted,4);
-  assert.equal([...env.MEDIA_SHIELD_BUCKET.store.keys()].length,0);
+  assert.equal(list.items[0].provider,'youtube');
+  assert.equal(list.items[0].title,'i주일 말씀/i');
+  // the watch page HTML never carries the video address
+  const page=await mediaShieldPageResponse(new Request('https://ekodi.kr'+watchPath)).text();
+  assert.doesNotMatch(page,/dQw4w9WgXcQ|youtube/);
+  assert.equal((await call(env,'POST','token',{body:{contentId}})).status,401);
+  const view=await call(env,'POST','token',{token:'member',body:{contentId}});
+  assert.equal(view.status,200);
+  const body=await view.json();
+  assert.equal(body.kind,'link');
+  assert.match(body.embedUrl,/^https:\/\/www\.youtube-nocookie\.com\/embed\/dQw4w9WgXcQ\?/);
+  assert.match(body.watermark,/^EKODI me\*\*\*@ekodi\.kr /);
+  assert.equal(view.headers.get('cache-control'),'private, no-store, max-age=0');
+  const {token}=await (await call(env,'POST','token',{token:'member',body:{contentId}})).json().catch(()=>({}));
+  const t=(await (await handleMediaShieldRequest(req('POST','token',{token:'admin',body:{contentId}}),env,{})).json());
+  assert.equal(t.kind,'link');
+  const manifest=await handleMediaShieldRequest(new Request(`https://ekodi.kr/api/media-shield/manifest/${contentId}?t=${encodeURIComponent(token||'')}`),env,{});
+  assert.notEqual(manifest.status,500);
+  assert.equal((await call(env,'DELETE','admin/content/'+contentId,{token:'admin'})).status,200);
+  assert.equal(env.MEDIA_SHIELD_BUCKET.store.size,0);
 });
 
 test('subject-only content: listed people and admins only',async()=>{
@@ -111,6 +112,7 @@ test('studio and watch pages are served with a strict CSP and safe ids only',asy
   assert.equal(studio.status,200);
   assert.match(studio.headers.get('content-security-policy'),/script-src 'self';/);
   assert.match(studio.headers.get('content-security-policy'),/frame-ancestors 'none'/);
+  assert.match(studio.headers.get('content-security-policy'),/frame-src https:\/\/www\.youtube-nocookie\.com https:\/\/player\.vimeo\.com;/);
   const body=await studio.text();
   assert.doesNotMatch(body,/<script>(?!<)/,'no inline scripts');
   const watch=await mediaShieldPageResponse(new Request('https://ekodi.kr/my/media/ms-20261121-aaaabbbb')).text();
@@ -118,23 +120,17 @@ test('studio and watch pages are served with a strict CSP and safe ids only',asy
   assert.equal(mediaShieldPageResponse(new Request('https://ekodi.kr/my/media/%3Cscript%3E')),null);
   assert.equal(mediaShieldPageResponse(new Request('https://ekodi.kr/my/media/')),null);
   assert.equal(mediaShieldPageResponse(new Request('https://ekodi.kr/my/profile')),null);
-  for(const path of ['/__ekodi/mp4box.js','/__ekodi/media-studio.js','/__ekodi/media-watch.js','/__ekodi/media-pages.css'])
+  assert.equal(mediaShieldPageResponse(new Request('https://ekodi.kr/__ekodi/mp4box.js')),null,'no video packaging library is served');
+  for(const path of ['/__ekodi/media-studio.js','/__ekodi/media-watch.js','/__ekodi/media-pages.css'])
     assert.equal(mediaShieldPageResponse(new Request('https://ekodi.kr'+path)).status,200,path);
 });
 
 test('client scripts parse and never carry bundler helpers',()=>{
-  for(const script of [MEDIA_SHIELD_PAGE_SCRIPTS.studio,MEDIA_SHIELD_PAGE_SCRIPTS.watch,MEDIA_SHIELD_PLAYER_SCRIPT,MP4BOX_SOURCE]){
+  for(const script of [MEDIA_SHIELD_PAGE_SCRIPTS.studio,MEDIA_SHIELD_PAGE_SCRIPTS.watch,MEDIA_SHIELD_PLAYER_SCRIPT]){
     new vm.Script(script);
     assert.doesNotMatch(script,/__name\(/);
   }
-  const sandbox={globalThis:{}};sandbox.globalThis=sandbox;vm.createContext(sandbox);vm.runInContext(MP4BOX_SOURCE,sandbox);
-  assert.equal(typeof sandbox.EkodiMp4Box.createFile,'function');
-  assert.equal(MP4BOX_VERSION,'2.6.0');
-});
-
-test('vendored mp4box keeps its BSD license next to it',async()=>{
-  const license=await readFile(new URL('../vendor/mp4box/LICENSE',import.meta.url),'utf8');
-  assert.match(license,/BSD|Redistribution and use in source and binary forms/);
+  assert.doesNotMatch(MEDIA_SHIELD_PAGE_SCRIPTS.studio,/type="file"|EkodiMp4Box|PUT/);
 });
 
 test('manifest view exposes segment times only when consistent',()=>{
