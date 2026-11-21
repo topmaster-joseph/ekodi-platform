@@ -50,7 +50,7 @@ export function siteChromeDefaults(siteName='',homeUrl=''){
       operator,
       contact,
       copyright:`© ${new Date().getFullYear()} EKODI (에코디). All rights reserved.`,
-      precedenceNotice:'사이트 운영정보 및 별도 정책은 해당 사이트의 운영주체를 기준으로 합니다.',
+      precedenceNotice:'각 서비스의 약관·개인정보·환불 정책은 해당 서비스의 별도 고지를 확인해 주세요.',
       legalLinks:base.legalLinks.map(item=>({...item})),
     },
   };
