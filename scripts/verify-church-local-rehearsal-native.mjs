@@ -11,7 +11,7 @@ const browser=await puppeteer.launch({
   executablePath,headless:true,
   args:['--no-sandbox','--disable-dev-shm-usage','--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--autoplay-policy=no-user-gesture-required']
 });
-const mutations=[];
+const forbiddenMutations=[],blockedBackgroundRequests=[];
 const report={url:'/live/church/',test:'fake-device-local-rehearsal',publicBroadcastStarted:false,serverMutations:0};
 try{
   const page=await browser.newPage();
@@ -21,7 +21,15 @@ try{
   page.on('request',request=>{
     // Fail closed: not even a bug may create a room, session, recording or external stream.
     if(!['GET','HEAD','OPTIONS'].includes(request.method())){
-      mutations.push({method:request.method(),path:new URL(request.url()).pathname});
+      // Deny every write, including third-party telemetry. Only ordinary Cloudflare
+      // challenge/RUM and visit-count attempts may be excluded from *broadcast* violations.
+      // Never log challenge tokens or user-specific URL paths.
+      const path=new URL(request.url()).pathname;
+      if(path.startsWith('/cdn-cgi/challenge-platform/')||path==='/cdn-cgi/rum'||path==='/api/telemetry/visit'){
+        blockedBackgroundRequests.push(path.startsWith('/cdn-cgi/')?'cloudflare-background':'visit-metrics');
+      }else{
+        forbiddenMutations.push({method:request.method(),category:path.startsWith('/api/realtime')?'realtime-broadcast':path.startsWith('/api/')?'unexpected-api-write':'unexpected-external-write'});
+      }
       void request.abort('blockedbyclient');
       return;
     }
@@ -73,8 +81,8 @@ try{
   }));
   assert.ok(mobile.stageWidth>240 && mobile.stageWidth<=mobile.windowWidth+2,'mobile program monitor must fit the viewport');
   assert.equal(mobile.horizontalOverflow,false,'mobile studio must not overflow horizontally');
-  assert.deepEqual(mutations,[],'local rehearsal may not perform a single HTTP mutation');
-  Object.assign(report,{desktopMonitorWidth:Math.round(desktop.width),mobileMonitorWidth:Math.round(mobile.stageWidth),videoTracks:playback.videoTracks,audioTracks:playback.audioTracks,recordedBytes:playback.bytes,decodedWidth:playback.decodedWidth,decodedHeight:playback.decodedHeight,playedSeconds:Number(playback.playedSeconds.toFixed(2)),mediaType:playback.mime,serverMutations:mutations.length,status:'pass'});
+  assert.deepEqual(forbiddenMutations,[],'local rehearsal may not attempt any broadcast or unexpected API mutation');
+  Object.assign(report,{desktopMonitorWidth:Math.round(desktop.width),mobileMonitorWidth:Math.round(mobile.stageWidth),videoTracks:playback.videoTracks,audioTracks:playback.audioTracks,recordedBytes:playback.bytes,decodedWidth:playback.decodedWidth,decodedHeight:playback.decodedHeight,playedSeconds:Number(playback.playedSeconds.toFixed(2)),mediaType:playback.mime,serverMutations:forbiddenMutations.length,blockedBackgroundRequests:blockedBackgroundRequests.length,status:'pass'});
   console.log(JSON.stringify(report));
 }finally{
   await mkdir('artifacts/church-live-private-rehearsal',{recursive:true});
