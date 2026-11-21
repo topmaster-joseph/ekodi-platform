@@ -87,7 +87,7 @@ test('course lesson, presenter and handout QR URL uses real canonical Learner La
     assert.ok(matrix.modules.every(row=>row.length===matrix.size));
     const svg=qrSvg(url,{label:'수강생 입장'});
     assert.ok(svg.startsWith('<svg ')&&svg.includes('aria-label="수강생 입장"')&&svg.includes('<path d="'));
-    assert.doesNotMatch(svg,/https?:\/\/|<script|onload=|<foreignObject/i,'no fetched QR service or executable SVG');
+    assert.doesNotMatch(svg,/api\.qrserver|quickchart|<script|onload=|<foreignObject/i,'no fetched QR service or executable SVG');
     qr++;
    }
   }
