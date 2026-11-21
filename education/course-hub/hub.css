@@ -77,3 +77,12 @@ body[data-area^="education-"] a{color:inherit}
 .skip{position:absolute;left:-9999px;top:10px;padding:10px;background:#fff;color:#123}.skip:focus{left:10px;z-index:99}
 @media(max-width:760px){.hub-split{grid-template-columns:1fr}.hub-section-head{display:block}.hub-section-head p{margin-top:8px}.hub-heading{margin:15px 0}}
 @media(max-width:460px){.hub-header{align-items:flex-start;flex-direction:column;padding:12px 0;gap:8px}.hub-main-nav{width:100%}.hub-main-nav a{flex:1;text-align:center;padding:10px 8px}.hub-stage{min-height:230px}.hub-actions a,.hub-actions button{flex:1}.hub-footer{min-height:65px}.signin-actions .hub-button{width:100%}}
+
+/* One QR per canonical learner course, usable on screen and on a printed course handout. */
+.hub-join-card{margin-top:14px;padding:15px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;border:1px solid #c9dce9;border-radius:14px;background:#f5faff}
+.hub-join-qr{width:clamp(130px,20vw,170px);flex-shrink:0;padding:7px;background:#fff;border-radius:10px;line-height:0}
+.hub-join-qr svg{display:block;width:100%;height:auto}
+.hub-join-card>div:last-child{min-width:0;flex:1 1 205px}
+.hub-join-card strong{font-size:14px}
+.hub-join-url{font-size:12px;overflow-wrap:anywhere;word-break:break-all;color:#28547a}
+@media print{.hub-join-card{break-inside:avoid}.hub-join-qr{width:42mm}}
