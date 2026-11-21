@@ -19,6 +19,7 @@ on:
       - 'funding-worker.js'
       - 'funding-staging-worker.js'
       - 'migrations/202611211000_funding_phase1.sql'
+      - 'migrations/202611211900_funding_pilot_owner_fix.sql'
       - 'wrangler.funding.toml'
       - 'wrangler.funding.staging.toml'
       - 'test/funding-platform.test.mjs'
@@ -107,6 +108,7 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.funding.toml --file migrations/202611211000_funding_phase1.sql
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.funding.toml --file migrations/202611211900_funding_pilot_owner_fix.sql
       - name: Deploy production worker
         shell: bash
         run: |

@@ -169,7 +169,9 @@ textarea{min-height:110px}.cols{display:grid;grid-template-columns:2fr 1fr;gap:2
 .reward{border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0;background:#fff}.reward.sel{border-color:var(--brand);box-shadow:0 0 0 2px #cfe5da}
 .story{white-space:pre-wrap}table{width:100%;border-collapse:collapse;background:#fff}th,td{border-bottom:1px solid var(--line);padding:8px;text-align:left;font-size:14px;vertical-align:top}
 footer.biz{border-top:1px solid var(--line);background:#fff;padding:22px 0;font-size:13px;color:var(--muted)}footer.biz p{margin:4px 0}
-.tabs{display:flex;gap:8px;margin:14px 0}.tabs button{background:#fff;color:var(--ink);border:1px solid var(--line)}.tabs button.on{background:var(--brand);color:#fff}
+.tabs{display:flex;gap:8px;margin:14px 0;overflow-x:auto;padding-bottom:4px}.tabs button,th,.nowrap{white-space:nowrap}
+.problems{margin:8px 0 0;padding-left:20px}.next{font-weight:700}.next.err{color:var(--red)}.next.ok{color:var(--brand)}
+@media(max-width:640px){table.list,table.list tbody,table.list tr,table.list td{display:block;width:100%}table.list tr:first-child{display:none}table.list tr{border-bottom:1px solid var(--line);padding:8px 0}table.list td{border:0;padding:3px 8px}}.tabs button{background:#fff;color:var(--ink);border:1px solid var(--line)}.tabs button.on{background:var(--brand);color:#fff}
 .hide{display:none!important}`;
 
 function shell(title, body, { noindex = false, description = '', scripts = '' } = {}) {
@@ -330,11 +332,21 @@ function studioClient(cfg) {
     if (!r.ok) throw Object.assign(new Error(d.error || '처리하지 못했습니다.'), { data: d });
     return d;
   }
-  function say(t, type = '') { $('state').textContent = t; $('state').className = 'notice ' + type; }
+  function say(t, type = '', items = []) {
+    for (const id of ['state', 'stateBottom']) {
+      const box = $(id); if (!box) continue;
+      box.className = 'notice ' + type; box.textContent = t;
+      if (items.length) { const ul = document.createElement('ul'); ul.className = 'problems'; items.forEach(i => { const li = document.createElement('li'); li.textContent = i; ul.appendChild(li); }); box.appendChild(ul); }
+    }
+  }
+  function nextStep(c) {
+    if (c.status === 'draft' || c.status === 'rejected') return c.problems?.length ? ['err', `보완 필요 ${c.problems.length}건`] : ['ok', '심사 요청을 눌러 주세요'];
+    return ({ review: ['', '운영자 심사 대기'], waiting_payout: ['', '정산대행 준비 후 공개'], live: ['ok', '모금 중'], closed: ['', '종료'] })[c.status] || ['', ''];
+  }
   function rewardRow(r = {}) {
     const div = document.createElement('div'); div.className = 'reward';
     div.innerHTML = `<div class="cols"><div><label>이름</label><input data-k="title" maxlength="80" value="${esc(r.title)}"><label>설명</label><input data-k="description" maxlength="400" value="${esc(r.description)}"></div>
-<div><label>금액(원)</label><input data-k="amount" type="number" min="1000" step="1000" value="${esc(r.amount)}"><label>전달 방식</label><select data-k="delivery">${Object.entries(cfg.delivery).map(([k, v]) => `<option value="${k}"${r.delivery === k ? ' selected' : ''}>${v}</option>`).join('')}</select>
+<div><label>금액(원)</label><input data-k="amount" type="number" min="1000" step="1000" value="${esc(r.amount)}"><label>전달 방식</label><select data-k="delivery">${Object.entries(cfg.delivery).map(([k, v]) => `<option value="${k}"${r.delivery === k ? ' selected' : ''}>${k === 'digital' && !cfg.digital ? v + ' (무형 결제 상점 승인 후 가능)' : v}</option>`).join('')}</select>
 <label>수량 한정(0=무제한)</label><input data-k="limit" type="number" min="0" value="${esc(r.limit || 0)}"><label>예상 전달 시기</label><input data-k="estimatedDelivery" maxlength="80" value="${esc(r.estimatedDelivery)}"></div></div>
 <input type="hidden" data-k="id" value="${esc(r.id)}"><button type="button" class="ghost" data-del>삭제</button>`;
     div.querySelector('[data-del]').onclick = () => div.remove();
@@ -344,6 +356,7 @@ function studioClient(cfg) {
     editing = c.id || null;
     for (const k of ['slug', 'title', 'summary', 'story', 'organizerName', 'contactEmail', 'goalAmount', 'startsOn', 'endsOn', 'refundPolicy']) $('f_' + k).value = c[k] ?? '';
     $('f_kind').value = c.kind || 'reward';
+    if (me?.isOperator) $('f_ownerOrg').value = c.ownerOrg || 'publishing';
     if (!c.refundPolicy) $('f_refundPolicy').value = cfg.refund;
     $('rewards').innerHTML = ''; (c.rewards?.length ? c.rewards : [{}]).forEach(rewardRow);
     const locked = c.status && !['draft', 'rejected'].includes(c.status);
@@ -352,6 +365,8 @@ function studioClient(cfg) {
     $('reviewNote').textContent = c.reviewNote ? '심사 의견: ' + c.reviewNote : '';
     $('btnSubmit').classList.toggle('hide', !editing); $('btnWithdraw').classList.toggle('hide', c.status !== 'review');
     $('btnWithdraw').disabled = false; $('editor').classList.remove('hide');
+    const [type, text] = nextStep(c);
+    if (editing) say(c.problems?.length && !locked ? '심사 요청 전에 아래를 고쳐 주세요.' : `상태: ${cfg.status[c.status] || ''} — ${text}`, c.problems?.length && !locked ? 'err' : type, locked ? [] : (c.problems || []));
   }
   function collect() {
     const body = {}; for (const k of ['slug', 'title', 'summary', 'story', 'organizerName', 'contactEmail', 'goalAmount', 'startsOn', 'endsOn', 'refundPolicy', 'kind']) body[k] = $('f_' + k).value;
@@ -361,7 +376,7 @@ function studioClient(cfg) {
     return body;
   }
   function render() {
-    $('mine').innerHTML = list.length ? `<table><tr><th>펀딩</th><th>상태</th><th>목표</th><th>모금</th><th></th></tr>${list.map(c => `<tr><td>${esc(c.title)}<br><span class="muted">/funding/c/${esc(c.slug)}</span></td><td>${esc(cfg.status[c.status])}</td><td>${wonf(c.goalAmount)}</td><td>${wonf(c.raisedAmount)}</td><td><button class="ghost" data-open="${esc(c.id)}">열기</button></td></tr>`).join('')}</table>` : '<p class="muted">아직 만든 펀딩이 없습니다.</p>';
+    $('mine').innerHTML = list.length ? `<table class="list"><tr><th>펀딩</th><th>상태</th><th>다음 할 일</th><th>목표 · 모금</th><th></th></tr>${list.map(c => { const [t, n] = nextStep(c); return `<tr><td><b>${esc(c.title)}</b><br><span class="muted">/funding/c/${esc(c.slug)}</span></td><td class="nowrap">${esc(cfg.status[c.status])}</td><td><span class="next ${t}">${esc(n)}</span></td><td class="nowrap">${wonf(c.goalAmount)} · ${wonf(c.raisedAmount)}</td><td><button class="ghost" data-open="${esc(c.id)}">열기</button></td></tr>`; }).join('')}</table>` : '<p class="muted">아직 만든 펀딩이 없습니다.</p>';
     document.querySelectorAll('[data-open]').forEach(b => b.onclick = () => fill(list.find(c => c.id === b.dataset.open)));
   }
   async function load() { list = (await api('/studio/campaigns')).campaigns || []; render(); }
@@ -370,13 +385,18 @@ function studioClient(cfg) {
     try {
       const body = collect();
       const d = editing ? await api('/studio/campaigns/' + editing, { method: 'PUT', body: JSON.stringify(body) }) : await api('/studio/campaigns', { method: 'POST', body: JSON.stringify(body) });
-      await load(); fill(d.campaign); say(d.warnings?.length ? '저장했습니다. 심사 요청 전에 확인할 점: ' + d.warnings.join(' / ') : '저장했습니다.', d.warnings?.length ? '' : 'ok');
-    } catch (x) { say(x.message + (x.data?.errors ? ' — ' + x.data.errors.join(' / ') : ''), 'err'); }
+      await load(); fill({ ...d.campaign, problems: d.warnings || [] });
+      if (d.warnings?.length) say('저장했습니다. 다만 심사를 요청하려면 아래를 고쳐 주세요.', 'err', d.warnings);
+      else say("저장했습니다. 이제 아래 '심사 요청' 버튼을 눌러 주세요.", 'ok');
+      return true;
+    } catch (x) { say(x.message, 'err', x.data?.errors || []); return false; }
   }
   async function act(path, confirmText) {
     if (confirmText && !confirm(confirmText)) return;
-    try { await save(); const d = await api(`/studio/campaigns/${editing}/${path}`, { method: 'POST', body: '{}' }); await load(); fill(d.campaign); say(d.message, 'ok'); }
-    catch (x) { say(x.message + (x.data?.errors ? ' — ' + x.data.errors.join(' / ') : ''), 'err'); }
+    try {
+      if (path === 'submit' && !(await save())) return;
+      const d = await api(`/studio/campaigns/${editing}/${path}`, { method: 'POST', body: '{}' }); await load(); fill(d.campaign); say(d.message, 'ok');
+    } catch (x) { say(x.message, 'err', x.data?.errors || []); }
   }
   (async () => {
     try {
@@ -386,7 +406,7 @@ function studioClient(cfg) {
       $('ownerBox').classList.toggle('hide', !me.isOperator);
       $('f_ownerOrg').innerHTML = Object.entries(me.orgs).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
       $('btnNew').onclick = () => fill({}); $('btnAddReward').onclick = () => rewardRow({}); $('form').onsubmit = save;
-      $('btnSubmit').onclick = () => act('submit', '심사를 요청할까요? 심사 중에는 수정할 수 없습니다.');
+      $('btnSubmit').onclick = () => act('submit', '저장하고 심사를 요청할까요? 심사 중에는 수정할 수 없습니다.');
       $('btnWithdraw').onclick = () => act('withdraw');
       $('app').classList.remove('hide'); await load(); say('펀딩 계획서를 작성하고 심사를 요청할 수 있습니다.', 'ok');
     } catch (x) { say(x.message, 'err'); }
@@ -413,10 +433,10 @@ function adminClient(cfg) {
     const rows = list.filter(c => filter === 'all' || c.status === filter);
     $('list').innerHTML = rows.length ? rows.map(c => `<div class="card" style="margin:10px 0"><div class="row"><b>${esc(c.title)}</b><span class="tag">${esc(cfg.status[c.status])}</span></div>
 <p class="muted">${esc(cfg.kinds[c.kind] || c.kind)} · ${esc(cfg.orgs[c.ownerOrg] || '회원 개설')} · ${esc(c.organizerName)} · ${esc(c.organizerEmail)}<br>목표 ${wonf(c.goalAmount)} · 모금 ${wonf(c.raisedAmount)} (${c.backerCount}명) · ${esc(c.startsOn)} ~ ${esc(c.endsOn)} · <a href="/funding/c/${esc(c.slug)}" target="_blank" rel="noopener">미리보기</a></p>
-${c.problems?.length ? `<div class="notice err">확인필요: ${c.problems.map(esc).join(' / ')}</div>` : ''}
+${['draft', 'rejected', 'review'].includes(c.status) && c.problems?.length ? `<div class="notice err">승인 전에 고칠 점 (<a href="/funding/studio">펀딩 만들기</a>에서 수정)<ul class="problems">${c.problems.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>` : ''}${c.status === 'draft' && !cfg.orgs[c.ownerOrg] ? '<div class="notice">작성 중 — 개설자가 심사 요청을 하면 승인할 수 있습니다.</div>' : ''}
 <details><summary>리워드 ${c.rewards.length}개 · 소개 보기</summary><p class="story">${esc(c.summary)}\n\n${esc(c.story)}</p><ul>${c.rewards.map(r => `<li>${esc(r.title)} · ${wonf(r.amount)} · ${esc(cfg.delivery[r.delivery])}${r.limit ? ` · ${r.limit}개` : ''}</li>`).join('')}</ul></details>
 <input placeholder="심사 의견(보완 요청 시 필수)" data-note="${esc(c.id)}" maxlength="500" style="margin:8px 0">
-<div class="row" style="justify-content:flex-start">${c.status === 'review' ? `<button data-act="approve" data-id="${esc(c.id)}">승인</button><button class="ghost" data-act="reject" data-id="${esc(c.id)}">보완 요청</button>` : ''}
+<div class="row" style="justify-content:flex-start">${c.status === 'review' || (c.status === 'draft' && cfg.orgs[c.ownerOrg]) ? `<button data-act="approve" data-id="${esc(c.id)}"${c.problems?.length ? ' disabled title="확인필요 항목을 먼저 고쳐 주세요"' : ''}>승인</button>` : ''}${c.status === 'review' ? `<button class="ghost" data-act="reject" data-id="${esc(c.id)}">보완 요청</button>` : ''}
 ${['live', 'waiting_payout'].includes(c.status) ? `<button class="ghost" data-act="close" data-id="${esc(c.id)}">모금 종료</button>` : ''}<button class="ghost" data-pledges="${esc(c.id)}">후원 내역</button></div><div data-out="${esc(c.id)}"></div></div>`).join('') : '<p class="muted">해당하는 펀딩이 없습니다.</p>';
     document.querySelectorAll('[data-act]').forEach(b => b.onclick = async () => {
       const id = b.dataset.id; const note = document.querySelector(`[data-note="${id}"]`).value;
@@ -441,8 +461,8 @@ ${['live', 'waiting_payout'].includes(c.status) ? `<button class="ghost" data-ac
   })();
 }
 
-export function renderStudio() {
-  const cfg = { api: API, delivery: DELIVERY, status: STATUS, refund: DEFAULT_REFUND_POLICY };
+export function renderStudio({ digitalApproved = false } = {}) {
+  const cfg = { api: API, delivery: DELIVERY, status: STATUS, refund: DEFAULT_REFUND_POLICY, digital: Boolean(digitalApproved) };
   const kindOptions = Object.entries(KINDS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('') + Object.entries(FUTURE_KINDS).map(([k, v]) => `<option value="${k}" disabled>${v} (3단계 준비 중)</option>`).join('');
   return shell('펀딩 만들기 · 에코디 펀딩', `<main><h1>펀딩 만들기</h1><p class="lead">에코디 회원이면 누구나 펀딩을 계획하고 심사를 요청할 수 있습니다. <span id="who" class="muted"></span></p>
 <div id="state" class="notice">로그인 상태를 확인하고 있습니다…</div><div id="loginBox" class="hide"><button id="loginBtn">에코디 계정으로 로그인</button></div>
@@ -460,7 +480,7 @@ export function renderStudio() {
 <label for="f_startsOn">시작일</label><input id="f_startsOn" type="date"><label for="f_endsOn">종료일 (최대 ${MAX_DAYS}일)</label><input id="f_endsOn" type="date">
 <label for="f_organizerName">개설자(단체) 이름</label><input id="f_organizerName" maxlength="60"><label for="f_contactEmail">문의 이메일</label><input id="f_contactEmail" type="email" maxlength="254"></div></div>
 <h3>후원 선택지</h3><div id="rewards"></div><button type="button" class="ghost" id="btnAddReward">선택지 추가</button>
-<div class="row" style="margin-top:16px;justify-content:flex-start"><button type="submit">저장</button><button type="button" id="btnSubmit" class="hide">심사 요청</button><button type="button" id="btnWithdraw" class="ghost hide">심사 요청 취소</button></div></form>
+<div class="row" style="margin-top:16px;justify-content:flex-start"><button type="submit" class="ghost">저장</button><button type="button" id="btnSubmit" class="hide">저장하고 심사 요청</button><button type="button" id="btnWithdraw" class="ghost hide">심사 요청 취소</button></div><div id="stateBottom" class="notice hide"></div></form>
 <p class="muted">공개 모금은 펀딩마다 ${won(PUBLIC_CAP_KRW)} 미만입니다. 1단계에서는 에코디 소속 조직의 펀딩부터 결제가 열리고, 회원 펀딩은 심사 통과 후 정산대행 준비가 끝나는 대로 열립니다.</p></div></div></main>`,
   { noindex: true, scripts: `${inline(studioClient, `{...${JSON.stringify(cfg)},helpers:${authClientHelpers.toString()}}`)}` });
 }
@@ -528,7 +548,7 @@ export function createApp({ store, authenticate, pay, notify = null, extraHeader
     if (parts[0] !== 'campaigns') return J({ error: 'not_found' }, 404);
     // Org campaigns (에코디비즈·에코디출판) are operated by platform operators; members see only their own.
     const mine = c => Boolean(c && (c.organizerUserId === me.userId || (c.organizerEmail && c.organizerEmail === me.email) || (me.isOperator && Object.hasOwn(PHASE1_ORGS, c.ownerOrg))));
-    if (parts.length === 1 && method === 'GET') return J({ campaigns: (await store.listCampaigns({})).filter(mine).map(ownView) });
+    if (parts.length === 1 && method === 'GET') return J({ campaigns: (await store.listCampaigns({})).filter(mine).map(c => ({ ...ownView(c), problems: validateCampaign(c, { forSubmit: true, digitalApproved }) })) });
     if (parts.length === 1 && method === 'POST') {
       const body = await readJson(request); if (!body) return J({ error: '요청 형식이 올바르지 않습니다.' }, 400);
       const c = normalizeCampaign(body, {});
@@ -591,7 +611,8 @@ export function createApp({ store, authenticate, pay, notify = null, extraHeader
     const note = clean(body.note, 500);
     const now = clock().toISOString();
     if (parts[2] === 'approve') {
-      if (c.status !== 'review') return J({ error: '심사 중인 펀딩만 승인할 수 있습니다.' }, 409);
+      // Org campaigns (에코디비즈·에코디출판) are run by the operators themselves, so an operator may approve their draft directly.
+      if (!(c.status === 'review' || (c.status === 'draft' && Object.hasOwn(PHASE1_ORGS, c.ownerOrg)))) return J({ error: '심사 중인 펀딩만 승인할 수 있습니다. 회원 펀딩은 개설자가 먼저 심사를 요청해야 합니다.' }, 409);
       const errors = validateCampaign(c, { forSubmit: true, digitalApproved });
       if (errors.length) return J({ error: '승인 전에 보완이 필요합니다.', errors }, 422);
       const status = Object.hasOwn(PHASE1_ORGS, c.ownerOrg) ? 'live' : 'waiting_payout';
@@ -726,7 +747,7 @@ export function createApp({ store, authenticate, pay, notify = null, extraHeader
     if (!['GET', 'HEAD'].includes(method)) return J({ error: '허용되지 않은 요청입니다.' }, 405);
     if (path === PUBLIC_PATH) return H(renderHome(await store.listCampaigns({ statuses: ['live', 'waiting_payout'] }), clock()), 200, method, 'public, max-age=60');
     if (path === GUIDE_PATH) return H(renderGuide(), 200, method, 'public, max-age=300');
-    if (path === STUDIO_PATH) return H(renderStudio(), 200, method);
+    if (path === STUDIO_PATH) return H(renderStudio({ digitalApproved }), 200, method);
     if (path === ADMIN_PATH) return H(renderAdmin(), 200, method);
     const m = /^\/funding\/c\/([a-z0-9-]{3,40})(?:\/(success|fail))?$/.exec(path);
     if (m) {
