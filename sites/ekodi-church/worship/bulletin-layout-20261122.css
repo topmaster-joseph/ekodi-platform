@@ -1,0 +1,23 @@
+/* Effective from 2026-11-22. Applied only after the shared bulletin controller
+   confirms the new Sunday worship order. Legacy bulletins remain unchanged. */
+.bp-pages[data-worship-layout="2026-11-22"] .bp-col:first-child{padding-right:20px}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-col:last-child{padding-left:20px}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-col:first-child>.bp-h:first-child{margin-top:0}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-col:first-child .bp-sponsors{grid-template-columns:repeat(3,minmax(0,1fr));font-size:11px;line-height:1.55;margin-bottom:14px}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-col:first-child .bp-grid{font-size:11.5px}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-order{background:#f7f8f5;border:1px solid #dbe3dd;border-radius:8px;padding:12px 14px 14px}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-order h3{font-size:16px;letter-spacing:.01em;color:#173b30}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-order .bp-red{margin:3px 0 10px;font-size:11px}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-order table{table-layout:fixed;font-size:11.7px;line-height:1.45}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-order table tr{border-top:1px solid #dee6e0}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-order table tr:first-child{border-top:0}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-order table td,.bp-pages[data-worship-layout="2026-11-22"] .bp-order table th{padding:5px 3px;vertical-align:middle;overflow-wrap:anywhere}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-order table td:first-child{width:75px;color:#173b30;font-weight:700}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-order table td:last-child{width:47px;font-size:10.5px}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-order table th{font-weight:600}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-q{margin:8px 0 0;font-size:12.5px;line-height:1.7}
+.bp-pages[data-worship-layout="2026-11-22"] .bp-q li{margin:0;list-style:none}
+@media print{
+ .bp-pages[data-worship-layout="2026-11-22"] .bp-order{break-inside:avoid}
+ .bp-pages[data-worship-layout="2026-11-22"] .bp-order table td,.bp-pages[data-worship-layout="2026-11-22"] .bp-order table th{padding:4px 3px}
+}
