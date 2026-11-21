@@ -70,6 +70,8 @@ async function stagingApps(){
 // Resolve only via DEVELOPMENT account metadata and an exact match to the
 // independently protected Client ID. A failed/partial listing is not proof.
 async function resolveStaticTokenId(){
+  if(!rawStaticTokenId)
+    throw new Error(`protected STATIC_ACCESS_SERVICE_TOKEN_ID is required for a least-privilege Access policy (${tokenIdShape()}; expected the token UUID or matching Client ID)`);
   if(/^[A-Za-z0-9_-]{8,128}$/.test(staticTokenId))return staticTokenId;
   const clientId=String(process.env.STATIC_ACCESS_ID||'').trim();
   const clientIdLike=/\.access(?:\.[A-Za-z0-9.-]+)?$/i.test(rawStaticTokenId);
