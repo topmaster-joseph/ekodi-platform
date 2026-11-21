@@ -53,19 +53,48 @@
     const tableEl = order && order.querySelector('table');
     if (!tableEl) return;
 
-    // Retain verified, date-specific Scripture and sermon captions when a
-    // weekly bulletin supplies them; never re-use those values as a template.
+    // 4 columns: Korean order, English, Korean song/scripture/title, person.
+    // Song details are weekly; never reuse November 22 hymns in later services.
     const previousRows = Array.from(tableEl.querySelectorAll('tr'));
-    const details = (ko, pattern) => {
-      const match = previousRows.find(r => r.cells[0]?.textContent?.trim() === ko);
-      const label = match?.cells[1]?.textContent?.trim() || '';
-      return (label.match(pattern)?.[1] || '').trim().slice(0, 100);
+    const readOld = ko => {
+      const row = previousRows.find(r => r.cells[0]?.textContent?.trim().startsWith(ko));
+      if (!row) return '';
+      return row.cells.length >= 4
+        ? row.cells[2]?.textContent?.trim() || ''
+        : row.cells[1]?.textContent?.trim() || '';
     };
-    const scripture = details('말씀읽기', /^Scripture Reading\s*:\s*(.+)$/i) || details('말씀봉독', /^Scripture Reading\s*:\s*(.+)$/i);
-    const sermon = details('말씀나눔', /^Sermon\s*[-–:]\s*(.+)$/i) || details('말씀선포', /^Proclamation of the Word\s*[-–:·]\s*(.+)$/i);
+    const extract = (ko, re) => (readOld(ko).match(re)?.[1] || '').trim().slice(0, 120);
+    const existingScripture = extract('말씀읽기', /^Scripture Reading\\s*:\\s*(.+)$/i)
+      || extract('말씀봉독', /^(?:Scripture Reading\\s*:\\s*)?(.+)$/i);
+    const existingSermon = extract('말씀나눔', /^Sermon\\s*[-–:]\\s*(.+)$/i)
+      || extract('말씀선포', /^(?:Proclamation of the Word\\s*[-–:·]\\s*)?(.+)$/i);
+    const weeklySongs = date === '2026-11-22' ? {
+      "경배찬양": [
+            "은혜",
+            "날구원하신주",
+            "지금까지"
+      ],
+      "입례찬송": "거룩하신 하나님",
+      "회개찬송": "나 주님의 기쁨되기",
+      "말씀봉독": "고린도전서 12:1–11",
+      "말씀찬송": "아 하나님의 은혜로",
+      "말씀선포": "공동의 유익을 위한 은사",
+      "결단찬송": "성령이여 강림하사",
+      "파송찬송": "주 안에 우린 하나"
+} : {};
+    const detailMap = { ...weeklySongs };
+    if (existingScripture && existingScripture !== 'Scripture Reading') detailMap['말씀봉독'] = detailMap['말씀봉독'] || existingScripture;
+    if (existingSermon && existingSermon !== 'Proclamation of the Word') detailMap['말씀선포'] = detailMap['말씀선포'] || existingSermon;
+    function formatDetail(value) {
+      const lines = (Array.isArray(value) ? value : [value]).map(v => String(v || '').trim()).filter(Boolean).slice(0, 5);
+      return lines.map(line => '<span class="bp-order-line">' + esc(line) + '</span>').join('');
+    }
     const rows = newOrder.map(([ko, en, actor]) => {
-      const description = en + (ko === '말씀봉독' && scripture ? ': ' + scripture : '') + (ko === '말씀선포' && sermon ? ' · ' + sermon : '');
-      return '<tr><td>' + esc(ko) + '</td><th scope="row">' + esc(description) + '</th><td>' + esc(actor) + '</td></tr>';
+      const korean = esc(ko) + (ko === '경배찬양' ? '<small class="bp-praise-time">예배 15분 전</small>' : '');
+      return '<tr><td class="bp-order-ko">' + korean + '</td>'
+        + '<td class="bp-order-en">' + esc(en) + '</td>'
+        + '<td class="bp-order-detail">' + formatDetail(detailMap[ko]) + '</td>'
+        + '<td class="bp-order-actor">' + esc(actor) + '</td></tr>';
     }).join('');
     tableEl.innerHTML = rows;
 
