@@ -25,10 +25,10 @@ const expected = [
 test('Nov 22 worship order is exactly fourteen bilingual steps in requested sequence', () => {
   const block = source.match(/const newOrder = \[([\s\S]*?)\n  \];/)?.[1];
   assert.ok(block, 'canonical, effective-dated worship order');
-  const items = Array.from(block.matchAll(/^\s*\['([^']+)',\s*(?:'([^']+)'|"([^"]+)"),/gm));
-  assert.deepEqual(items.map(m => m[1]), expected);
+  const items = JSON.parse('[' + block + ']');
+  assert.deepEqual(items.map(row => row[0]), expected);
   assert.equal(items.length, 14);
-  for (const match of items) assert.ok((match[2] || match[3]).length > 4, 'English must be present');
+  for (const row of items) assert.ok(row[1].length > 4, 'English must be present');
 });
 test('layout places service order on left and committee, cooperation, one question on right; archive intact', () => {
   assert.match(source, /const orderEffectiveDate = '2026-11-22'/);
