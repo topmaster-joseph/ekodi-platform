@@ -41,7 +41,7 @@ test('new PR153 header cleanup is the only new Church homepage change and source
 
 test('six primary links remain ordered and public notices and schedules keep their own routes',()=>{
   const nav=home.match(/<nav id="main-nav"[\s\S]*?<\/nav>/)?.[0]||'';
-  const expected=['매일묵상','예배·방송','공지사항','주요일정','함께하기','마이페이지'];
+  const expected=['매일묵상','예배·방송','공지사항','주요일정','함께하기','큐티인 신청'];
   assert.equal((nav.match(/<a\b/g)||[]).length,6);
   let last=-1;
   for(const label of expected){const at=nav.indexOf('>'+label+'</a>');assert.ok(at>last,label);last=at;}
