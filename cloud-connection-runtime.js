@@ -24,6 +24,9 @@ export const CLOUD_CONNECTION_POLICY = Object.freeze({
   strategy: 'cloud_first_provider_independent',
   operaRequired: false,
   operaEnabledByDefault: false,
+  // External Opera tabs belong to the human operator, never unattended automation.
+  automaticOperaInvocationAllowed: false,
+  userBrowserTabCreationAllowed: false,
   automaticFailover: true,
   usageAwareFailover: true,
   automaticRefresh: true,
@@ -80,12 +83,18 @@ function normalizeProvider(provider, index, env) {
   const quotaRemainingPercent = getQuotaRemainingPercent(provider);
   const quotaExhausted = provider?.quotaExhausted === true || quotaRemainingPercent !== null && quotaRemainingPercent <= 0;
   const operaDisabled = kind === 'opera_browser' && !isOperaConnectorEnabled(env);
+  // This is an unattended provider failover path. Even an explicitly enabled
+  // Opera connector must not open/drive the operator's interactive tabs here.
+  // Attended tab reuse belongs to a separate, user-initiated adapter.
+  const operaAutomaticForbidden = kind === 'opera_browser' && !operaDisabled;
   const explicitlyUnavailable = provider?.available === false;
-  const available = !explicitlyUnavailable && !operaDisabled && !quotaExhausted;
+  const available = !explicitlyUnavailable && !operaDisabled && !operaAutomaticForbidden && !quotaExhausted;
   const unavailableReason = quotaExhausted
     ? 'quota_exhausted'
     : operaDisabled
       ? 'disabled'
+      : operaAutomaticForbidden
+        ? 'automatic_user_browser_invocation_forbidden'
       : explicitlyUnavailable
         ? provider?.unavailableReason || 'unavailable'
         : state === 'unavailable'

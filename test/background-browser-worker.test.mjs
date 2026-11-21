@@ -25,6 +25,29 @@ test('EKODI background browser policy is native, canonical-origin and isolated',
   assert.equal(policy.evidence.httpErrorResponsesCaptured,true);
 });
 
+test('owned background browser closes on setup failure and only reports success after shutdown',()=>{
+  const run=source.slice(source.indexOf('export async function runTask'),source.indexOf('\nconst invoked='));
+  const launch=run.indexOf('const browser=runtimeBrowser');
+  const lifetimeStart=run.indexOf('  try {\n    context=await browser.newContext');
+  const pageSetup=run.indexOf('const page=await context.newPage()');
+  const contextCleanup=run.lastIndexOf('await context.close().catch(()=>{})');
+  const browserCleanup=run.lastIndexOf('await browser.close()');
+  const successWrite=run.lastIndexOf("await fs.writeFile(path.join(taskDir,'result.json')");
+  assert.ok(launch>=0&&lifetimeStart>launch&&pageSetup>lifetimeStart,
+    'owned browser lifetime must begin before context/page initialization');
+  assert.ok(contextCleanup>pageSetup&&browserCleanup>contextCleanup,
+    'owned context and parent browser must close on setup and execution failures');
+  assert.ok(successWrite>browserCleanup,
+    'do not write a successful receipt before close is verified');
+  assert.match(run,/const watchdog=setTimeout\(\(\)=>\{[\s\S]*?browser\.close\(\)\.catch/);
+  assert.match(run,/task\.timeoutMs\+15000/);
+  assert.match(run,/clearTimeout\(watchdog\)/);
+  assert.match(run,/watchdogExpired \|\| browser\.isConnected\(\)/);
+  assert.match(run,/BROWSER_CLEANUP_UNVERIFIED/);
+  assert.doesNotMatch(run,/await browser\.close\(\)\.catch/,
+    'shutdown exceptions must not be suppressed as success');
+});
+
 test('task protocol rejects external origins and raw execution surfaces',()=>{
   assert.throws(()=>normalizeTask({path:'https://example.com/'}),/canonical ekodi\.kr/);
   assert.throws(()=>normalizeTask({actions:[{type:'evaluate',code:'1+1'}]}),/Unsupported browser action/);

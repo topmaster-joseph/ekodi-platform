@@ -117,8 +117,15 @@ function Invoke-HeadlessCheck([string]$Browser, [string]$Target) {
     $proc = [System.Diagnostics.Process]::Start($psi)
     $stdoutTask = $proc.StandardOutput.ReadToEndAsync()
     $null = $proc.StandardError.ReadToEndAsync()
-    if (-not $proc.WaitForExit($TimeoutSeconds * 1000)) { $result.renderError = 'render_timeout' }
-    $dom = if ($stdoutTask.Wait(2000)) { [string]$stdoutTask.Result } else { '' }
+    if (-not $proc.WaitForExit($TimeoutSeconds * 1000)) {
+      $result.renderError = 'render_timeout'
+    } else {
+      # WaitForExit(timeout) observes process termination but does not guarantee
+      # redirected asynchronous stdout has been fully drained on Windows.
+      # The unbounded overload is safe only AFTER the process has exited.
+      $proc.WaitForExit()
+    }
+    $dom = if ($stdoutTask.Wait(5000)) { [string]$stdoutTask.Result } else { '' }
     if ($Screenshot) {
       $result.screenshot = if (Test-Path -LiteralPath $shot) { $shot } else { $null }
     } else {
@@ -133,6 +140,8 @@ function Invoke-HeadlessCheck([string]$Browser, [string]$Target) {
     $result.profileRemoved = Remove-OwnedProfile $profileDir
     $result.elapsedMs = [int]((Get-Date) - $started).TotalMilliseconds
   }
+  # A successful render is not success if its browser/profile was left behind.
+  $result.ok = [bool]$result.ok -and [bool]$result.browserClosed -and [bool]$result.profileRemoved
   return $result
 }
 
@@ -151,6 +160,7 @@ function Invoke-VisibleCheck([string]$Browser, [string]$Target) {
     $result.browserClosed = Stop-OwnedBrowserTree $profileDir
     $result.profileRemoved = Remove-OwnedProfile $profileDir
   }
+  $result.ok = [bool]$result.ok -and [bool]$result.browserClosed -and [bool]$result.profileRemoved
   return $result
 }
 
