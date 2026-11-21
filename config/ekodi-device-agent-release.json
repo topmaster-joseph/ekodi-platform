@@ -1,0 +1,12 @@
+{
+  "policyId": "EKODI-AGENT-AUTOUPDATE-001",
+  "channel": "protected-orchestrator",
+  "approved": true,
+  "approvedBy": "Joseph Jeong — explicit chat approval 2026-11-21 23:37 KST (\"승인\")",
+  "reason": "EKODI-EDGE-TRAFFIC-SHIELD-001: adaptive idle polling (2.6.6) and expired interactive-auth fix (2.6.8); device-agent polls were 34% of ekodi.kr requests on 2026-11-21",
+  "version": "2.6.8",
+  "agentPath": "tools/ekodi-device-agent/windows/ekodi-device-agent.ps1",
+  "sourceCommit": "ce7be2566584d726befe093ea3306da0fcf383da",
+  "sha256": "eb25548bf378429c2341dd853d87104bd889ef65369ca887f855866644d04f1c",
+  "rolloutPercent": 25
+}
