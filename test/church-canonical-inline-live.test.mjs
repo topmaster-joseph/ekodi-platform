@@ -19,7 +19,8 @@ test('canonical church studio uses same site-owned header/footer and existing li
  for(const detail of ['사업자 소재지','운영주체 에코디교회','대표 정찬균','고유번호 307-82-82097'])assert.ok(html.includes(detail));
  assert.match(html,/href="\/tenant-live-church.css"/);
  assert.match(html,/src="\/tenant-live-church.js"/);
- assert.match(html,/src="\/ekodichurch\/church-daily-verse.js"/);
+ assert.doesNotMatch(html,/src="\/ekodichurch\/church-daily-verse.js"/);
+ assert.doesNotMatch(html,/class="daily-verse"/);
  assert.match(html,/id="studioView"/);
  assert.match(html,/id="goLiveButton"/);
  assert.match(html,/id="viewerVideo"/);
