@@ -36,6 +36,7 @@ on:
       - 'storefront-page.js'
       - 'homepage-subscription-site.js'
       - 'supabase/migrations/20261121160000_homepage_subscription_auto_provision.sql'
+      - 'supabase/migrations/20261122010000_homepage_subscription_admin_check_lint.sql'
       - 'test/homepage-subscription-site.test.mjs'
       - 'restaurant-storefront.js'
       - 'restaurant-storefront-v2.js'
@@ -103,6 +104,7 @@ on:
       - 'storefront-page.js'
       - 'homepage-subscription-site.js'
       - 'supabase/migrations/20261121160000_homepage_subscription_auto_provision.sql'
+      - 'supabase/migrations/20261122010000_homepage_subscription_admin_check_lint.sql'
       - 'test/homepage-subscription-site.test.mjs'
       - 'restaurant-storefront.js'
       - 'restaurant-storefront-v2.js'
@@ -437,6 +439,8 @@ jobs:
           test -f "$HOMEPAGE_SUB_MIGRATION"
           ! grep -Eiq 'drop[[:space:]]+(table|function)|delete[[:space:]]+from|truncate|alter[[:space:]]+table[[:space:]]+public\.(stores|tenants|store_user_sites)' "$HOMEPAGE_SUB_MIGRATION"
           apply_dev_migration "$HOMEPAGE_SUB_MIGRATION"
+          apply_dev_migration "supabase/migrations/20261122010000_homepage_subscription_admin_check_lint.sql"
+          apply_migration "supabase/migrations/20261122010000_homepage_subscription_admin_check_lint.sql"
           if ! grep -Fq '"homepage_sub":true' /tmp/space-schema-before.json; then
             apply_migration "$HOMEPAGE_SUB_MIGRATION"
           fi
