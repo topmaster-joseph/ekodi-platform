@@ -150,3 +150,16 @@ test('nine-language Church Pages production proof reports the exact residual tex
   assert.match(w,/body:window\.__EKODI_CHURCH_RENDERED_TEXT__\(\)/);
   assert.doesNotMatch(w,/body:clone\.innerText|visible=clone\.innerText/);
 });
+
+test('guarded Church Pages promotion requires translated account controls for all nine locales and member-name privacy',async()=>{
+  const w=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+  for(const marker of [
+    `"'로그인':{en:'Sign in'" church/church-i18n.js`,
+    `"'로그아웃':{en:'Sign out'" church/church-i18n.js`,
+    `"add('로그인'," church/church-i18n-extended.js`,
+    `"add('로그아웃'," church/church-i18n-extended.js`,
+    `"name.dataset.ekodiUserContent = ''" church/church-account-header.js`
+  ])assert.ok(w.includes(marker),'missing reviewed Church source release guard: '+marker);
+  assert.match(w,/window\.__EKODI_CHURCH_RENDERED_TEXT__/);
+  assert.doesNotMatch(w,/body:clone\.innerText/);
+});
