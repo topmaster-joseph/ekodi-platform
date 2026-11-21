@@ -16,7 +16,7 @@ if (headerBrandName) headerBrandName.textContent = '에코디교회';
 const headerBrandLink = document.querySelector('.site-header .brand');
 if (headerBrandLink) headerBrandLink.setAttribute('aria-label', '에코디교회 홈');
 
-// Public church header: keep only the most useful next actions and the church-local member home.
+// Public church header: prioritize worship, devotion and the existing QTIN application.
 if (nav) {
   const items = [
     { href: '/ekodichurch/devotion/', label: '매일묵상', className: 'nav-devotion' },
@@ -24,7 +24,7 @@ if (nav) {
     { href: '/ekodichurch/notices/', label: '공지사항' },
     { href: '/ekodichurch/schedule/', label: '주요일정' },
     { href: '/ekodichurch/#together', label: '함께하기', className: 'nav-together' },
-    { href: '/ekodichurch/my/', label: '마이페이지', className: 'shell-my' },
+    { href: '/qtin/church', label: '큐티인 신청' },
   ];
   const links = items.map((item) => {
     const link = document.createElement('a');
