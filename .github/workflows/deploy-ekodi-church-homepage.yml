@@ -471,12 +471,25 @@ jobs:
               await page.waitForFunction(expected=>document.documentElement.lang===expected&&window.__EKODI_CHURCH_LIFE_HUB_I18N__===true&&document.querySelector('a[href="/ekodichurch/devotion/"]'),{timeout:25000},locale);
               if(extended.has(locale)) await page.waitForFunction(expected=>window.EKODIChurchExtendedI18n?.getLocale?.()===expected,{timeout:20000},locale);
               if(locale!=='ko-KR'){
-                await page.waitForFunction(expected=>{
-                  if(document.documentElement.lang!==expected)return false;
-                  const clone=document.body.cloneNode(true);
-                  clone.querySelectorAll('[data-ekodi-language-control],[data-ekodi-user-content]').forEach(node=>node.remove());
-                  return !/[가-힣]/.test(clone.innerText);
-                },{timeout:20000,polling:'raf'},locale);
+                try{
+                  await page.waitForFunction(expected=>{
+                    if(document.documentElement.lang!==expected)return false;
+                    const clone=document.body.cloneNode(true);
+                    clone.querySelectorAll('[data-ekodi-language-control],[data-ekodi-user-content]').forEach(node=>node.remove());
+                    return !/[가-힣]/.test(clone.innerText);
+                  },{timeout:20000,polling:'raf'},locale);
+                }catch(error){
+                  // Diagnostic only. Preserve strict failure, but name the untranslated visible text.
+                  const residual=await page.evaluate(()=>{
+                    const clone=document.body.cloneNode(true);
+                    clone.querySelectorAll('[data-ekodi-language-control],[data-ekodi-user-content]').forEach(node=>node.remove());
+                    const visible=clone.innerText||clone.textContent||'';
+                    const korean=[...visible.matchAll(/.{0,35}[가-힣].{0,35}/g)].slice(0,30).map(x=>x[0]);
+                    return {lang:document.documentElement.lang,visibleLength:visible.length,korean,qtin:document.querySelector('a[href="/qtin/church"]')?.textContent?.trim()||''};
+                  });
+                  console.error('Church nine-language residual diagnostic '+JSON.stringify({locale,...residual}));
+                  throw error;
+                }
                 await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
               }
               const snapshot=await page.evaluate(()=>{
