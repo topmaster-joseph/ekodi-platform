@@ -11,6 +11,17 @@ export function tenantLivePage(tenant){
     :missionShell
     ?`<header class="mission-site-header"><a class="mission-brand" href="${home}"><span class="mission-brand-mark">E</span><span><strong>${name}</strong><small>EKODI MISSION</small></span></a><nav aria-label="주요 메뉴" data-mission-nav></nav></header><div class="mission-live-state"><span id="liveState">확인 중</span></div>`
     :`<header class="live-header"><a class="brand" href="${home}"><span class="mark">E</span><span><strong>${name}</strong><small>LIVE</small></span></a><div class="header-actions"><span id="liveState">확인 중</span><a href="${home}">홈</a></div></header>`;
+  // Canonical Church studio only: local rehearsal never creates a room or public stream.
+  const rehearsalPanel=churchShell?`<section class="church-rehearsal" aria-label="방송 전 비공개 테스트">
+    <strong>방송 전 비공개 테스트</strong>
+    <p>영상·마이크·화면 구성을 이 기기에서만 녹화합니다. 방송 서버나 외부 채널에 송출하지 않습니다.</p>
+    <div class="church-rehearsal-actions">
+      <button type="button" id="localRehearsalStart">테스트 녹화 시작</button>
+      <button type="button" id="localRehearsalStop" disabled>녹화 중지 · 확인</button>
+    </div>
+    <p id="localRehearsalStatus" role="status" aria-live="polite">시작 전 · 카메라와 마이크를 준비하세요.</p>
+    <video class="church-rehearsal-playback hidden" id="localRehearsalPlayback" controls playsinline preload="metadata" aria-label="테스트 녹화 재생"></video>
+  </section>`:'';
   const shellScript=churchShell?'<script src="/ekodichurch/church-daily-verse.js" defer></script><script src="/tenant-live-church.js" defer></script>':missionShell?'<script src="/ekodimission/assets/shell.js" defer></script>':'';
   const body=`<!doctype html><html lang="ko-KR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="${robots}"><title>${title}</title><meta name="description" content="${name} 실시간 방송"><link rel="stylesheet" href="/tenant-live.css?v=20261107-1"><link rel="stylesheet" href="/live-interpretation.css?v=20261107-1">${shellHead}</head>
 <body data-tenant="${esc(tenant.apiTenant)}" data-room-mode="${esc(tenant.mode)}" data-live-path="${path}" data-auth-site="${esc(tenant.authSite)}" data-name="${name}" data-default-title="${title}">
@@ -49,6 +60,7 @@ ${header}
 
     <details class="delivery-settings compact-section"><summary>송출·저장</summary><div class="delivery-fixed"><span class="delivery-check" aria-hidden="true">✓</span><div><strong>EKODI · 자동 저장</strong></div><span class="delivery-default">기본</span></div><div class="external-head"><strong>외부 동시방송</strong><button id="refreshDestinationsButton" type="button">확인</button></div><div id="externalDestinations" class="destination-options"><small>로그인 후 확인</small></div><div class="live-simulcast" data-live-simulcast></div></details>
 
+    ${rehearsalPanel}
     <div class="broadcast-actions"><button class="primary" id="goLiveButton">방송 시작</button><button class="danger hidden" id="endLiveButton" disabled>방송 종료</button></div>
     <div id="hostAccessStatus" class="studio-host-status hidden" role="status" aria-live="polite"></div>
     <a id="hostAccessLogin" class="studio-host-login hidden" href="#" rel="nofollow">Google 계정 선택 · 진행자 권한 확인</a>
