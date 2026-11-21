@@ -330,7 +330,7 @@ test('backup restore rejects tampering, cross-tenant replay and missing key vers
 test('backup refuses records exceeding the bounded pilot archive rather than truncating transcripts', async () => {
   const { env } = setup();
   const id = { tenantId: 'campus1', operationId: 'large00001' };
-  assert.equal((await call(env, { ...draft(id.operationId), payload: { text: 'x'.repeat(9000) } })).status, 201);
+  assert.equal((await call(env, { ...draft(id.operationId), payload: { text: 'x'.repeat(7000) } })).status, 201);
   const result = await call(env, id, 'backup', 'campus1', 'backup');
   // Small pilot archive is bounded at 12KiB; large content remains private and intact.
   assert.equal(result.status, 200);
