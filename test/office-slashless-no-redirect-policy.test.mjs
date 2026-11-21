@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 const site=readFileSync(new URL('../wrangler.site.toml',import.meta.url),'utf8');
 const worker=readFileSync(new URL('../site-worker.js',import.meta.url),'utf8');
 const headers=readFileSync(new URL('../_headers',import.meta.url),'utf8');
+const shell=readFileSync(new URL('../site-shell-worker.js',import.meta.url),'utf8');
 const m=site.match(/^run_worker_first = \[([^\n]+)\]$/m);
 if(!m) throw Error('run_worker_first source declaration is absent');
 const routes=JSON.parse('['+m[1]+']');
@@ -18,6 +19,7 @@ test('Office direct Worker contract and static asset CSP are preserved',()=>{
  assert.match(worker,/url\.pathname === '\/office' \|\| url\.pathname\.startsWith\('\/office\/'\)/);
  assert.match(worker,/url\.pathname==='\/office'\?'\/office\/':url\.pathname/);
  assert.match(worker,/office-method-blocked/);
+ assert.match(shell,/if\(pathname==='\/office'\|\|pathname\.startsWith\('\/office\/'\)\)return response/);
  assert.match(worker,/OFFICE_HUB_CSP/);
  for(const p of ['/office','/office/','/office/*']){
    const section=headers.split('\n'+p+'\n')[1]?.split('\n\n')[0];
