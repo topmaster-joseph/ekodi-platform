@@ -120,6 +120,12 @@ const CHAT_ERRORS={
 const CHAT_PROVIDER_LABELS={'gemini-free':'무료 AI','openrouter-free':'무료 AI','groq-free':'무료 AI','huggingface-free-credit':'무료 AI','cloudflare-workers-ai':'무료 AI','openai-api':'GPT','anthropic-api':'Claude',ollama:'Ollama',auto:'자동',gpt:'GPT',claude:'Claude'};
 function chatProviderLabel(provider){return CHAT_PROVIDER_LABELS[provider]||'EKODI AI'}
 function chatStatus(message){$('chatStatus').textContent=message}
+const WEB_SOURCE_LABELS={naver:'네이버',google:'구글뉴스',bing:'Bing뉴스',gdelt:'GDELT뉴스',wiki:'위키'};
+function webStatusText(status){
+  if(!status||typeof status!=='object')return'';
+  const parts=Object.entries(status).filter(([key])=>WEB_SOURCE_LABELS[key]).map(([key,value])=>WEB_SOURCE_LABELS[key]+' '+(String(value).startsWith('ok:')?String(value).slice(3)+'건':value==='not_configured'?'미연결':String(value).slice(0,12)));
+  return parts.length?' ('+parts.join(' · ')+')':'';
+}
 function chatStore(){try{return window.sessionStorage}catch{return null}}
 function saveChat(){try{chatStore()?.setItem(CHAT_STORE_KEY,JSON.stringify({history:chatState.history.slice(-8),task:$('chatTask')?.value||'general'}))}catch{}}
 function clearChatStore(){try{chatStore()?.removeItem(CHAT_STORE_KEY)}catch{}}
@@ -196,7 +202,7 @@ async function copyText(text,button){
     try{document.execCommand('copy');done('복사됨')}catch{done('복사 실패')}finally{area.remove()}}
 }
 function chatLog(){const log=$('chatMessages');if(log.querySelector('.chat-intro'))log.replaceChildren();return log}
-function chatSources(bubble,sources){
+function chatSources(bubble,sources,status=null){
   const list=(Array.isArray(sources)?sources:[]).filter(item=>item&&item.title&&/^https:\/\//.test(String(item.url||''))).slice(0,6);
   if(!list.length)return;
   const box=document.createElement('div');box.className='chat-sources';
@@ -208,9 +214,12 @@ function chatSources(bubble,sources){
     link.target='_blank';link.rel='noopener noreferrer';
     const meta=document.createElement('span');meta.textContent=' '+[item.source,item.date].filter(Boolean).join(' · ');li.append(link,meta);ol.append(li);
   }
-  box.append(ol);bubble.insertBefore(box,bubble.querySelector('.chat-tools'));
+  box.append(ol);
+  const detail=webStatusText(status);
+  if(detail){const note=document.createElement('p');note.className='chat-sources-status';note.textContent='검색원'+detail;box.append(note)}
+  bubble.insertBefore(box,bubble.querySelector('.chat-tools'));
 }
-function chatBubble(role,content,provider='',sources=null){
+function chatBubble(role,content,provider='',sources=null,webStatus=null){
   const log=chatLog();
   const bubble=document.createElement('div');bubble.className='chat-bubble '+role;
   const caption=document.createElement('small');caption.textContent=role==='user'?'나':'EKODI AI'+(provider?' · '+chatProviderLabel(provider):'');
@@ -220,7 +229,7 @@ function chatBubble(role,content,provider='',sources=null){
     const tools=document.createElement('div');tools.className='chat-tools';
     const copy=document.createElement('button');copy.type='button';copy.className='chat-mini';copy.textContent='답변 복사';
     copy.addEventListener('click',()=>copyText(String(content||''),copy));tools.append(copy);bubble.append(tools);
-    chatSources(bubble,sources);
+    chatSources(bubble,sources,webStatus);
   }else{const message=document.createElement('div');message.textContent=String(content||'');bubble.append(message)}
   log.append(bubble);log.scrollTop=log.scrollHeight;return bubble;
 }
@@ -282,9 +291,9 @@ async function sendChat(message,existingBubble=null){
     const result=response.jobId?await chatPoll(response.jobId):response;
     if(!result.reply)throw new Error('empty_model_answer');
     const sources=(Array.isArray(response.sources)?response.sources:[]).filter(item=>item&&item.title&&/^https:\/\//.test(String(item.url||''))).slice(0,6);
-    typing.remove();chatBubble('assistant',result.reply,result.provider||mode,sources);
+    typing.remove();chatBubble('assistant',result.reply,result.provider||mode,sources,response.webStatus);
     rememberChat(message,result.reply,sources);
-    chatStatus('응답 완료 · '+chatProviderLabel(result.provider||mode)+(web?(sources.length?' · 웹 출처 '+sources.length+'건':' · 웹 검색 결과 없음'):''));
+    chatStatus('응답 완료 · '+chatProviderLabel(result.provider||mode)+(web?(sources.length?' · 웹 출처 '+sources.length+'건':' · 웹 검색 결과 없음'+webStatusText(response.webStatus)):''));
   }catch(error){
     typing.remove();
     const text=CHAT_ERRORS[error.message]||(
