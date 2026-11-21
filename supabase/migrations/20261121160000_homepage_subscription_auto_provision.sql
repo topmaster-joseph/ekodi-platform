@@ -143,6 +143,24 @@ begin
 end
 $$;
 
+create or replace function public.homepage_subscription_is_admin()
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare v_admin boolean := false;
+begin
+  -- 플랫폼 관리자 판정은 운영 DB의 public.is_platform_admin()(profiles.platform_admin)을 그대로 따른다.
+  -- 함수가 없는 환경(로컬 CI)에서는 항상 false.
+  if to_regprocedure('public.is_platform_admin()') is not null then
+    execute 'select public.is_platform_admin()' into v_admin;
+  end if;
+  return coalesce(v_admin,false);
+end
+$$;
+
 create or replace function public.homepage_subscription_admin_list(p_limit integer default 50)
 returns jsonb
 language plpgsql
@@ -151,7 +169,7 @@ security definer
 set search_path = public
 as $$
 begin
-  if not public.is_platform_admin() then return jsonb_build_object('ok',false,'error','forbidden'); end if;
+  if not public.homepage_subscription_is_admin() then return jsonb_build_object('ok',false,'error','forbidden'); end if;
   return jsonb_build_object('ok',true,'requests',coalesce((
     select jsonb_agg(to_jsonb(x) order by x.created_at desc) from (
       select r.id,r.created_at,r.mode,r.audience,r.plan,r.contract,r.monthly_estimate,r.display_name,r.email,r.phone,r.status,r.site_slug,s.published
@@ -169,7 +187,7 @@ set search_path = public
 as $$
 declare v_slug text := lower(trim(coalesce(p_slug,''))); v_request uuid;
 begin
-  if not public.is_platform_admin() then return jsonb_build_object('ok',false,'error','forbidden'); end if;
+  if not public.homepage_subscription_is_admin() then return jsonb_build_object('ok',false,'error','forbidden'); end if;
   update public.homepage_sites set published=coalesce(p_published,true),
     published_at=case when coalesce(p_published,true) then coalesce(published_at,now()) else published_at end,
     updated_at=now()
@@ -182,9 +200,11 @@ $$;
 
 revoke all on function public.homepage_subscription_submit(jsonb) from public;
 revoke all on function public.homepage_site_public(text) from public;
+revoke all on function public.homepage_subscription_is_admin() from public;
 revoke all on function public.homepage_subscription_admin_list(integer) from public;
 revoke all on function public.homepage_subscription_publish(text, boolean) from public;
 grant execute on function public.homepage_subscription_submit(jsonb) to anon, authenticated;
 grant execute on function public.homepage_site_public(text) to anon, authenticated;
+grant execute on function public.homepage_subscription_is_admin() to authenticated;
 grant execute on function public.homepage_subscription_admin_list(integer) to authenticated;
 grant execute on function public.homepage_subscription_publish(text, boolean) to authenticated;
