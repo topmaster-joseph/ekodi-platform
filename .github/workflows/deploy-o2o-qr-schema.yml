@@ -6,6 +6,7 @@ on:
       - ".github/workflows/deploy-o2o-qr-schema.yml"
       - "supabase/migrations/*o2o_tenant_operator_qr.sql"
       - "test/o2o-tenant-operator.test.mjs"
+      - "test/o2o-schema-release-gate.test.mjs"
   workflow_dispatch:
     inputs:
       release_branch_ref:
@@ -30,6 +31,7 @@ concurrency:
 
 env:
   MIGRATION: supabase/migrations/20261103165945_o2o_tenant_operator_qr.sql
+  MIGRATION_BLOB_SHA: c8f0059877222fa4c829624110b8ec12fbc91218
   DEV_PROJECT: lxcxwbdwwojjkgybbqii
   PROD_PROJECT: renzehysxirjilvdxacv
 
@@ -47,9 +49,10 @@ jobs:
         run: |
           set -euo pipefail
           test -s "$MIGRATION"
+          test "$(git hash-object "$MIGRATION")" = "$MIGRATION_BLOB_SHA"
           ! grep -Eiq '(^|[[:space:]])(drop[[:space:]]+table|truncate[[:space:]]+table|drop[[:space:]]+column)' "$MIGRATION"
           node scripts/validate-supabase-public-grants.mjs
-          node --test test/o2o-tenant-operator.test.mjs test/o2o-hub.test.mjs test/o2o-routing-reservation.test.mjs
+          node --test test/o2o-tenant-operator.test.mjs test/o2o-hub.test.mjs test/o2o-routing-reservation.test.mjs test/o2o-schema-release-gate.test.mjs
 
   promote:
     needs: validate
@@ -79,6 +82,7 @@ jobs:
           [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           test "$GITHUB_SHA" = "$EXPECTED_SHA"
           test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(git hash-object "$MIGRATION")" = "$MIGRATION_BLOB_SHA"
           [[ "$RELEASE_BRANCH" =~ ^ai/[a-zA-Z0-9._-]+/orch_[a-zA-Z0-9_-]+$ ]]
           [[ "$RELEASE_TASK" =~ ^orch_[a-zA-Z0-9_-]+$ ]]
           test "${RELEASE_BRANCH##*/}" = "$RELEASE_TASK"
@@ -141,7 +145,29 @@ jobs:
             query "$project" "$scratch/prereq.sql" true "$scratch/prereq.json"
             jq -e 'length == 1 and (.[0] | all(.[]; . == true))' "$scratch/prereq.json" >/dev/null
           done
-          query "$DEV_PROJECT" "$MIGRATION" false "$scratch/dev-applied.json"
+          # Previously promoted DEV must not be needlessly mutated on every
+          # attempt. That extra management write increases the immutable-main
+          # race window before PROD, even when DEV's full RLS/RPC proof is green.
+          # Partial installs are never repaired automatically.
+          cat > "$scratch/dev-installed.sql" <<'SQL'
+          select
+            to_regclass('public.o2o_campaign_links') is not null as links,
+            to_regclass('public.o2o_campaign_audit') is not null as audit,
+            to_regprocedure('public.o2o_operator_snapshot(uuid)') is not null as snapshot_rpc,
+            to_regprocedure('public.o2o_operator_issue(uuid,text,text,text,timestamptz)') is not null as issue_rpc,
+            to_regprocedure('public.o2o_operator_revoke(uuid)') is not null as revoke_rpc,
+            to_regprocedure('public.o2o_public_resolve(text)') is not null as resolve_rpc;
+          SQL
+          query "$DEV_PROJECT" "$scratch/dev-installed.sql" true "$scratch/dev-installed.json"
+          if jq -e 'length == 1 and (.[0] | all(.[]; . == true))' "$scratch/dev-installed.json" >/dev/null; then
+            echo 'DEV O2O schema already present. Run full read-only proof; no DEV schema write.'
+          elif jq -e 'length == 1 and (.[0] | all(.[]; . == false))' "$scratch/dev-installed.json" >/dev/null; then
+            echo 'DEV O2O schema absent. Applying the pinned migration once before full proof.'
+            query "$DEV_PROJECT" "$MIGRATION" false "$scratch/dev-applied.json"
+          else
+            echo 'DEV O2O schema is partially installed. Manual authorized reconciliation required.'
+            exit 1
+          fi
           query "$DEV_PROJECT" "$scratch/proof.sql" true "$scratch/dev-proof.json"
           jq -e 'length == 1 and (.[0] | all(.[]; . == true))' "$scratch/dev-proof.json" >/dev/null
           echo 'DEV QR RLS, authorization RPCs and revoked table access verified.'
