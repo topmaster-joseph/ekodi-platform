@@ -252,7 +252,18 @@ export async function runTask(rawTask, options={}){
     ? await chromium.launch({headless:true,executablePath:runtimeBrowser})
     : await chromium.launch({headless:true});
   const device=PROFILE[task.deviceProfile];
-  const context=await browser.newContext({
+  // Keep the watchdog active during context/page setup and shutdown. A setup
+  // error must never bypass the close of the freshly launched owned browser.
+  let context;
+  let taskReport;
+  let watchdogExpired=false;
+  const watchdog=setTimeout(()=>{
+    watchdogExpired=true;
+    void browser.close().catch(()=>{});
+  },task.timeoutMs+15000);
+  watchdog.unref();
+  try {
+    context=await browser.newContext({
     viewport:{width:device.width,height:device.height},
     isMobile:device.isMobile,
     hasTouch:device.hasTouch,
@@ -541,13 +552,22 @@ export async function runTask(rawTask, options={}){
       supabaseCalls,
       documentLoads,
     };
-    const safeReport=sanitizeNativeBrowserReceipt(report);
-    await fs.writeFile(path.join(taskDir,'result.json'),JSON.stringify(safeReport,null,2));
-    return safeReport;
+    taskReport=sanitizeNativeBrowserReceipt(report);
   } finally {
+    // Close the task context first; parent shutdown also closes a context
+    // whose initialization never reached the normal action loop.
     await context.close().catch(()=>{});
-    await browser.close().catch(()=>{});
   }
+  } finally {
+    clearTimeout(watchdog);
+    // Never turn a failed browser shutdown into a successful task receipt.
+    await browser.close();
+  }
+  if(watchdogExpired || browser.isConnected())
+    fail('BROWSER_CLEANUP_UNVERIFIED','Owned background browser shutdown not verified');
+  // Persist success only *after* the browser was closed and disconnected.
+  await fs.writeFile(path.join(taskDir,'result.json'),JSON.stringify(taskReport,null,2));
+  return taskReport;
 }
 
 const invoked=process.argv[1]&&path.resolve(process.argv[1])===path.resolve(fileURLToPath(import.meta.url));
