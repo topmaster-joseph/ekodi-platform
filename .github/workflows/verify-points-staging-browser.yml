@@ -32,8 +32,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  verify:
+  # Browser/fixture work has an owner-approved finite KST reservation window.
+  # After expiry no Access token, D1/Supabase fixture or Chromium is created.
+  reservation_window:
     if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      active: ${{ steps.window.outputs.active }}
+    steps:
+      - name: Validate finite EKODI Points E2E period
+        id: window
+        shell: bash
+        run: |
+          set -euo pipefail
+          kst_day="$(TZ=Asia/Seoul date +%Y-%m-%d)"
+          if [[ "$kst_day" < '2026-11-22' || "$kst_day" > '2026-12-22' ]]; then
+            echo 'active=false' >> "$GITHUB_OUTPUT"
+            echo "::notice::Points browser E2E reservation expired/not begun ($kst_day KST); no credentials used."
+          else
+            echo 'active=true' >> "$GITHUB_OUTPUT"
+            echo "::notice::Points browser E2E is within its approved KST reservation window."
+          fi
+  verify:
+    needs: reservation_window
+    if: github.ref == 'refs/heads/main' && needs.reservation_window.outputs.active == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: development
