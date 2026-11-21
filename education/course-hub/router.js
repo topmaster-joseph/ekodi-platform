@@ -104,10 +104,10 @@ function publicCourse(course){
     'publicSlideAccess']){
     if(Object.hasOwn(course,field))out[field]=course[field];
   }
-  // Only known service-relative public resources may appear in the student API.
+  // Only known direct canonical /edu/ public resources may appear in the student API.
   if(Array.isArray(course.resources)){
     out.resources=course.resources.filter(resource=>resource&&typeof resource.label==='string'&&
-      typeof resource.url==='string'&&/^\/(?!\/)(?:study\/|pizza-experience\/)/.test(resource.url)&&
+      typeof resource.url==='string'&&/^\/edu\/(?:study\/|pizza-experience\/)/.test(resource.url)&&
       !/^\/edu(?:\/edu)+(?=\/|$)/.test(resource.url))
       .map(resource=>({label:resource.label,url:resource.url}));
   }
