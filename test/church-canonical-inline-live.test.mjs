@@ -16,8 +16,9 @@ test('canonical church studio uses same site-owned header/footer and existing li
  assert.match(html,/class="church-live-site-header site-header"/);
  assert.match(html,/id="churchLiveNav"/);
  for(const label of ['예배안내','온라인','오시는 길','큐티인 신청','마이페이지'])assert.ok(html.includes(label));
- for(const detail of ['전남 무안군 청계면 백련동1길 17-4, 1층','운영주체 에코디교회','대표 정찬균','고유번호 307-82-82097'])assert.ok(html.includes(detail));
+ for(const detail of ['전남 무안군 청계면 백련동1길 17-4, 1층','에코디교회 정찬균','고유번호 307-82-82097'])assert.ok(html.includes(detail));
  assert.doesNotMatch(html,/사업자 소재지/);
+ assert.doesNotMatch(html,/운영주체 에코디교회|대표 정찬균/);
  assert.match(html,/href="\/tenant-live-church.css"/);
  assert.match(html,/src="\/tenant-live-church.js"/);
  assert.doesNotMatch(html,/src="\/ekodichurch\/church-daily-verse.js"/);
@@ -78,6 +79,8 @@ test('Church guest and studio share the same address-only legal footer',async()=
   assert.ok(footer.startsWith('<footer'),'Church '+view+' footer missing');
   assert.match(footer,/전남 무안군 청계면 백련동1길 17-4, 1층/);
   assert.doesNotMatch(footer,/사업자 소재지/);
+  assert.match(footer,/에코디교회 정찬균/);
+  assert.doesNotMatch(footer,/운영주체 에코디교회|대표 정찬균/);
   assert.match(footer,/고유번호 307-82-82097/);
   assert.match(footer,/href="\/privacy"/);
   assert.match(footer,/href="\/terms"/);
