@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 
 const script=fs.readFileSync('scripts/points-staging-access.mjs','utf8');
@@ -33,22 +35,38 @@ test('workflow issues the token when secrets are absent and always removes it', 
 const mockedAccessProcess=String.raw`
 const actions=[];
 const own='ekodi-points-e2e-'+process.env.POINTS_E2E_RUN;
-const json=result=>new Response(JSON.stringify({success:true,result}),{
+const json=(result,result_info)=>new Response(JSON.stringify({success:true,result,...(result_info?{result_info}:{})}),{
   status:200,headers:{'content-type':'application/json'}
 });
 globalThis.fetch=async (input,init={})=>{
   const url=String(input),method=init.method||'GET';
   if(url.endsWith('/api/session'))return new Response(null,{status:200});
   if(url.includes('/access/apps?per_page=200'))
-    return json([{id:'app1',name:'staging-only',domain:'ekodi-admin-staging.ekodi-development.workers.dev'}]);
-  if(url.includes('/access/service_tokens?per_page=1000')){
+    return json([
+      {id:'app1',name:'staging-only',domain:'ekodi-admin-staging.ekodi-development.workers.dev'},
+      ...(process.env.TEST_ACCESS_TWO_APPS==='1'?[{id:'app2',name:'staging-member',domain:'ekodi-my-staging.ekodi-development.workers.dev'}]:[])
+    ]);
+  if(url.includes('/access/service_tokens?per_page=100&page=')){
     if(process.env.TEST_ACCESS_LIST_DENIED==='1')
       return new Response(JSON.stringify({success:false,errors:[{code:1010,message:'forbidden'}]}),{
         status:403,headers:{'content-type':'application/json'}});
-    if(process.env.TEST_ACCESS_LIST==='empty')return json([]);
-    const id='0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b';
-    const token={id,client_id:process.env.STATIC_ACCESS_ID||''};
-    return json(process.env.TEST_ACCESS_LIST==='duplicate'?[token,token]:[token]);
+    const page=Number(url.split('&page=')[1]);
+    const mode=process.env.TEST_ACCESS_LIST||'one';
+    const match={id:'0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b',client_id:process.env.STATIC_ACCESS_ID||''};
+    const other={id:'b0af5941-987a-453d-aad8-b4350afc2e7f',client_id:'someone-else.access'};
+    const multi=mode==='twopages'||mode==='twopagesduplicate';
+    const total_pages=mode==='unbounded'?11:multi?2:1;
+    let tokens= mode==='empty'?[]:
+      mode==='duplicate'?[match,match]:
+      mode==='twopages'?(page===1?[other]:[match]):
+      mode==='twopagesduplicate'?[match]:
+      mode==='expired'?[{...match,expires_at:'2020-01-01T00:00:00Z'}]:
+      mode==='malformedExpiry'?[{...match,expires_at:'not-a-timestamp'}]:
+      [match];
+    const info={page,total_pages,count:tokens.length};
+    if(mode==='truncated')info.count+=1;
+    if(mode==='missingMetadata')return json(tokens);
+    return json(tokens,info);
   }
   if(url.endsWith('/access/service_tokens')&&method==='POST'&&process.env.TEST_ACCESS_DENY_TOKEN_CREATE==='1')
     return new Response(JSON.stringify({success:false,errors:[{code:1010,error:'auth.forbidden'}]}),{
@@ -58,6 +76,9 @@ globalThis.fetch=async (input,init={})=>{
     actions.push({method,url,body:JSON.parse(init.body)});
     return json({id:'created-policy'});
   }
+  if(url.endsWith('/access/apps/app2/policies')&&method==='POST')
+    return new Response(JSON.stringify({success:false,errors:[{message:'intentional second app failure'}]}),{
+      status:403,headers:{'content-type':'application/json'}});
   if(url.endsWith('/access/apps/app1/policies?per_page=100'))
     return json([{id:'same-run',name:own},{id:'another-run',name:'ekodi-points-e2e-other-run'}]);
   if(url.endsWith('/access/service_tokens?per_page=100'))
@@ -169,4 +190,43 @@ test('Client ID mismatch, missing match, duplicate match, or unreadable list nev
     assert.doesNotMatch(r.stdout,/ACCESS_PROBE=/);
     assert.doesNotMatch(r.stdout, /0123456789abcdef/);
   }
+});
+
+test('paginated Cloudflare Access metadata resolves a matching token on page two',()=>{
+  const client='0123456789abcdef0123456789abcdef.access';
+  const r=runMockAccess('open-static',{
+    STATIC_ACCESS_SERVICE_TOKEN_ID:client,STATIC_ACCESS_ID:client,TEST_ACCESS_LIST:'twopages'
+  });
+  assert.equal(r.status,0,r.stdout+'\n'+r.stderr);
+  const calls=actionsOf(r);
+  assert.equal(calls.length,1);
+  assert.deepEqual(calls[0].body.include,
+    [{service_token:{token_id:'0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b'}}]);
+  assert.doesNotMatch(r.stdout,/0123456789abcdef/);
+});
+test('incomplete, contradictory, duplicate and expired token metadata cannot grant Access',()=>{
+  const client='0123456789abcdef0123456789abcdef.access';
+  for(const mode of ['twopagesduplicate','truncated','missingMetadata','unbounded','expired','malformedExpiry']){
+    const r=runMockAccess('open-static',{
+      STATIC_ACCESS_SERVICE_TOKEN_ID:client,STATIC_ACCESS_ID:client,TEST_ACCESS_LIST:mode
+    });
+    assert.notEqual(r.status,0,'mode='+mode+' '+r.stdout+' '+r.stderr);
+    assert.doesNotMatch(r.stdout,/ACCESS_PROBE=/);
+    assert.doesNotMatch(r.stdout,/0123456789abcdef/);
+  }
+});
+test('partial Access policy creation keeps the first policy ID for unconditional cleanup',()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'ekodi-points-policy-'));
+  const file=path.join(dir,'env');
+  try{
+    const r=runMockAccess('open-static',{
+      STATIC_ACCESS_SERVICE_TOKEN_ID:'approved-token-123456',
+      TEST_ACCESS_TWO_APPS:'1',
+      GITHUB_ENV:file
+    });
+    assert.notEqual(r.status,0,'second policy must fail closed');
+    const recorded=fs.readFileSync(file,'utf8');
+    assert.match(recorded,/E2E_ACCESS_POLICIES=app1:created-policy/);
+    assert.doesNotMatch(recorded,/app2:/);
+  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
