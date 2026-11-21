@@ -26,6 +26,9 @@ export async function verifySearchVisibilityInteractions(page,artifactsDir,resul
       : googleScenario==='no_rows'
         ? {state:'connected',property:selected,period:{startDate:'2026-09-01',endDate:'2026-09-28'},
           metrics:null,sitemaps:[]}
+      : googleScenario==='zero_impressions'
+        ? {state:'connected',property:selected,period:{startDate:'2026-09-01',endDate:'2026-09-28'},
+          metrics:{clicks:0,impressions:0,ctrPercent:0,avgPosition:0},sitemaps:[]}
         : {state:'connected',property:selected,period:{startDate:'2026-09-01',endDate:'2026-09-28'},
           metrics:{clicks:12,impressions:120,ctrPercent:10,avgPosition:4.5},
           sitemaps:[{path:selected.replace(/\/$/,'')+'/sitemap.xml'}]};
@@ -132,7 +135,7 @@ export async function verifySearchVisibilityInteractions(page,artifactsDir,resul
     googleScenario='connected';
     await googleButton.click();
     await panel.locator('[data-sv-google-summary]').filter({
-      hasText:/검색 클릭 12회 · 노출 120회 · CTR 10\.00% · 평균 순위 4\.5/
+      hasText:/검색 클릭 12회 · 노출 120회 · CTR 10\.00% · 평균 순위 4\.5위/
     }).waitFor({timeout:7000});
     if(!(await panel.locator('[data-sv-google-summary]').textContent())?.includes(
       '전체 페이지 색인 완료나 AI 검색 인용을 의미하지 않습니다'
@@ -140,12 +143,20 @@ export async function verifySearchVisibilityInteractions(page,artifactsDir,resul
     googleScenario='no_rows';
     await googleButton.click();
     await panel.locator('[data-sv-google-summary]').filter({
-      hasText:'현재 기간에 반환된 검색 성과 행이 없어 실측치를 확정할 수 없습니다.'
+      hasText:'이 기간 Google 검색 성과 자료가 없습니다'
     }).waitFor({timeout:7000});
-    if(googleReadRequests.length!==3||googleReadRequests.some(x=>x.method!=='GET'))
+    // Zero impressions have no Google ranking; never render a misleading 평균 순위 0.0.
+    googleScenario='zero_impressions';
+    await googleButton.click();
+    await panel.locator('[data-sv-google-summary]').filter({
+      hasText:'노출이 없어 평균 순위는 계산되지 않습니다'
+    }).waitFor({timeout:7000});
+    if((await panel.locator('[data-sv-google-summary]').textContent())?.includes('평균 순위 0.0'))
+      throw new Error('Zero-impression Google metrics rendered a misleading average position');
+    if(googleReadRequests.length!==4||googleReadRequests.some(x=>x.method!=='GET'))
       throw new Error('Unexpected Google Search Console metric request count or method');
     results.push({id:'search-visibility-google-readonly',group:'ai',kind:'synthetic-readonly-ui',
-      ok:true,detail:'button and selected-site GET; disconnected, measured and missing-data fixtures; no provider API or writes'});
+      ok:true,detail:'button and selected-site GET; disconnected, measured, missing-data and zero-impression fixtures; no provider API or writes'});
     await page.screenshot({path:path.join(artifactsDir,'search-visibility-google-ui-synthetic.png'),fullPage:false});
     await page.screenshot({path:path.join(artifactsDir,'search-visibility-desktop.png'),fullPage:false});
     await page.setViewportSize({width:390,height:844});
