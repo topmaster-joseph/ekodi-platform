@@ -6,14 +6,15 @@ on:
   issue_comment:
     types: [created]
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/church-live-production-e2e.yml'
-      - 'scripts/church-live-production-e2e.mjs'
-  workflow_run:
-    workflows: ['Deploy Control API']
-    types: [completed]
+    inputs:
+      acknowledge_public_synthetic_broadcast:
+        description: 'I acknowledge that this runs a short publicly visible synthetic Church test broadcast'
+        required: true
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
+        default: 'no'
 
 permissions:
   contents: read
@@ -25,11 +26,9 @@ concurrency:
 jobs:
   church-live-e2e:
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_branch == 'main') ||
+      (github.event_name == 'workflow_dispatch' &&
+       github.actor == 'topmaster-joseph' &&
+       inputs.acknowledge_public_synthetic_broadcast == 'yes') ||
       (github.event_name == 'issue_comment' &&
        github.repository == 'topmaster-joseph/ekodi-platform' &&
        github.event.issue.number == 5140 &&
@@ -43,7 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
