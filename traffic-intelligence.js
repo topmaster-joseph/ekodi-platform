@@ -69,7 +69,7 @@ export const ROOT_PATH_SITE_IDS = Object.freeze({
   sosik:'sosik', qtin:'qtin', pyeonggongmok:'pyeonggongmok',
   'mokpo-presbytery':'mokpo-presbytery', proposal:'proposal', office:'office', promotion:'promotion',
   notifications:'notifications', singles:'singles', learn:'learn', history:'history',
-  'local-commerce':'local-commerce', org:'org', hub:'hub',
+  'local-commerce':'local-commerce', org:'org', hub:'hub', funding:'funding',
   'ekodibiz/trade':'trade', 'ekodibiz/marketing-ai':'marketing',
   'ekodibiz/mall':'mall'
 });
