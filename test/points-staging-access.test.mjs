@@ -41,6 +41,15 @@ globalThis.fetch=async (input,init={})=>{
   if(url.endsWith('/api/session'))return new Response(null,{status:200});
   if(url.includes('/access/apps?per_page=200'))
     return json([{id:'app1',name:'staging-only',domain:'ekodi-admin-staging.ekodi-development.workers.dev'}]);
+  if(url.includes('/access/service_tokens?per_page=1000')){
+    if(process.env.TEST_ACCESS_LIST_DENIED==='1')
+      return new Response(JSON.stringify({success:false,errors:[{code:1010,message:'forbidden'}]}),{
+        status:403,headers:{'content-type':'application/json'}});
+    if(process.env.TEST_ACCESS_LIST==='empty')return json([]);
+    const id='0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b';
+    const token={id,client_id:process.env.STATIC_ACCESS_ID||''};
+    return json(process.env.TEST_ACCESS_LIST==='duplicate'?[token,token]:[token]);
+  }
   if(url.endsWith('/access/service_tokens')&&method==='POST'&&process.env.TEST_ACCESS_DENY_TOKEN_CREATE==='1')
     return new Response(JSON.stringify({success:false,errors:[{code:1010,error:'auth.forbidden'}]}),{
       status:403,headers:{'content-type':'application/json'}
@@ -136,4 +145,28 @@ test('static token ID: dashboard URL yields its UUID; client ID is refused with 
   assert.doesNotMatch(client.stdout,/3e4872f8b2bf5a1234/);
   const url=run('https://dash.cloudflare.com/46aad/one/access-controls/service-credentials/service-tokens/0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b');
   assert.doesNotMatch(url.stdout,/required for a least-privilege/);
+});
+
+test('Client ID secret resolves only to one exact development token UUID',()=>{
+  const client='0123456789abcdef0123456789abcdef.access';
+  const r=runMockAccess('open-static',{STATIC_ACCESS_SERVICE_TOKEN_ID:client,STATIC_ACCESS_ID:client});
+  assert.equal(r.status,0,r.stdout+'\\n'+r.stderr);
+  const calls=actionsOf(r);
+  assert.equal(calls.length,1);
+  assert.deepEqual(calls[0].body.include,[{service_token:{token_id:'0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b'}}]);
+  assert.doesNotMatch(r.stdout, /0123456789abcdef/);
+});
+test('Client ID mismatch, missing match, duplicate match, or unreadable list never creates a policy',()=>{
+  const client='0123456789abcdef0123456789abcdef.access';
+  for(const extra of [
+    {STATIC_ACCESS_ID:'different.access'},
+    {STATIC_ACCESS_ID:client,TEST_ACCESS_LIST:'empty'},
+    {STATIC_ACCESS_ID:client,TEST_ACCESS_LIST:'duplicate'},
+    {STATIC_ACCESS_ID:client,TEST_ACCESS_LIST_DENIED:'1'},
+  ]){
+    const r=runMockAccess('open-static',{STATIC_ACCESS_SERVICE_TOKEN_ID:client,...extra});
+    assert.notEqual(r.status,0);
+    assert.doesNotMatch(r.stdout,/ACCESS_PROBE=/);
+    assert.doesNotMatch(r.stdout, /0123456789abcdef/);
+  }
 });
