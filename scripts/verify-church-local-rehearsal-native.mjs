@@ -13,28 +13,27 @@ const browser=await puppeteer.launch({
 });
 const forbiddenMutations=[],blockedBackgroundRequests=[];
 const report={url:'/live/church/',test:'fake-device-local-rehearsal',publicBroadcastStarted:false,serverMutations:0};
+// A single fail-closed network gate applies to the host and the independent guest viewer.
+function readOnlyRequest(request){
+  if(!['GET','HEAD','OPTIONS'].includes(request.method())){
+    // Always abort writes. Exempt known analytics from *violation counting*, never from blocking.
+    const path=new URL(request.url()).pathname;
+    if(path.startsWith('/cdn-cgi/challenge-platform/')||path==='/cdn-cgi/rum'||path==='/api/telemetry/visit'){
+      blockedBackgroundRequests.push(path.startsWith('/cdn-cgi/')?'cloudflare-background':'visit-metrics');
+    }else{
+      forbiddenMutations.push({method:request.method(),category:path.startsWith('/api/realtime')?'realtime-broadcast':path.startsWith('/api/')?'unexpected-api-write':'unexpected-external-write'});
+    }
+    void request.abort('blockedbyclient');
+    return;
+  }
+  void request.continue();
+}
 try{
   const page=await browser.newPage();
   await page.setViewport({width:1440,height:900,deviceScaleFactor:1});
   await browser.defaultBrowserContext().overridePermissions(origin,['camera','microphone']);
   await page.setRequestInterception(true);
-  page.on('request',request=>{
-    // Fail closed: not even a bug may create a room, session, recording or external stream.
-    if(!['GET','HEAD','OPTIONS'].includes(request.method())){
-      // Deny every write, including third-party telemetry. Only ordinary Cloudflare
-      // challenge/RUM and visit-count attempts may be excluded from *broadcast* violations.
-      // Never log challenge tokens or user-specific URL paths.
-      const path=new URL(request.url()).pathname;
-      if(path.startsWith('/cdn-cgi/challenge-platform/')||path==='/cdn-cgi/rum'||path==='/api/telemetry/visit'){
-        blockedBackgroundRequests.push(path.startsWith('/cdn-cgi/')?'cloudflare-background':'visit-metrics');
-      }else{
-        forbiddenMutations.push({method:request.method(),category:path.startsWith('/api/realtime')?'realtime-broadcast':path.startsWith('/api/')?'unexpected-api-write':'unexpected-external-write'});
-      }
-      void request.abort('blockedbyclient');
-      return;
-    }
-    void request.continue();
-  });
+  page.on('request',readOnlyRequest);
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:30000});
   await page.waitForSelector('#localRehearsalStart',{visible:true,timeout:25000});
   await page.waitForFunction(()=>{
@@ -73,6 +72,46 @@ try{
   assert.ok(playback.bytes>2048,'recorded local preview blob must contain actual encoded data');
   assert.ok(playback.decodedWidth>0 && playback.decodedHeight>0 && playback.playedSeconds>0.1,'local recording must decode and advance in the browser player');
   assert.ok(playback.videoTracks>=1 && playback.audioTracks>=1,'rehearsal requires video and microphone audio');
+  // External reachability is verified from the GitHub-hosted runner, not the user's LAN.
+  // No room is created: anonymous access checks are strictly GET-only.
+  const viewerResponse=await fetch(origin+'/live/church/?mode=viewer',{redirect:'manual',signal:AbortSignal.timeout(20000)});
+  assert.equal(viewerResponse.status,200,'public guest viewer route must return HTTP 200, without redirect');
+  const viewerHtml=await viewerResponse.text();
+  assert.match(viewerHtml,/id="viewerVideo"/,'guest viewer HTML must provide a media element');
+  assert.match(viewerHtml,/data-tenant="ekodichurch"/,'guest viewer must be scoped to Church tenant');
+  const liveResponse=await fetch(origin+'/api/realtime/live?tenant=ekodichurch',{
+    redirect:'manual',headers:{accept:'application/json'},signal:AbortSignal.timeout(20000)
+  });
+  assert.equal(liveResponse.status,200,'anonymous live-state API must return HTTP 200');
+  const externalLive=await liveResponse.json();
+  assert.equal(typeof externalLive.live,'boolean','public live-state API must return a boolean status');
+  const external={viewerPageHttp:viewerResponse.status,liveApiHttp:liveResponse.status,anonymous:true,
+    liveNow:externalLive.live,guestBrowser:'skipped_live_in_progress'};
+  // Do not attach to (or change) someone else's real broadcast during a safety canary.
+  if(!externalLive.live){
+    const guestContext=await browser.createBrowserContext();
+    try{
+      const guest=await guestContext.newPage();
+      await guest.setRequestInterception(true);
+      guest.on('request',readOnlyRequest);
+      const navigation=await guest.goto(origin+'/live/church/?mode=viewer',{waitUntil:'domcontentloaded',timeout:30000});
+      assert.equal(navigation?.status(),200,'anonymous external guest browser must load the live route');
+      await guest.waitForFunction(()=>document.querySelector('#viewerStatus')?.textContent?.trim()==='현재 방송 없음',
+        {timeout:20000});
+      const state=await guest.evaluate(()=>({
+        viewerVisible:!document.querySelector('#viewerView')?.classList.contains('hidden'),
+        status:document.querySelector('#viewerStatus')?.textContent?.trim()||'',
+        hasAccessToken:Boolean(sessionStorage.getItem('ekodi-auth-token'))
+      }));
+      assert.equal(state.viewerVisible,true,'guest viewer must enter the viewer surface without login');
+      assert.equal(state.hasAccessToken,false,'guest must remain anonymous');
+      assert.equal(state.status,'현재 방송 없음','idle broadcast must be communicated clearly');
+      external.guestBrowser='pass_idle_viewer';
+    }finally{
+      await guestContext.close();
+    }
+  }
+  report.externalViewer=external;
   await page.setViewport({width:390,height:844,deviceScaleFactor:1});
   const mobile=await page.evaluate(()=>({
     windowWidth:window.innerWidth,
