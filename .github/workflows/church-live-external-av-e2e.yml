@@ -34,7 +34,8 @@ jobs:
        github.event.issue.number == 10054 &&
        github.event.comment.user.login == 'topmaster-joseph' &&
        github.event.comment.body == '/ekodi-church-external-av-e2e 2026-11-22')
-    runs-on: ubuntu-latest
+    # Playwright 1.55.0 does not support ubuntu26.04 used by ubuntu-latest.
+    runs-on: ubuntu-24.04
     timeout-minutes: 8
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

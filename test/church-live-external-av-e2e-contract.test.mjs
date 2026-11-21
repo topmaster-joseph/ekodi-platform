@@ -6,6 +6,16 @@ const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const workflow=read('.github/workflows/church-live-external-av-e2e.yml');
 const e2e=read('scripts/tenant-live-production-e2e.mjs');
 
+test('Playwright 1.55 Chromium uses a supported pinned Ubuntu 24.04 runner',()=>{
+  const legacy=read('.github/workflows/church-live-production-e2e.yml');
+  for(const source of [workflow,legacy]){
+    assert.match(source,/runs-on: ubuntu-24\.04/);
+    assert.doesNotMatch(source,/runs-on: ubuntu-latest/);
+    assert.match(source,/playwright@1\.55\.0/);
+    assert.match(source,/npx playwright install --with-deps chromium/);
+  }
+});
+
 test('canonical external AV broadcast runs only with explicit owner approval',()=>{
   assert.match(workflow,/issue_comment:/);
   assert.match(workflow,/workflow_dispatch:/);
