@@ -66,7 +66,34 @@ test('audience choices make the entry plan available to people, institutions and
   for (const id of ['name', 'phone']) assert.doesNotMatch(html, new RegExp('id="' + id + '"[^>]*required'));
   assert.ok(html.includes("if(v('phone')&&!/"));
   assert.ok(html.includes("name:v('name')||v('business')"));
-  assert.ok(html.indexOf('id="apply"') < html.indexOf('class="service-details"'));
+  assert.ok(html.indexOf('id="apply"') < html.indexOf('id="plansPanel"'), 'apply tab is first');
+});
+
+test('page is split into four screen tabs with the application tab open first', () => {
+  const html = ekodiBizHomepageServiceHtml();
+  const page = html.split('id="pageTabs"')[1].split('</div>')[0];
+  assert.deepEqual([...page.matchAll(/aria-controls="([^"]+)"/g)].map((m) => m[1]), ['apply', 'plansPanel', 'typesPanel', 'rulesPanel']);
+  assert.match(page, /id="ptab-apply" aria-controls="apply" aria-selected="true"/);
+  for (const id of ['plansPanel', 'typesPanel', 'rulesPanel']) assert.match(html, new RegExp('id="' + id + '" class="page-panel" role="tabpanel"[^>]* hidden>'));
+  assert.doesNotMatch(html, /id="apply" class="page-panel" role="tabpanel"[^>]* hidden>/);
+});
+
+test('application flows type -> plan with description -> payment/add-ons -> consult or subscribe', () => {
+  const html = ekodiBizHomepageServiceHtml();
+  const order = ['유형 선택', '요금제 선택', '결제 방식 · 추가 선택', '신청자 정보'].map((t) => html.indexOf(t));
+  assert.ok(order.every((i, k) => i > 0 && (k === 0 || i > order[k - 1])), 'steps in order');
+  for (const p of Object.values(P.plans)) {
+    assert.ok(html.includes('name="planChoice" value="' + p.id + '"'), p.id);
+    const info = html.split('class="plan-info" data-plan="' + p.id + '"')[1].split('</div>')[0];
+    for (const f of p.scope.split(/,\s*/)) assert.ok(info.includes(f), p.id + ' ' + f);
+  }
+  assert.equal((html.match(/class="plan-info" data-plan="S\d" hidden>/g) || []).length, 3, 'only selected plan description visible');
+  assert.match(html, /id="send" type="submit" data-mode="consult"/);
+  assert.match(html, /id="subscribe" type="submit" data-mode="subscribe"/);
+  assert.ok(html.includes("if(sub&&!v('phone'))"), 'subscribe needs phone');
+  assert.ok(html.includes("if(sub&&!$('terms').checked)"), 'subscribe needs terms check');
+  assert.ok(html.includes('[홈페이지 바로 구독 신청]') && html.includes('[홈페이지 구독 상담 신청]'));
+  assert.ok(html.includes('결제 전까지 요금은 청구되지 않습니다'));
 });
 
 test('estimate: base, add-ons, included features, discounts and contract terms', () => {
@@ -95,9 +122,9 @@ test('estimate: base, add-ons, included features, discounts and contract terms',
 test('page shows type tabs with features and the live calculator', () => {
   const html = ekodiBizHomepageServiceHtml();
   assert.ok(html.includes(`<link rel="canonical" href="${EKODIBIZ_HOMEPAGE_SERVICE_URL}">`));
-  assert.equal((html.match(/role="tab"/g) || []).length, HOMEPAGE_TYPES.length);
-  assert.equal((html.match(/role="tabpanel"/g) || []).length, HOMEPAGE_TYPES.length);
-  assert.equal((html.match(/role="tabpanel"[^>]* hidden>/g) || []).length, HOMEPAGE_TYPES.length - 1, 'only first panel visible');
+  assert.equal((html.match(/role="tab"/g) || []).length, HOMEPAGE_TYPES.length + 4);
+  assert.equal((html.match(/role="tabpanel"/g) || []).length, HOMEPAGE_TYPES.length + 4);
+  assert.equal((html.match(/class="panel" role="tabpanel"[^>]* hidden>/g) || []).length, HOMEPAGE_TYPES.length - 1, 'only first type panel visible');
   for (const t of HOMEPAGE_TYPES) {
     assert.ok(html.includes(t.name), t.name);
     for (const f of t.features) assert.ok(html.includes(f), f);
