@@ -11,7 +11,7 @@ const newNav=[
   ['/ekodichurch/notices/','공지사항'],
   ['/ekodichurch/schedule/','주요일정'],
   ['/ekodichurch/#together','함께하기'],
-  ['/ekodichurch/my/','마이페이지']
+  ['/qtin/church','큐티인 신청']
 ];
 const modernHome=()=>'<html><head><link href="church-compact-navigation.css"></head><body>'+
   '<nav id="main-nav" aria-label="주요 메뉴">'+
