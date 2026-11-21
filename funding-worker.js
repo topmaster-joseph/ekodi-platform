@@ -67,17 +67,24 @@ export function createGatewayPay(env) {
   };
 }
 
+/** Private operator phone notice (OperatorNotifier RPC on ekodi-auth-api). Off unless explicitly enabled. */
+export function createOperatorNotify(env) {
+  if (!yes(env.FUNDING_OPERATOR_NOTIFY_ENABLED) || env.DATA_MODE === 'isolated-staging' || !env.OPERATOR_NOTIFY?.notify) return null;
+  return notice => env.OPERATOR_NOTIFY.notify(notice);
+}
+
 const ekodiWorkerEntry = {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const app = createApp({
       store: createD1Store(env.DB),
       authenticate: req => authenticate(req, env),
       pay: createGatewayPay(env),
+      notify: createOperatorNotify(env),
       digitalApproved: yes(env.FUNDING_DIGITAL_MID_APPROVED),
       extraHeaders: { 'x-ekodi-route': 'funding' },
     });
     try {
-      return await app(request);
+      return await app(request, ctx);
     } catch (error) {
       console.error('funding-worker', error?.message || error);
       const url = new URL(request.url);

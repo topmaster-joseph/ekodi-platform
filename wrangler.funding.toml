@@ -15,6 +15,8 @@ EKODIPAY_PROFILE = "mall"
 FUNDING_PAYMENTS_ENABLED = "false"
 FUNDING_MID_APPROVED = "false"
 FUNDING_DIGITAL_MID_APPROVED = "false"
+# 심사 요청·후원 완료 시 최고관리자 휴대폰 알림(개인정보 없음, 바로가기 링크 포함).
+FUNDING_OPERATOR_NOTIFY_ENABLED = "true"
 
 [[routes]]
 pattern = "ekodi.kr/funding*"
@@ -29,6 +31,12 @@ binding = "DB"
 database_name = "ekodi-auth"
 database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
 migrations_dir = "migrations"
+
+# EKODI internal operator-only notification RPC; no public sender URL.
+[[services]]
+binding = "OPERATOR_NOTIFY"
+service = "ekodi-auth-api"
+entrypoint = "OperatorNotifier"
 
 [[services]]
 binding = "EKODIPAY"

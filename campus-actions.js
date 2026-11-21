@@ -579,6 +579,7 @@
     { id: 'ekodibiz-trade', publicPath: '/ekodibiz/trade', adminPath: '/ekodibiz/trade/admin', siteType: 'org' },
     { id: 'ekodimall', publicPath: '/ekodimall', adminPath: '/ekodimall/admin', siteType: 'store' },
     { id: 'ekodibooks', publicPath: '/books', adminPath: '/books/admin', siteType: 'brand' },
+    { id: 'funding', publicPath: '/funding', adminPath: '/funding/admin', siteType: 'org' },
     { id: 'cheonggye-local', publicPath: '/cheonggye', adminPath: '/cheonggye/admin', siteType: 'org' },
     { id: 'cgma', publicPath: '/cgma', adminPath: '/cgma/admin', siteType: 'org' },
     { id: 'cmpmyi', publicPath: '/cmpmyi', adminPath: '/cmpmyi/admin', siteType: 'store' },

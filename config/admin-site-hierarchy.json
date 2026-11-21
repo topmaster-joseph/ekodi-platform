@@ -50,6 +50,13 @@
       "navigationProfile": "role-projected-site-admin"
     },
     {
+      "id": "funding",
+      "publicPath": "/funding",
+      "adminPath": "/funding/admin",
+      "parentId": "ekodibiz",
+      "navigationProfile": "role-projected-site-admin"
+    },
+    {
       "id": "ekodichurch",
       "publicPath": "/ekodichurch",
       "adminPath": "/ekodichurch/admin",
