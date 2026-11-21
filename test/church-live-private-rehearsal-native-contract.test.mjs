@@ -26,7 +26,11 @@ test('local media rehearsal never opens a public room, stream or credentialed br
   assert.match(s,/--use-fake-device-for-media-stream/);
   assert.match(s,/--use-fake-ui-for-media-stream/);
   assert.match(s,/request\.abort\('blockedbyclient'\)/);
-  assert.match(s,/assert\.deepEqual\(mutations,\[\]/);
+  assert.match(s,/assert\.deepEqual\(forbiddenMutations,\[\]/);
+  assert.match(s,/blockedBackgroundRequests/);
+  assert.match(s,/\/cdn-cgi\/challenge-platform\//);
+  assert.match(s,/\/api\/telemetry\/visit/);
+  assert.match(s,/serverMutations:forbiddenMutations\.length/);
   assert.match(s,/await page\.click\('#localRehearsalStart'\)/);
   assert.match(s,/await page\.click\('#localRehearsalStop'\)/);
   assert.match(s,/recordedBytes:playback\.bytes/);
