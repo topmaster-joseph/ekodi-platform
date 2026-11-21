@@ -251,10 +251,13 @@
       const scopeText=report.scope==='page_filter'&&report.pagePrefix?' (이 사이트 경로 '+report.pagePrefix+' 페이지만 집계)':'';
       googleStatus('Google 공식 실측 · '+report.property+scopeText+' · '+report.period.startDate+' ~ '+report.period.endDate);
       const metrics=report.metrics;
-      const metricText=metrics
+      // With zero impressions Google has no ranking: show '순위 없음', never a misleading 0.0.
+      const metricText=metrics&&metrics.impressions>0
         ? '검색 클릭 '+metrics.clicks.toLocaleString()+'회 · 노출 '+metrics.impressions.toLocaleString()+
-          '회 · CTR '+metrics.ctrPercent.toFixed(2)+'% · 평균 순위 '+metrics.avgPosition.toFixed(1)
-        : '현재 기간에 반환된 검색 성과 행이 없어 실측치를 확정할 수 없습니다.';
+          '회 · CTR '+metrics.ctrPercent.toFixed(2)+'% · 평균 순위 '+metrics.avgPosition.toFixed(1)+'위'
+        : metrics
+          ? '이 기간 Google 검색 노출 0회 · 클릭 0회 (노출이 없어 평균 순위는 계산되지 않습니다)'
+          : '이 기간 Google 검색 성과 자료가 없습니다 (노출 0회로 보거나, 아직 색인되지 않았을 수 있습니다).';
       const sitemapText=report.scope==='page_filter'?'':' · Google 제출 사이트맵 '+report.sitemaps.length+'건';
       $('[data-sv-google-summary]').textContent=metricText+sitemapText+
         '. 이 수치는 전체 페이지 색인 완료나 AI 검색 인용을 의미하지 않습니다. 네이버 노출·클릭은 공식 조회 API가 확인되지 않아 네이버 서치어드바이저 리포트에서 확인하세요(확인필요).';
