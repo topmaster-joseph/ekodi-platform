@@ -49,5 +49,5 @@ test('Nov 22 draft bulletin is two-sheet, sanitized and guarded', () => {
   assert.match(stage, /'ekodi-church-worship-20261122'/);
   assert.equal(manifest.status, 'draft');
   assert.equal(manifest.reviewRequired, true);
-  assert.equal(weekly.services.find(x => x.date === '2026-11-22')?.status,'draft');
+  assert.equal(weekly.services.some(x => x.date === '2026-11-22'), false, 'draft stays out of published weekly index until pastor approval');
 });
