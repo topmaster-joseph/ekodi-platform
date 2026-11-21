@@ -69,14 +69,14 @@ try{
    navigationQueue.push(ORIGIN+link);
   }
   if(course.id.startsWith('mnu-factchat')){
-   for(const s of [1,2]){
+   for(const s of (course.id==='mnu-factchat-2026'?[1,2]:[1])){
     const join=learnerUrl(ORIGIN,'/edu/study/live/present/',{c:course.id,s,lv:'basic'});
     qrPayload(join,course.id+' lesson '+s);
     navigationQueue.push(join);
    }
   }
  }
- for(const s of [1,2]){
+ for(const s of [1,2,3,4,5,6]){
   const feedback=BASE+'study/live/feedback/?s='+s;
   qrPayload(feedback,'anonymous feedback session '+s);
   navigationQueue.push(feedback);
