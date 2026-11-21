@@ -42,3 +42,19 @@ test('local media rehearsal never opens a public room, stream or credentialed br
   assert.doesNotMatch(s,/\.click\('#hostButton'/);
   assert.doesNotMatch(s,/createRoom\(|publishStream\(|startHost\(/);
 });
+
+test('independent anonymous external viewer probes are GET-only and never publish a room',()=>{
+  assert.match(s,/fetch\(origin\+'\\/live\\/church\\/\\?mode=viewer'/);
+  assert.match(s,/fetch\(origin\+'\\/api\\/realtime\\/live\\?tenant=ekodichurch'/);
+  assert.match(s,/viewerResponse\.status,200/);
+  assert.match(s,/liveResponse\.status,200/);
+  assert.match(s,/typeof externalLive\.live,'boolean'/);
+  assert.match(s,/browser\.createBrowserContext\(\)/);
+  assert.match(s,/guest\.setRequestInterception\(true\)/);
+  assert.match(s,/guest\.on\('request',readOnlyRequest\)/);
+  assert.match(s,/guestContext\.close\(\)/);
+  assert.match(s,/if\(!externalLive\.live\)/);
+  assert.match(s,/hasAccessToken,false/);
+  assert.match(s,/report\.externalViewer=external/);
+  assert.match(s,/serverMutations:forbiddenMutations\.length/);
+});
