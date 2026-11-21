@@ -33,10 +33,10 @@ test('all twenty generated publishing-bookstore headers and footers carry offici
         assert.match(head,/aria-label="에코디출판 메뉴"/);
         assert.match(foot,/<h2>에코디출판<\/h2>/);
         assert.match(text,/<title>[^<]*에코디출판[^<]*<\/title>/);
-        assert.match(foot,/운영 에코디비즈/,'legal operating entity stays unchanged');
+        assert.match(foot,/에코디비즈 · 정찬균/,'merchant identity remains explicit without a redundant title');
       }else{
         assert.match(head,/<b>에코디서점<\/b>/);
-        assert.match(foot,/상호 에코디비즈/,'bookstore seller remains independent');
+        assert.match(foot,/에코디비즈 · 정찬균/,'bookstore seller remains independent without a redundant title');
       }
     }
   }

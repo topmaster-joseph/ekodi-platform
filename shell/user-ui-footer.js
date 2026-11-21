@@ -200,7 +200,7 @@ function createFooter(config){
   // The operator line repeats nothing: when it equals the brand shown above it, skip it.
   const sameAsBrand=String(config.operator?.name||'').trim().toLowerCase()===String(config.brand||'').trim().toLowerCase();
   if(config.operator?.name&&!sameAsBrand)appendText(business,'span',config.operator.name);
-  if(config.operator?.representative)appendText(business,'span',`${config.operator.representativeLabel} ${config.operator.representative}`);
+  if(config.operator?.representative)appendText(business,'span',String(config.operator.representative));
   if(config.operator?.businessRegistrationNumber)appendText(business,'span',`${config.operator.registrationLabel} ${config.operator.businessRegistrationNumber}`);
   const address=appendText(copy,'div','','ekodi-user-ui-footer__address');
   if(config.contact?.address)appendText(address,'span',config.contact.address);

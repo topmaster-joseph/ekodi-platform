@@ -170,7 +170,7 @@ const footerPolicyLinks = (pages.policies || []).map((policy) =>
 ).join('');
 
 const business = site.business || {};
-const businessCore = `<p><strong>상호</strong> ${esc(business.name || '')} &nbsp; <strong>대표</strong> ${esc(business.representative || '')}</p>`;
+const businessCore = `<p><strong>상호</strong> ${esc(business.name || '')} &nbsp; ${esc(business.representative || '')}</p>`;
 const legalFieldsComplete = business.registrationNumber && business.commerceRegistrationNumber && business.address && business.customerService;
 const businessInfo = legalFieldsComplete
   ? `${businessCore}<p><strong>사업자등록번호</strong> ${esc(business.registrationNumber)} &nbsp; <strong>통신판매업 신고번호</strong> ${esc(business.commerceRegistrationNumber)}</p><p>${esc(business.address)} · ${esc(business.customerService)}${business.email ? ` · ${esc(business.email)}` : ''}</p>`
