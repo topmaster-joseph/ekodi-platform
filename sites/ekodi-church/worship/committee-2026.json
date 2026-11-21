@@ -1,0 +1,62 @@
+{
+  "schema": "ekodi.church.annual-worship-committee.v1",
+  "year": 2026,
+  "source": "261122에코디주보 — Worship committee; only verified names are seeded",
+  "timezone": "Asia/Seoul",
+  "roles": [
+    {
+      "id": "praise_leader",
+      "title": "경배찬양"
+    },
+    {
+      "id": "worship_leader",
+      "title": "예배인도"
+    },
+    {
+      "id": "prayer_leader",
+      "title": "대표기도"
+    },
+    {
+      "id": "preacher",
+      "title": "말씀선포"
+    },
+    {
+      "id": "meal_coordinator",
+      "title": "식사준비"
+    }
+  ],
+  "records": [
+    {
+      "date": "2026-11-01",
+      "praise_leader": "박은희",
+      "worship_leader": "정찬균",
+      "prayer_leader": "정진",
+      "preacher": "정찬균",
+      "meal_coordinator": "박은희"
+    },
+    {
+      "date": "2026-11-08",
+      "praise_leader": "박은희",
+      "worship_leader": "정찬균",
+      "prayer_leader": "정성",
+      "preacher": "정찬균",
+      "meal_coordinator": "박은희"
+    },
+    {
+      "date": "2026-11-15",
+      "praise_leader": "박은희",
+      "worship_leader": "정찬균",
+      "prayer_leader": "정진",
+      "preacher": "정찬균",
+      "meal_coordinator": "박은희"
+    },
+    {
+      "date": "2026-11-22",
+      "praise_leader": "박은희",
+      "worship_leader": "정찬균",
+      "prayer_leader": "두본요",
+      "preacher": "정찬균",
+      "meal_coordinator": "박은희"
+    }
+  ]
+}
