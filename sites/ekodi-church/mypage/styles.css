@@ -13,3 +13,13 @@
 .group{border:1px solid #e3dfd5;border-radius:12px;margin:10px 0;background:#fff}.group>summary{cursor:pointer;padding:12px 14px;font-weight:800;list-style:none}.group>summary::-webkit-details-marker{display:none}.group>summary:before{content:'＋ ';color:#2f4936}.group[open]>summary:before{content:'－ '}.group>.editor-grid{padding:0 14px 6px}
 .bulletin-editor{margin-bottom:0}.bulletin-editor h2{font-size:18px}
 .photo-edit canvas{max-height:220px}
+
+/* Church annual worship committee administration */
+.annual-scroll{max-height:570px;overflow:auto;border:1px solid #dbe6df;border-radius:10px;margin-top:14px}
+.annual-table{border-collapse:collapse;width:100%;min-width:680px;font-size:13px}
+.annual-table th,.annual-table td{padding:9px 11px;border-bottom:1px solid #e6ede8;text-align:left;white-space:nowrap}
+.annual-table thead th{position:sticky;top:0;background:#edf4ef;z-index:1;color:#193e30}
+.annual-table tbody tr[data-current="true"]{background:#f5edcf;font-weight:700}
+.annual-table tbody tr[role="button"]{cursor:pointer}
+.annual-table tbody tr:focus-visible{outline:2px solid #174936;outline-offset:-2px}
+@media(max-width:650px){.annual-scroll{max-height:420px}}
