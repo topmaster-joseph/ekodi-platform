@@ -76,6 +76,10 @@ test('Church official news is stored in the existing tenant-scoped board, catego
     assert.equal(list.data.boardId,'site:ekodichurch:main');
     assert.equal(list.data.items.length,11);
     assert.deepEqual(list.data.items.slice(0,2).map(x=>x.title),['11월 15일 교회소식','11월 8일 교회소식']);
+    const crossTenant=await f.call('/api/posts?category=mission-notice');
+    assert.equal(crossTenant.status,200);
+    assert.equal(crossTenant.data.categoryId,null);
+    assert.deepEqual(crossTenant.data.items,[],'foreign mission category can never reveal Church news');
   }finally{f.sql.close()}
 });
 
