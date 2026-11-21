@@ -44,8 +44,8 @@ create table if not exists public.homepage_sites (
 
 alter table public.homepage_subscription_requests enable row level security;
 alter table public.homepage_sites enable row level security;
-revoke all on public.homepage_subscription_requests from public, anon, authenticated;
-revoke all on public.homepage_sites from public, anon, authenticated;
+revoke all on table public.homepage_subscription_requests from public, anon, authenticated, service_role;
+revoke all on table public.homepage_sites from public, anon, authenticated, service_role;
 
 create or replace function public.homepage_subscription_submit(p jsonb)
 returns jsonb
