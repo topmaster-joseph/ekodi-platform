@@ -70,7 +70,8 @@ test('migration provisions drafts automatically and keeps publishing behind plat
   assert.match(sql, /enable row level security/);
   assert.match(sql, /grant execute on function public\.homepage_subscription_submit\(jsonb\) to anon, authenticated/);
   assert.match(sql, /if not public\.homepage_subscription_is_admin\(\) then return jsonb_build_object\('ok',false,'error','forbidden'\)/);
-  assert.match(sql, /to_regprocedure\('public\.is_platform_admin\(\)'\) is not null then\n    execute format\('select %I\.%I\(\)', 'public', 'is_platform_admin'\) into v_admin;/);
+  assert.match(sql, /v_fn := to_regprocedure\('public\.is_platform_admin\(\)'\);/);
+  assert.match(sql, /execute 'select ' \|\| v_fn::regproc::text \|\| '\(\)' into v_admin;/);
   assert.match(sql, /interval '1 day'\) >= 3/);
   assert.doesNotMatch(sql, /alter table public\.(stores|tenants|store_user_sites)|drop (table|function)|delete from/i);
   const wf = await read('.github/workflows/deploy-space.yml');
