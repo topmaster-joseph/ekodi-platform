@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
 import { institutionAiApi, institutionAiStore } from '../institution-ai-api.js';
+import { planInstitutionProviderFallback } from '../institution-ai-routing.js';
 import {
   encryptInstitutionPayload, decryptInstitutionPayload, institutionExternalModelAllowed,
   INSTITUTION_AI_MAX_BODY_BYTES,
@@ -9,7 +10,7 @@ import {
 
 globalThis.crypto ||= webcrypto;
 const KEY = suffix => ('K'.repeat(40) + suffix);
-const tenantKeys = keys => ({ status: 'active', keys: { submit: [KEY(keys + '-submit')], assistant: [KEY(keys + '-assistant')], read: [KEY(keys + '-read')], approve: [KEY(keys + '-approve')], execute: [KEY(keys + '-execute')], backup: [KEY(keys + '-backup')], restore: [KEY(keys + '-restore')] } });
+const tenantKeys = keys => ({ status: 'active', keys: { submit: [KEY(keys + '-submit')], assistant: [KEY(keys + '-assistant')], read: [KEY(keys + '-read')], approve: [KEY(keys + '-approve')], execute: [KEY(keys + '-execute')], backup: [KEY(keys + '-backup')], restore: [KEY(keys + '-restore')], route: [KEY(keys + '-route')] } });
 const secrets = () => ({
   EKODIBIZ_MODE: 'isolated-staging',
   INSTITUTION_AI_STAGING_PILOT_ENABLED: 'true',
@@ -341,4 +342,118 @@ test('backup refuses records exceeding the bounded pilot archive rather than tru
   assert.equal((await rejected.json()).code, 'BACKUP_TOO_LARGE');
   const stillThere = await (await call(env, id, 'read', 'campus1', 'status')).json();
   assert.equal(stillThere.messages[0].text.length, 4000);
+});
+
+const routeProvider = (id, model, costClass = 'free-preferred') => ({
+  id, model, available: true, officialPath: true, automationAllowed: true,
+  capabilities: ['text', 'reasoning'], costClass, fundingSource: 'ekodi', resourceClass: 'hosted-ai',
+});
+const approvedRoute = (id, model, costClass = 'free-preferred') => ({
+  id, model, costClass, classifications: ['public', 'internal'],
+  capabilities: ['text'], dataTransferApproved: true, tenantEntitlementVerified: true,
+});
+const routePolicy = (providers, more = {}) => ({
+  status: 'active', dataTransferApproved: true, allowFailover: true, billingApproved: false,
+  providers, ...more,
+});
+const routingEnv = policies => ({
+  INSTITUTION_AI_PROVIDER_PLAN_ENABLED: 'true',
+  INSTITUTION_AI_PROVIDER_POLICIES_JSON: JSON.stringify(policies),
+});
+const routingJob = (change = {}) => ({
+  tenantId: 'campus1', operationId: 'routes0001', classification: 'internal',
+  taskType: 'draft', status: 'queued', ...change,
+});
+
+test('explicit tenant provider policy plans read-only failover with no model calls', () => {
+  const env = routingEnv({ campus1: routePolicy([
+    approvedRoute('provider-a', 'approved-v1'),
+    approvedRoute('provider-b', 'approved-v2'),
+  ]) });
+  const observed = [
+    routeProvider('provider-a', 'approved-v1'),
+    routeProvider('provider-b', 'approved-v2'),
+    routeProvider('other-unapproved', 'whatever'),
+  ];
+  const decision = planInstitutionProviderFallback(env, 'campus1', routingJob(), observed);
+  assert.equal(decision.mode, 'configuration_only');
+  assert.equal(decision.plannedFailover, true);
+  assert.deepEqual(decision.eligibleProviderIds, ['provider-a', 'provider-b']);
+  assert.equal(decision.readyForLiveInvocation, false);
+  assert.equal(decision.externalCallsMade, 0);
+  assert.equal(JSON.stringify(decision).includes('whatever'), false);
+});
+
+test('plan refuses tenant mismatch, secret absence, changed classification, side effects and paid fallback', () => {
+  const paid = approvedRoute('provider-paid', 'paid-v1', 'paid-opt-in');
+  const free = approvedRoute('provider-free', 'free-v1');
+  const registry = [routeProvider('provider-free', 'free-v1'),
+    routeProvider('provider-paid', 'paid-v1', 'paid-opt-in')];
+  const env = routingEnv({ campus1: routePolicy([paid, free]) });
+  const plan = (job = routingJob(), e = env) =>
+    planInstitutionProviderFallback(e, 'campus1', job, registry);
+  assert.equal(plan(routingJob({ tenantId: 'campus2' })).mode, 'core_only');
+  assert.equal(plan(routingJob({ classification: 'restricted' })).reason, 'EXTERNAL_TRANSFER_DENIED');
+  assert.equal(plan(routingJob({ classification: 'confidential' })).reason, 'EXTERNAL_TRANSFER_DENIED');
+  assert.equal(plan(routingJob({ taskType: 'payment' })).reason, 'EXTERNAL_TRANSFER_DENIED');
+  assert.equal(plan(routingJob({ status: 'completed' })).reason, 'JOB_NOT_ROUTABLE');
+  assert.deepEqual(plan().eligibleProviderIds, ['provider-free']);
+  assert.deepEqual(plan(routingJob(), routingEnv({
+    campus1: routePolicy([paid, free], { billingApproved: true }),
+  })).eligibleProviderIds, ['provider-paid', 'provider-free']);
+  assert.equal(plan(routingJob(), { ...env, INSTITUTION_AI_PROVIDER_PLAN_ENABLED: 'false' }).mode, 'core_only');
+  assert.throws(() => plan(routingJob(), { INSTITUTION_AI_PROVIDER_PLAN_ENABLED: 'true' }),
+    /INSTITUTION_ROUTING_NOT_CONFIGURED/);
+  assert.deepEqual(plan(routingJob(), routingEnv({
+    campus1: routePolicy([free], { status: 'suspended' }),
+  })).eligibleProviderIds, []);
+});
+
+test('provider model, entitlement, status, cost, funding and permission must exactly match', () => {
+  const entry = approvedRoute('provider-a', 'v1');
+  const env = routingEnv({ campus1: routePolicy([entry]) });
+  const approved = routeProvider('provider-a', 'v1');
+  const call = statuses => planInstitutionProviderFallback(env, 'campus1', routingJob(), statuses);
+  for (const modified of [
+    { ...approved, available: false },
+    { ...approved, officialPath: false },
+    { ...approved, automationAllowed: false },
+    { ...approved, model: 'unreviewed-v2' },
+    { ...approved, costClass: 'paid-opt-in' },
+    { ...approved, fundingSource: 'personal' },
+    { ...approved, resourceClass: 'personal-api' },
+    { ...approved, capabilities: ['vision'] },
+  ]) {
+    assert.equal(call([modified]).reason, 'NO_APPROVED_PROVIDER');
+  }
+  assert.equal(planInstitutionProviderFallback(routingEnv({
+    campus1: routePolicy([{ ...entry, dataTransferApproved: false }]),
+  }), 'campus1', routingJob(), [approved]).reason, 'PROVIDER_POLICY_INVALID');
+  assert.equal(planInstitutionProviderFallback(routingEnv({
+    campus1: routePolicy([{ ...entry, tenantEntitlementVerified: false }]),
+  }), 'campus1', routingJob(), [approved]).reason, 'PROVIDER_POLICY_INVALID');
+  assert.equal(planInstitutionProviderFallback(routingEnv({
+    campus1: routePolicy([entry, entry]),
+  }), 'campus1', routingJob(), [approved]).reason, 'PROVIDER_POLICY_INVALID');
+});
+
+test('route-plan gateway needs a dedicated role and refuses request classification downgrade', async () => {
+  const { env } = setup();
+  const id = { tenantId: 'campus1', operationId: 'payment0009' };
+  assert.equal((await call(env, external(id.operationId))).status, 201);
+  assert.equal((await call(env, id, 'read', 'campus1', 'provider-plan')).status, 403);
+  env.INSTITUTION_AI_PROVIDER_PLAN_ENABLED = 'true';
+  env.INSTITUTION_AI_PROVIDER_POLICIES_JSON = JSON.stringify({
+    campus1: routePolicy([approvedRoute('gemini', 'fake-approved-model')]),
+  });
+  const denied = await call(env, { ...id, classification: 'public', taskType: 'draft' },
+    'route', 'campus1', 'provider-plan');
+  assert.equal(denied.status, 200);
+  const result = await denied.json();
+  assert.equal(result.mode, 'core_only');
+  assert.equal(result.reason, 'EXTERNAL_TRANSFER_DENIED');
+  assert.equal(result.externalCallsMade, 0);
+  assert.equal((await call(env, id, 'route', 'campus2', 'provider-plan')).status, 403);
+  assert.equal((await call({ ...env, EKODIBIZ_MODE: 'operational-mvp' }, id,
+    'route', 'campus1', 'provider-plan')).status, 503);
 });
