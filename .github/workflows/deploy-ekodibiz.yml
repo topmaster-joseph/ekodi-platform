@@ -72,6 +72,7 @@ jobs:
           node --check ekodibiz-worker.js
           node --check institution-ai-security.js
           node --check institution-ai-backup.js
+          node --check institution-ai-routing.js
           node --check institution-ai-api.js
           node --test test/ekodibiz-institution-ai.test.mjs
           node --check ekodibiz/app.js
