@@ -152,6 +152,7 @@ export function maskSubject(subject){
  *   audience:"members"|"subjects", subjects:["email@…"], eme?:{keySystem,licenseUrl} }
  */
 export function publicManifestView(manifest){
+  if(isLinkManifest(manifest))return {version:manifest.version,kind:'link',contentId:manifest.contentId,title:String(manifest.title||''),provider:manifest.link.provider};
   const view={version:manifest.version,contentId:manifest.contentId,title:String(manifest.title||''),mime:manifest.mime,init:manifest.init,segments:[...(manifest.segments||[])],duration:Number(manifest.duration)||null};
   if(Array.isArray(manifest.times)&&manifest.times.length===view.segments.length)view.times=manifest.times.map(Number);
   if(manifest.eme?.keySystem&&manifest.eme?.licenseUrl)view.eme={keySystem:String(manifest.eme.keySystem),licenseUrl:String(manifest.eme.licenseUrl)};
@@ -172,12 +173,70 @@ function shieldJson(body,status=200,extra={}){
 }
 function shieldError(code,status,message){return shieldJson({ok:false,code,error:message},status);}
 
+// ---------------------------------------------------------------- external video links (EKODI-MEDIA-SHIELD-003)
+// Video files are NOT stored on EKODI. Administrators register a link to a video hosted on
+// YouTube or Vimeo; EKODI stores only the small manifest (title, provider id, audience) and
+// hands the embed address to signed-in, permitted viewers — never in page HTML.
+export const EXTERNAL_VIDEO_FRAME_ORIGINS=Object.freeze(['https://www.youtube-nocookie.com','https://player.vimeo.com']);
+const YOUTUBE_ID=/^[A-Za-z0-9_-]{11}$/;
+function startSeconds(value){
+  const text=String(value||'').trim();
+  if(!text)return 0;
+  if(/^\d+$/.test(text))return Math.min(Number(text),86400);
+  const m=text.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/i);
+  return m?Math.min(86400,(Number(m[1]||0)*3600)+(Number(m[2]||0)*60)+Number(m[3]||0)):0;
+}
+export function parseExternalVideoUrl(input){
+  let url;
+  try{url=new URL(String(input||'').trim());}catch{return null;}
+  if(url.protocol!=='https:'&&url.protocol!=='http:')return null;
+  const host=url.hostname.toLowerCase().replace(/^www\.|^m\./,'');
+  const parts=url.pathname.split('/').filter(Boolean);
+  const start=startSeconds(url.searchParams.get('t')||url.searchParams.get('start'));
+  if(host==='youtube.com'||host==='youtube-nocookie.com'||host==='music.youtube.com'){
+    let id='';
+    if(parts[0]==='watch')id=url.searchParams.get('v')||'';
+    else if(['embed','shorts','live','v'].includes(parts[0]))id=parts[1]||'';
+    return YOUTUBE_ID.test(id)?{provider:'youtube',videoId:id,start}:null;
+  }
+  if(host==='youtu.be'){
+    const id=parts[0]||'';
+    return YOUTUBE_ID.test(id)?{provider:'youtube',videoId:id,start}:null;
+  }
+  if(host==='vimeo.com'||host==='player.vimeo.com'){
+    const nums=parts.filter(v=>/^\d{1,12}$/.test(v));
+    const id=nums[0]||'';
+    if(!id)return null;
+    const after=parts[parts.indexOf(id)+1]||'';
+    const hash=/^[0-9a-f]{6,20}$/i.test(after)?after:(/^[0-9a-f]{6,20}$/i.test(url.searchParams.get('h')||'')?url.searchParams.get('h'):'');
+    return {provider:'vimeo',videoId:id,hash:hash.toLowerCase(),start};
+  }
+  return null;
+}
+export function externalEmbedUrl(link){
+  if(link?.provider==='youtube'&&YOUTUBE_ID.test(String(link.videoId||''))){
+    const params=new URLSearchParams({rel:'0',modestbranding:'1',playsinline:'1',iv_load_policy:'3'});
+    if(link.start)params.set('start',String(link.start));
+    return `https://www.youtube-nocookie.com/embed/${link.videoId}?${params}`;
+  }
+  if(link?.provider==='vimeo'&&/^\d{1,12}$/.test(String(link.videoId||''))){
+    const params=new URLSearchParams({dnt:'1',title:'0',byline:'0',portrait:'0'});
+    if(/^[0-9a-f]{6,20}$/.test(String(link.hash||'')))params.set('h',link.hash);
+    const suffix=link.start?`#t=${link.start}s`:'';
+    return `https://player.vimeo.com/video/${link.videoId}?${params}${suffix}`;
+  }
+  return '';
+}
+function isLinkManifest(manifest){return manifest?.kind==='link'&&Boolean(externalEmbedUrl(manifest.link));}
+
 async function loadManifest(bucket,contentId){
   if(!isValidContentId(contentId))return null;
   const object=await bucket.get(`${MEDIA_SHIELD_OBJECT_PREFIX}${contentId}/manifest.json`);
   if(!object)return null;
   const manifest=await object.json().catch(()=>null);
-  if(!manifest||manifest.contentId!==contentId||!Array.isArray(manifest.segments))return null;
+  if(!manifest||manifest.contentId!==contentId)return null;
+  if(isLinkManifest(manifest))return manifest;
+  if(!Array.isArray(manifest.segments))return null;
   return manifest;
 }
 
@@ -240,13 +299,25 @@ async function handleMediaShieldAdmin(request,env,{bucket,masterKey,rest,method,
     const items=[];
     for(const id of ids){
       const manifest=await loadManifest(bucket,id);
-      items.push(manifest?{contentId:id,status:'published',title:manifest.title||id,audience:manifest.audience,subjects:(manifest.subjects||[]).length,duration:Number(manifest.duration)||null,segments:manifest.segments.length,publishedAt:manifest.publishedAt||manifest.packagedAt||null}:{contentId:id,status:'draft',title:id});
+      items.push(manifest?{contentId:id,status:'published',kind:isLinkManifest(manifest)?'link':'stored',provider:isLinkManifest(manifest)?manifest.link.provider:'ekodi',title:manifest.title||id,audience:manifest.audience,subjects:(manifest.subjects||[]).length,duration:Number(manifest.duration)||null,segments:Array.isArray(manifest.segments)?manifest.segments.length:0,publishedAt:manifest.publishedAt||manifest.packagedAt||null}:{contentId:id,status:'draft',kind:'stored',title:id});
     }
     return shieldJson({ok:true,items});
   }
-  if(action==='new'&&method==='POST'){
-    return shieldJson({ok:true,contentId:newContentId()});
+  if(action==='link'&&method==='POST'){
+    const body=await request.json().catch(()=>({}));
+    const link=parseExternalVideoUrl(body?.url);
+    if(!link)return shieldError('INVALID_LINK',400,'유튜브 또는 비메오 영상 주소를 입력해 주세요.');
+    const audience=body?.audience==='members'?'members':'subjects';
+    const subjects=cleanSubjects(body?.subjects);
+    if(audience==='subjects'&&!subjects.length)return shieldError('SUBJECTS_REQUIRED',400,'볼 수 있는 사람의 이메일을 한 개 이상 입력해 주세요.');
+    const contentId=newContentId();
+    const manifest={version:MEDIA_SHIELD_VERSION,kind:'link',contentId,title:cleanTitle(body?.title)||'보호 영상',link,audience,subjects,publishedBy:maskSubject(admin.email),publishedAt:new Date().toISOString()};
+    await bucket.put(contentPrefix(contentId)+'manifest.json',JSON.stringify(manifest),{httpMetadata:{contentType:'application/json'}});
+    console.info('EKODI media shield link registered',{contentId,provider:link.provider,audience,admin:maskSubject(admin.email)});
+    return shieldJson({ok:true,contentId,watchPath:`/my/media/${contentId}`});
   }
+  // Owner policy (2026-11-21): video files are never stored on EKODI servers.
+  if(['new','key','part','publish'].includes(action))return shieldError('VIDEO_STORAGE_DISABLED',410,'영상 파일은 에코디 서버에 저장하지 않습니다. 유튜브 등에 올린 뒤 링크로 등록해 주세요.');
   if(!isValidContentId(contentId))return shieldError('INVALID_CONTENT',400,'영상 식별자가 올바르지 않습니다.');
   const published=await loadManifest(bucket,contentId);
 
@@ -338,6 +409,10 @@ export async function handleMediaShieldRequest(request,env={},{resolvePrincipal,
     if(!manifest)return shieldError('CONTENT_NOT_FOUND',404,'영상을 찾을 수 없습니다.');
     if(!subjectMayView(manifest,principal))return shieldError('CONTENT_FORBIDDEN',403,'이 영상을 볼 권한이 없습니다.');
     const issued=await issuePlaybackToken({contentId,subject:String(principal.email).toLowerCase()},tokenSecret);
+    if(isLinkManifest(manifest)){
+      console.info('EKODI media shield link view',{contentId,subject:maskSubject(principal.email),nonce:issued.nonce});
+      return shieldJson({ok:true,kind:'link',title:String(manifest.title||''),provider:manifest.link.provider,embedUrl:externalEmbedUrl(manifest.link),watermark:`EKODI ${maskSubject(principal.email)} ${issued.nonce}`});
+    }
     console.info('EKODI media shield token',{contentId,subject:maskSubject(principal.email),nonce:issued.nonce});
     return shieldJson({ok:true,...issued});
   }
@@ -350,6 +425,7 @@ export async function handleMediaShieldRequest(request,env={},{resolvePrincipal,
     const manifest=await loadManifest(bucket,verified.payload.c);
     if(!manifest)return shieldError('CONTENT_NOT_FOUND',404,'영상을 찾을 수 없습니다.');
     if(manifest.eme)return shieldError('HARDWARE_DRM_CONTENT',409,'이 영상은 하드웨어 DRM 라이선스 서버로 재생됩니다.');
+    if(isLinkManifest(manifest))return shieldError('EXTERNAL_LINK_CONTENT',409,'외부 링크 영상은 키가 필요하지 않습니다.');
     let envelope;
     try{envelope=await wrapContentKey(await deriveContentKeyBytes(masterKey,verified.payload.c),body?.publicKey);}
     catch{return shieldError('INVALID_VIEWER_KEY',400,'재생 장치 키가 올바르지 않습니다.');}
@@ -366,6 +442,7 @@ export async function handleMediaShieldRequest(request,env={},{resolvePrincipal,
     const manifest=await loadManifest(bucket,contentId);
     if(!manifest)return shieldError('CONTENT_NOT_FOUND',404,'영상을 찾을 수 없습니다.');
     if(action==='manifest')return shieldJson({ok:true,manifest:publicManifestView(manifest)});
+    if(isLinkManifest(manifest))return shieldError('SEGMENT_NOT_FOUND',404,'영상 조각을 찾을 수 없습니다.');
     const name=String(rest[2]||'');
     if(!SEGMENT_NAME.test(name)||(name!==manifest.init&&!manifest.segments.includes(name)))return shieldError('SEGMENT_NOT_FOUND',404,'영상 조각을 찾을 수 없습니다.');
     const object=await bucket.get(`${MEDIA_SHIELD_OBJECT_PREFIX}${contentId}/${name}`);
@@ -454,7 +531,20 @@ const MEDIA_SHIELD_PLAYER_CLIENT_SOURCE=String.raw`function mediaShieldPlayerCli
     var state={token:'',expiresAt:0,watermark:''};
     var stop=function(){};
     harden(video);
-    function refresh(){return post('token',{contentId:contentId},authFor()).then(function(j){state.token=j.token;state.expiresAt=j.expiresAt;return j;});}
+    function refresh(){return post('token',{contentId:contentId},authFor()).then(function(j){state.token=j.token;state.expiresAt=j.expiresAt;state.link=j.kind==='link'?j:null;return j;});}
+    function mountLink(link){
+      var frame=document.createElement('iframe');
+      frame.src=link.embedUrl;
+      frame.title=link.title||'보호 영상';
+      frame.setAttribute('allow','autoplay; encrypted-media; fullscreen; picture-in-picture');
+      frame.setAttribute('allowfullscreen','');
+      frame.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
+      frame.setAttribute('sandbox','allow-scripts allow-same-origin allow-presentation');
+      frame.style.cssText='display:block;width:100%;aspect-ratio:16/9;border:0;background:#000';
+      video.replaceWith(frame);
+      stop=overlay(frame,link.watermark||'EKODI');
+      return {stop:function(){stop();},kind:'link'};
+    }
     function fresh(){return Date.now()/1000<state.expiresAt-20?Promise.resolve():refresh();}
     function get(path){
       return fresh().then(function(){return fetch(API+path+'?t='+encodeURIComponent(state.token),{credentials:'same-origin',cache:'no-store'});}).then(function(r){
@@ -463,7 +553,8 @@ const MEDIA_SHIELD_PLAYER_CLIENT_SOURCE=String.raw`function mediaShieldPlayerCli
         return fresh().then(function(){return fetch(API+path+'?t='+encodeURIComponent(state.token),{credentials:'same-origin',cache:'no-store'});});
       });
     }
-    return refresh().then(function(){return get('manifest/'+contentId);}).then(function(r){return r.json().then(function(j){if(!r.ok||!j.ok)throw fail(r,j);return j.manifest;});}).then(function(manifest){
+    return refresh().then(function(){if(state.link)return mountLink(state.link);return get('manifest/'+contentId).then(function(r){return playStored(r);});});
+    function playStored(r){return Promise.resolve(r).then(function(r){return r.json().then(function(j){if(!r.ok||!j.ok)throw fail(r,j);return j.manifest;});}).then(function(manifest){
       var hardware=Boolean(manifest.eme&&navigator.requestMediaKeySystemAccess);
       var keyPromise=hardware?emePlay(video,manifest,state).then(function(){return null;}):crypto.subtle.generateKey({name:'ECDH',namedCurve:'P-256'},false,['deriveBits']).then(function(pair){return unwrapKey(state,pair);});
       return keyPromise.then(function(key){
@@ -517,7 +608,7 @@ const MEDIA_SHIELD_PLAYER_CLIENT_SOURCE=String.raw`function mediaShieldPlayerCli
           },{once:true});
         });
       });
-    }).then(function(){return {stop:function(){stop();}};});
+    }).then(function(){return {stop:function(){stop();}};});}
   }
   window.EkodiMediaShield={version:'v1',mount:mount,storedAuth:storedAuth};
   document.querySelectorAll('video[data-ekodi-media][data-ekodi-media-autoload]').forEach(function(video){mount(video).catch(function(error){video.setAttribute('data-ekodi-media-error',error.code||error.message);});});
