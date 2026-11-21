@@ -47,8 +47,8 @@
 
 ## 4. 2026년 11월 22일부터 적용되는 예배순서 및 주보 2면 배치
 
-- **시행일:** 2026년 11월 22일 주일부터 계속 적용합니다. 11월 15일까지의 주보·예배자료는 당시 순서를 보존하고 소급 변경하지 않습니다.
-- **예배순서(14개, 한·영 병기):** 경배찬양/Praise & Worship → 예배부름/Call to Worship → 공동고백/Community Confession → 입례찬송/Processional Hymn → 대표기도/Congregational Prayer → 헌금찬송/Offertory Hymn → 말씀봉독/Scripture Reading → 말씀찬송/Hymn before the Sermon → 말씀선포/Proclamation of the Word → 말씀기도/Prayer in Response to the Word → 결단찬송/Hymn of Commitment → 교회소식/Church Announcements → 파송찬송/Sending Hymn → 주기도문/The Lord's Prayer.
-- **주보 2면:** 오른쪽 상단에 예배순서를 배치하고, 왼쪽에 협력기관·예배봉사위원표·적용질문을 배치합니다. 적용질문은 **1개만** 남기고 주차별 말씀과 연결되게 작성합니다. 다른 고정 정보·개인정보 공개 규칙은 그대로 지킵니다.
-- **원본 일치:** 주일 예배 Google Docs 원본과 공개 주보, 인쇄/PDF, 운영자/현장/방송 PPT의 순서가 일치해야 합니다. 원본 문서의 최종 검토/확정 전에는 신규 주보를 자동 공개하지 않습니다.
-- **반복 작업:** 새 주간 자료 생성 시 날짜별 정적 주보 템플릿에도 공통 `bulletin-data.js`를 연결해 이 시행일 규칙을 재사용합니다. 개인별 수정 데이터의 `questions` 항목도 공개 화면에서는 단일 적용질문으로 제한합니다. 필요시 첫 질문을 주차별로 검토·수정합니다.
+- **시행일:** 2026년 11월 22일 주일부터 적용. 이전 주보 소급 변경 금지.
+- **예배순서(한국어/영어 14개):** 경배찬양/Praise & Worship → 예배부름/Call to Worship → 입례찬송/Processional Hymn → 공동고백/Community Confession → 회개찬송/Hymn of Repentance → 대표기도/Congregational Prayer → 말씀봉독/Scripture Reading → 말씀찬송/Hymn before the Sermon → 말씀선포/Proclamation of the Word → 말씀기도/Prayer in Response to the Word → 결단찬송/Hymn of Commitment → 교회소식/Church Announcements → 파송찬송/Sending Hymn → 주기도문/The Lord's Prayer.
+- **주보 2면:** 왼쪽에는 예배순서 14개, 오른쪽에는 예배위원표 → 협력기관 안내 → 주간 적용질문 **1개**를 위에서 아래로 배치합니다. PC·모바일·인쇄에서 같은 정보와 순서를 유지합니다.
+- **일관성:** 구글 주보 원본, 웹 주보, PPT·진행자 화면의 명칭과 순서를 일치시킵니다. 설교 본문과 원고는 변경된 예배 진행 순서 때문에 임의로 수정하지 않습니다.
+- **검토:** 공개 승인 전에는 `materials.json`을 draft로 두고 권한 검토·실서비스 검사 후 변경하며, 기존 발표·주보 경로에는 자동 리디렉션을 적용하지 않습니다.
