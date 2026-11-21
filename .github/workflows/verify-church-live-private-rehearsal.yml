@@ -1,0 +1,63 @@
+name: Verify Church Live Private Local Rehearsal
+# This read-only canary uses a fake camera and microphone on an isolated GitHub runner.
+# It never logs in, creates a room, starts a broadcast or opens the user's Opera.
+on:
+  # Safe first-party fake-device proof immediately after this workflow lands on protected main.
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-church-live-private-rehearsal.yml'
+      - 'scripts/verify-church-local-rehearsal-native.mjs'
+  pull_request:
+    paths:
+      - '.github/workflows/verify-church-live-private-rehearsal.yml'
+      - 'scripts/verify-church-local-rehearsal-native.mjs'
+      - 'test/church-live-private-rehearsal-native-contract.test.mjs'
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['Deploy EKODI Shared Site Core']
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: church-private-rehearsal-readonly
+  cancel-in-progress: true
+
+jobs:
+  fake-device-rehearsal:
+    if: >-
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'workflow_dispatch' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Prepare first-party ephemeral Chromium
+        run: |
+          set -euo pipefail
+          test -n "$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          npm install --no-save --package-lock=false puppeteer-core@24.16.0
+      - name: Verify 50-percent monitor, local microphone+camera recording and replay without ANY broadcast mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)" node scripts/verify-church-local-rehearsal-native.mjs
+      - name: Preserve redacted local rehearsal proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: church-live-private-rehearsal
+          path: artifacts/church-live-private-rehearsal/report.json
+          if-no-files-found: warn
+          retention-days: 7
