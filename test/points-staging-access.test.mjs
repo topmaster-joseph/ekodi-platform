@@ -126,3 +126,14 @@ test('workflow rejects a partial static Access identity instead of implicit fall
   assert.match(wf,/Incomplete Points staging Access identity/);
   assert.match(wf,/exit 2\n\s+fi\n\s+# Never authorize any valid token/);
 });
+
+test('static token ID: dashboard URL yields its UUID; client ID is refused with a shape hint',()=>{
+  const run=v=>spawnSync(process.execPath,['scripts/points-staging-access.mjs','open-static'],{env:{...process.env,
+    STATIC_ACCESS_SERVICE_TOKEN_ID:v,CLOUDFLARE_ACCOUNT_ID:'46aad4738793fbaca88574832a2ccc0f',CLOUDFLARE_API_TOKEN:'x',
+    POINTS_E2E_RUN:'1',HTTPS_PROXY:'http://127.0.0.1:9',https_proxy:'http://127.0.0.1:9'},encoding:'utf8'});
+  const client=run('3e4872f8b2bf5a1234.access');
+  assert.match(client.stdout,/client_id_like=true uuid_found=false/);
+  assert.doesNotMatch(client.stdout,/3e4872f8b2bf5a1234/);
+  const url=run('https://dash.cloudflare.com/46aad/one/access-controls/service-credentials/service-tokens/0f1e2d3c-4b5a-6978-8a9b-0c1d2e3f4a5b');
+  assert.doesNotMatch(url.stdout,/required for a least-privilege/);
+});

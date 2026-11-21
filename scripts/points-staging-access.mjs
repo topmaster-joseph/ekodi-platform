@@ -11,7 +11,12 @@ const accountId=String(process.env.CLOUDFLARE_ACCOUNT_ID||'').trim();
 const token=String(process.env.CLOUDFLARE_API_TOKEN||'').trim();
 const run=String(process.env.POINTS_E2E_RUN||'').replace(/[^0-9a-z-]/gi,'').slice(0,40);
 const mode=process.argv[2];
-const staticTokenId=String(process.env.STATIC_ACCESS_SERVICE_TOKEN_ID||'').trim();
+const rawStaticTokenId=String(process.env.STATIC_ACCESS_SERVICE_TOKEN_ID||'').trim();
+// Owners copy the token ID from the dashboard address bar; accept that URL but
+// use only the exact token UUID inside it. Anything else is still refused.
+const tokenUuid=rawStaticTokenId.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0]||'';
+const staticTokenId=/^[A-Za-z0-9_-]{8,128}$/.test(rawStaticTokenId)?rawStaticTokenId:tokenUuid;
+const tokenIdShape=()=>`length=${rawStaticTokenId.length} url=${rawStaticTokenId.includes('/')} client_id_like=${/\.access$/i.test(rawStaticTokenId)} uuid_found=${Boolean(tokenUuid)}`;
 if(accountId!==DEVELOPMENT_ACCOUNT)throw new Error('development Cloudflare account required');
 if(!token||!run||!['open','open-static','close'].includes(mode))throw new Error('usage: points-staging-access.mjs open|close (CLOUDFLARE_API_TOKEN, POINTS_E2E_RUN)');
 const name=`ekodi-points-e2e-${run}`;
@@ -66,7 +71,7 @@ if(mode==='open-static'){
   // create an any_valid_service_token policy: that authorizes unrelated
   // services and is not scoped to this synthetic browser verification.
   if(!/^[A-Za-z0-9_-]{8,128}$/.test(staticTokenId))
-    throw new Error('protected STATIC_ACCESS_SERVICE_TOKEN_ID is required for a least-privilege Access policy');
+    throw new Error(`protected STATIC_ACCESS_SERVICE_TOKEN_ID is required for a least-privilege Access policy (${tokenIdShape()}; expected the token UUID, not the client ID)`);
   const {apps}=await stagingApps();
   if(!apps.length)throw new Error('no readable development staging Access application; refusing broad or unverified access');
   const policies=[];
