@@ -207,6 +207,67 @@ export async function seonammediLiveRssXml(fetchPublic = fetch, host = '') {
   }
 }
 
+// ROUTE-META-20261121: every SPA route used to serve the home page's title,
+// description and a canonical pointing at '/'. Bing Webmaster flagged the
+// duplicate/short metadata, and a canonical of '/' tells engines every board
+// URL is a copy of the home page — a direct cause of near-zero indexing.
+// Serve crawler-visible per-route <title>, meta description and canonical.
+const SEONAMMEDI_SITE_NAME = '서남권국립의대 비상대책위원회';
+export function seonammediRouteMeta(pathname, payload = null) {
+  const path = String(pathname || '');
+  if (path === '/board/voices') {
+    return {
+      path,
+      title: '시민의견 | ' + SEONAMMEDI_SITE_NAME,
+      description: '서남권 국립의대 설립에 대한 시민 여러분의 의견을 나누는 공간입니다. 의견을 남기고 다른 시민들의 목소리를 확인해 보세요.',
+    };
+  }
+  const detail = path.match(/^\/board\/notices\/([1-9]\d*)$/);
+  if (path !== '/board/notices' && !detail) return null;
+  let title = '공지사항 | ' + SEONAMMEDI_SITE_NAME;
+  let description = '서남권국립의대 비상대책위원회 공지사항 게시판 — 성명서, 집회·행사 안내와 공식 발표, 활동 소식을 확인할 수 있습니다.';
+  if (detail && payload?.ok === true && payload?.boardId === 'seonammedi.notice' && Array.isArray(payload.items)) {
+    const id = Number(detail[1]);
+    const row = payload.items.find(r => r?.id === id && r?.status === 'published');
+    if (row) {
+      const postTitle = rssText(row.title, 60);
+      const postBody = rssText(row.excerpt || row.summary || row.body, 150, true);
+      if (postTitle) title = postTitle + ' | ' + SEONAMMEDI_SITE_NAME;
+      if (postBody) description = postBody;
+    }
+  }
+  return { path, title, description };
+}
+
+export function seonammediApplyRouteMeta(html, meta, host = '') {
+  if (!meta) return String(html || '');
+  const origin = seonammediHostOrigin(host);
+  const title = xmlEscape(meta.title);
+  const description = xmlEscape(meta.description);
+  const canonical = xmlEscape(origin + meta.path);
+  let out = String(html || '');
+  out = out.replace(/<title>[^<]*<\/title>/i, '<title>' + title + '</title>');
+  out = out.replace(/(<meta\s+name=["']description["']\s+content=["'])[^"']*(["'])/i, '$1' + description + '$2');
+  out = out.replace(/(<meta\s+property=["']og:title["']\s+content=["'])[^"']*(["'])/i, '$1' + title + '$2');
+  out = out.replace(/(<meta\s+property=["']og:description["']\s+content=["'])[^"']*(["'])/i, '$1' + description + '$2');
+  out = out.replace(/(<link\s+rel=["']canonical["']\s+href=["'])[^"']*(["'])/i, '$1' + canonical + '$2');
+  return out;
+}
+
+// Fetch the public notices list only for a notice-detail HTML request, and
+// fail closed to the static section metadata on any upstream problem.
+export async function seonammediLiveRouteMeta(pathname, fetchPublic = fetch) {
+  const path = String(pathname || '');
+  if (!/^\/board\/notices\/[1-9]\d*$/.test(path)) return seonammediRouteMeta(path);
+  try {
+    const response = await fetchPublic(ORIGIN + SITE_PREFIX + '/board/api/notices', { method: 'GET', headers: { accept: 'application/json' } });
+    if (!response?.ok) return seonammediRouteMeta(path);
+    return seonammediRouteMeta(path, await response.json());
+  } catch {
+    return seonammediRouteMeta(path);
+  }
+}
+
 function discoveryResponse(body, contentType, route, method) {
   return new Response(method === 'HEAD' ? null : body, {
     status: 200,
@@ -276,7 +337,11 @@ const ekodiWorkerEntry={
         headers,
       });
     }
-    const body = rewriteText(await upstream.text(), incoming, contentType);
+    let body = rewriteText(await upstream.text(), incoming, contentType);
+    if (contentType.includes('text/html') && upstream.status === 200) {
+      const routeMeta = await seonammediLiveRouteMeta(incoming.pathname, fetch);
+      if (routeMeta) body = seonammediApplyRouteMeta(body, routeMeta, incoming.hostname);
+    }
     headers.delete('content-length');
     headers.delete('content-encoding');
     headers.delete('etag');
