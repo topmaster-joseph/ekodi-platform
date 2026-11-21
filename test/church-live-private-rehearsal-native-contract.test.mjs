@@ -6,7 +6,10 @@ const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const w=read('.github/workflows/verify-church-live-private-rehearsal.yml');
 const s=read('scripts/verify-church-local-rehearsal-native.mjs');
 
-test('safe native Church rehearsal runs after protected main release or explicit manual dispatch only',()=>{
+test('safe native Church rehearsal runs on same-repo review and protected main release only',()=>{
+  assert.match(w,/pull_request:/);
+  assert.match(w,/github\.event_name == 'pull_request'/);
+  assert.match(w,/github\.event\.pull_request\.head\.repo\.full_name == github\.repository/);
   assert.match(w,/workflow_dispatch:/);
   assert.match(w,/push:\s*\n\s+branches: \[main\]/);
   assert.match(w,/github\.event_name == 'push' && github\.ref == 'refs\/heads\/main'/);
