@@ -6,10 +6,12 @@ export function createMemoryStore({ campaigns = [], pledges = [] } = {}) {
   const C = new Map(campaigns.map(c => [c.id, copy(c)]));
   const P = new Map(pledges.map(p => [p.id, copy(p)]));
   const interest = new Map();
+  const profiles = new Map();
+  const settlements = new Map();
   const audits = [];
   const live = (p, nowIso) => p.status === 'paid' || (p.status === 'payment_pending' && p.expiresAt > nowIso);
   return {
-    audits, interest,
+    audits, interest, profiles, settlements,
     async listCampaigns({ statuses } = {}) {
       return [...C.values()].filter(c => !statuses || statuses.includes(c.status)).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).map(copy);
     },
@@ -43,6 +45,12 @@ export function createMemoryStore({ campaigns = [], pledges = [] } = {}) {
     async countInterest(campaignId) { return [...interest.values()].filter(e => e.campaignId === campaignId).length; },
     async listInterest(campaignId) { return [...interest.values()].filter(e => e.campaignId === campaignId).map(copy); },
     async deleteInterest(campaignId) { let n = 0; for (const [k, e] of interest) if (e.campaignId === campaignId) { interest.delete(k); n += 1; } return n; },
+    async getPayoutProfile(userId) { return copy(profiles.get(userId) || null); },
+    async savePayoutProfile(p) { profiles.set(p.userId, copy(p)); },
+    async getSettlement(campaignId) { return copy(settlements.get(campaignId) || null); },
+    async listSettlements() { return [...settlements.values()].map(copy); },
+    async createSettlement(s) { if (settlements.has(s.campaignId)) return false; settlements.set(s.campaignId, copy(s)); return true; },
+    async updateSettlement(campaignId, patch, fromStatus) { const s = settlements.get(campaignId); if (!s || (fromStatus && s.status !== fromStatus)) return false; Object.assign(s, copy(patch)); return true; },
     async addInterest(entry) { const key = `${entry.campaignId}:${entry.email}`; if (!interest.has(key)) interest.set(key, copy(entry)); },
     async audit(entry) { audits.push(copy(entry)); },
   };

@@ -16,6 +16,11 @@ const pledge = r => r && ({
   paymentKey: r.payment_key, method: r.method, approvedAt: r.approved_at, receiptUrl: r.receipt_url, createdAt: r.created_at, updatedAt: r.updated_at,
 });
 
+const settlement = r => r && ({
+  campaignId: r.campaign_id, refPayoutId: r.ref_payout_id, sellerId: r.seller_id, gross: Number(r.gross_amount), feeBp: Number(r.fee_bp), fee: Number(r.fee_amount), net: Number(r.net_amount),
+  status: r.status, payoutId: r.payout_id, payoutStatus: r.payout_status, error: r.error, approvedBy: r.approved_by, createdAt: r.created_at, updatedAt: r.updated_at,
+});
+
 const CAMPAIGN_COLS = {
   slug: 'slug', title: 'title', summary: 'summary', story: 'story', kind: 'kind', ownerOrg: 'owner_org', organizerName: 'organizer_name',
   contactEmail: 'contact_email', goalAmount: 'goal_amount', startsOn: 'starts_on', endsOn: 'ends_on', refundPolicy: 'refund_policy',
@@ -95,6 +100,31 @@ export function createD1Store(DB) {
     async deleteInterest(campaignId) {
       const r = await DB.prepare('DELETE FROM funding_interest WHERE campaign_id=?').bind(campaignId).run();
       return Number(r?.meta?.changes || 0);
+    },
+    async getPayoutProfile(userId) {
+      const r = await DB.prepare('SELECT * FROM funding_payout_profiles WHERE user_id=?').bind(userId).first();
+      return r && { userId: r.user_id, email: r.email, refSellerId: r.ref_seller_id, sellerId: r.seller_id, sellerStatus: r.seller_status, businessType: r.business_type, displayName: r.display_name, bankCode: r.bank_code, accountMasked: r.account_masked, holderName: r.holder_name, updatedAt: r.updated_at };
+    },
+    async savePayoutProfile(p) {
+      await DB.prepare(`INSERT INTO funding_payout_profiles (user_id,email,ref_seller_id,seller_id,seller_status,business_type,display_name,bank_code,account_masked,holder_name,created_at,updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET seller_id=excluded.seller_id,seller_status=excluded.seller_status,business_type=excluded.business_type,
+        display_name=excluded.display_name,bank_code=excluded.bank_code,account_masked=excluded.account_masked,holder_name=excluded.holder_name,updated_at=excluded.updated_at`)
+        .bind(p.userId, p.email, p.refSellerId, p.sellerId, p.sellerStatus, p.businessType, p.displayName, p.bankCode, p.accountMasked, p.holderName, p.updatedAt, p.updatedAt).run();
+    },
+    async getSettlement(campaignId) { return settlement(await DB.prepare('SELECT * FROM funding_settlements WHERE campaign_id=?').bind(campaignId).first()); },
+    async listSettlements() { const { results } = await DB.prepare('SELECT * FROM funding_settlements ORDER BY created_at DESC LIMIT 500').all(); return (results || []).map(settlement); },
+    async createSettlement(s) {
+      const r = await DB.prepare(`INSERT OR IGNORE INTO funding_settlements (campaign_id,ref_payout_id,seller_id,gross_amount,fee_bp,fee_amount,net_amount,status,approved_by,created_at,updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)`).bind(s.campaignId, s.refPayoutId, s.sellerId, s.gross, s.feeBp, s.fee, s.net, s.status, s.approvedBy, s.createdAt, s.updatedAt).run();
+      return Number(r?.meta?.changes || 0) === 1;
+    },
+    async updateSettlement(campaignId, patch, fromStatus) {
+      const cols = { status: 'status', payoutId: 'payout_id', payoutStatus: 'payout_status', error: 'error', updatedAt: 'updated_at' };
+      const parts = []; const values = [];
+      for (const [k, c] of Object.entries(cols)) if (patch[k] !== undefined) { parts.push(`${c}=?`); values.push(patch[k]); }
+      if (!parts.length) return false;
+      const r = await DB.prepare(`UPDATE funding_settlements SET ${parts.join(',')} WHERE campaign_id=?${fromStatus ? ' AND status=?' : ''}`).bind(...values, campaignId, ...(fromStatus ? [fromStatus] : [])).run();
+      return Number(r?.meta?.changes || 0) > 0;
     },
     async addInterest(e) {
       await DB.prepare('INSERT OR IGNORE INTO funding_interest (id,campaign_id,email,consent_at) VALUES (?,?,?,?)').bind(e.id, e.campaignId, e.email, e.consentAt).run();
