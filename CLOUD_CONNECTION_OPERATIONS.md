@@ -49,9 +49,13 @@ When every authorized alternative has been exhausted, request only the minimum u
 
 Provider availability may also carry an operational reason such as `quota_exhausted`, `rate_limited`, `disabled` or `provider_error`; these reasons explain routing without creating a second authority model.
 
-## Opera policy
+## Opera policy — protect human tabs
 
-`OPERA_BROWSER_CONNECTOR_ENABLED` defaults to disabled. Enabling it makes Opera eligible only after higher-priority cloud paths. Disabling or losing Opera must never disable an EKODI core service.
+`OPERA_BROWSER_CONNECTOR_ENABLED` defaults to disabled. Enabling the connector does **not** authorize unattended calls to Opera: `runCloudConnectedTask` skips the `opera_browser` provider even when explicitly enabled, recording `automatic_user_browser_invocation_forbidden`. Disabling or losing Opera must never disable an EKODI core service.
+
+Automatic site/API checks must use official APIs or an EKODI-owned isolated headless browser that closes its task-owned profile and tabs. Never use an Opera Connector `go_to_page` call without an explicit existing `tabId`: omitting it opens a new personal-browser tab. Do not reuse an unrelated personal tab either. Attended operator navigation, if genuinely needed, requires a separately authorized user-initiated workflow that identifies the exact reusable tab and keeps the user's other windows untouched. No automatic login popup, no auto-cleanup of personal Opera tabs, no interactive fallback on `AUTH_REQUIRED`.
+
+**Live limitation:** This repository guard governs EKODI runtime provider selection; it cannot override third-party ChatGPT/Opera Connector calls made outside EKODI. Such agents must obey the same no-automatic-Opera rule at their own tool-call boundary.
 
 ## Implementation
 
