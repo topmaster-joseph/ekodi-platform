@@ -133,6 +133,8 @@ function Invoke-HeadlessCheck([string]$Browser, [string]$Target) {
     $result.profileRemoved = Remove-OwnedProfile $profileDir
     $result.elapsedMs = [int]((Get-Date) - $started).TotalMilliseconds
   }
+  # A successful render is not success if its browser/profile was left behind.
+  $result.ok = [bool]$result.ok -and [bool]$result.browserClosed -and [bool]$result.profileRemoved
   return $result
 }
 
@@ -151,6 +153,7 @@ function Invoke-VisibleCheck([string]$Browser, [string]$Target) {
     $result.browserClosed = Stop-OwnedBrowserTree $profileDir
     $result.profileRemoved = Remove-OwnedProfile $profileDir
   }
+  $result.ok = [bool]$result.ok -and [bool]$result.browserClosed -and [bool]$result.profileRemoved
   return $result
 }
 
