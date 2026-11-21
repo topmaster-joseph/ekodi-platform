@@ -32,3 +32,22 @@ test('layout places service order in top right, keeps one question, and leaves a
   assert.match(old, /<td>예배부름<\/td><th>Call to Worship<\/th>/);
   assert.doesNotMatch(old, /Processional Hymn/);
 });
+
+test('Nov 22 draft bulletin is two-sheet, sanitized and guarded', () => {
+  const html = readFileSync(new URL('../worship/2026-11-22/index.html', import.meta.url), 'utf8');
+  const stage = readFileSync(new URL('../worship/2026-11-22/worship.js', import.meta.url), 'utf8');
+  const manifest = JSON.parse(readFileSync(new URL('../worship/2026-11-22/materials.json', import.meta.url), 'utf8'));
+  const weekly = JSON.parse(readFileSync(new URL('../worship/weekly.json', import.meta.url), 'utf8'));
+  assert.equal((html.match(/class="bp-sheet"/g) || []).length, 2);
+  assert.equal((html.match(/<tr><td>경배찬양<\/td>/g) || []).length, 1);
+  assert.equal((html.match(/<li>성령께서 내게/g) || []).length, 1);
+  assert.match(html, /\.\.\/bulletin-data\.js\?v=20261122a/);
+  assert.match(html, /\.\.\/review-gate\.js/);
+  assert.doesNotMatch(html, /임진명|국화축제|sb_secret|service_role|stream_key/);
+  assert.match(html, /<h1 id="worship-title">공동의 유익을 위한 은사<\/h1>/);
+  assert.match(stage, /2026-11-22/);
+  assert.match(stage, /'ekodi-church-worship-20261122'/);
+  assert.equal(manifest.status, 'draft');
+  assert.equal(manifest.reviewRequired, true);
+  assert.equal(weekly.services.find(x => x.date === '2026-11-22')?.status,'draft');
+});
