@@ -484,6 +484,9 @@ jobs:
       AI_GITHUB_TASK_TOKEN: ${{ secrets.AI_CONTROL_GITHUB_TASK_TOKEN }}
       AI_OPENROUTER_API_KEY: ${{ secrets.AI_CONTROL_OPENROUTER_API_KEY }}
       AI_GROQ_API_KEY: ${{ secrets.AI_CONTROL_GROQ_API_KEY }}
+      # Naver Search API for AI Commons web evidence: a dedicated key wins, else the shared Naver search app key.
+      AI_NAVER_SEARCH_CLIENT_ID: ${{ secrets.AI_CONTROL_NAVER_SEARCH_CLIENT_ID || secrets.NAVER_CLIENT_ID }}
+      AI_NAVER_SEARCH_CLIENT_SECRET: ${{ secrets.AI_CONTROL_NAVER_SEARCH_CLIENT_SECRET || secrets.NAVER_CLIENT_SECRET }}
       AI_EXTERNAL_WORKER_URL: ${{ secrets.AI_CONTROL_WORKER_URL }}
       AI_EXTERNAL_WORKER_TOKEN: ${{ secrets.AI_CONTROL_WORKER_TOKEN }}
     steps:
@@ -547,6 +550,10 @@ jobs:
           if (process.env.AI_GITHUB_TASK_TOKEN) secrets.GITHUB_TASK_TOKEN = process.env.AI_GITHUB_TASK_TOKEN;
           if (process.env.AI_OPENROUTER_API_KEY) secrets.OPENROUTER_API_KEY = process.env.AI_OPENROUTER_API_KEY;
           if (process.env.AI_GROQ_API_KEY) secrets.GROQ_API_KEY = process.env.AI_GROQ_API_KEY;
+          if (process.env.AI_NAVER_SEARCH_CLIENT_ID && process.env.AI_NAVER_SEARCH_CLIENT_SECRET) {
+            secrets.NAVER_SEARCH_CLIENT_ID = process.env.AI_NAVER_SEARCH_CLIENT_ID;
+            secrets.NAVER_SEARCH_CLIENT_SECRET = process.env.AI_NAVER_SEARCH_CLIENT_SECRET;
+          }
           if (process.env.AI_EXTERNAL_WORKER_URL) secrets.AI_WORKER_URL = process.env.AI_EXTERNAL_WORKER_URL;
           if (process.env.AI_EXTERNAL_WORKER_TOKEN) secrets.AI_WORKER_TOKEN = process.env.AI_EXTERNAL_WORKER_TOKEN;
           const count = Object.keys(secrets).length;
