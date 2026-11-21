@@ -55,7 +55,7 @@ try{
   });
   assert.ok(playback.bytes>2048,'recorded local preview blob must contain actual encoded data');
   assert.ok(playback.videoTracks>=1 && playback.audioTracks>=1,'rehearsal requires video and microphone audio');
-  await page.setViewport({width:390,height:844,deviceScaleFactor:1,isMobile:true,hasTouch:true});
+  await page.setViewport({width:390,height:844,deviceScaleFactor:1});
   const mobile=await page.evaluate(()=>({
     windowWidth:window.innerWidth,
     stageWidth:document.querySelector('#programStage').getBoundingClientRect().width,
