@@ -51,9 +51,19 @@ try{
   const playback=await page.evaluate(async()=>{
     const v=document.querySelector('#localRehearsalPlayback');
     const recording=await (await fetch(v.src)).blob();
-    return {mime:recording.type,bytes:recording.size,videoTracks:document.querySelector('#mainVideo')?.srcObject?.getVideoTracks()?.length||0,audioTracks:document.querySelector('#mainVideo')?.srcObject?.getAudioTracks()?.length||0};
+    // A nonzero blob is not a valid rehearsal unless Chromium can actually decode and play it.
+    v.muted=true;
+    await v.play();
+    await new Promise(resolve=>setTimeout(resolve,850));
+    return {
+      mime:recording.type,bytes:recording.size,
+      decodedWidth:v.videoWidth,decodedHeight:v.videoHeight,playedSeconds:v.currentTime,
+      videoTracks:document.querySelector('#mainVideo')?.srcObject?.getVideoTracks()?.length||0,
+      audioTracks:document.querySelector('#mainVideo')?.srcObject?.getAudioTracks()?.length||0
+    };
   });
   assert.ok(playback.bytes>2048,'recorded local preview blob must contain actual encoded data');
+  assert.ok(playback.decodedWidth>0 && playback.decodedHeight>0 && playback.playedSeconds>0.1,'local recording must decode and advance in the browser player');
   assert.ok(playback.videoTracks>=1 && playback.audioTracks>=1,'rehearsal requires video and microphone audio');
   await page.setViewport({width:390,height:844,deviceScaleFactor:1});
   const mobile=await page.evaluate(()=>({
@@ -64,7 +74,7 @@ try{
   assert.ok(mobile.stageWidth>240 && mobile.stageWidth<=mobile.windowWidth+2,'mobile program monitor must fit the viewport');
   assert.equal(mobile.horizontalOverflow,false,'mobile studio must not overflow horizontally');
   assert.deepEqual(mutations,[],'local rehearsal may not perform a single HTTP mutation');
-  Object.assign(report,{desktopMonitorWidth:Math.round(desktop.width),mobileMonitorWidth:Math.round(mobile.stageWidth),videoTracks:playback.videoTracks,audioTracks:playback.audioTracks,recordedBytes:playback.bytes,mediaType:playback.mime,serverMutations:mutations.length,status:'pass'});
+  Object.assign(report,{desktopMonitorWidth:Math.round(desktop.width),mobileMonitorWidth:Math.round(mobile.stageWidth),videoTracks:playback.videoTracks,audioTracks:playback.audioTracks,recordedBytes:playback.bytes,decodedWidth:playback.decodedWidth,decodedHeight:playback.decodedHeight,playedSeconds:Number(playback.playedSeconds.toFixed(2)),mediaType:playback.mime,serverMutations:mutations.length,status:'pass'});
   console.log(JSON.stringify(report));
 }finally{
   await mkdir('artifacts/church-live-private-rehearsal',{recursive:true});
