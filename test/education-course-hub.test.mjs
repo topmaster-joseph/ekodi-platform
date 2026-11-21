@@ -42,7 +42,7 @@ async function admin(env){
 test('single source registry provides unique canonical course IDs and no copied content',async()=>{
  const cat=JSON.parse(await read('education/courses/catalog.json'));
  assert.equal(cat.schemaVersion,2);
- assert.equal(cat.courses.length,6);
+ assert.ok(cat.courses.length>=6,'preserve the baseline catalog while allowing new courses');
  assert.equal(new Set(cat.courses.map(x=>x.id)).size,cat.courses.length);
  for(const c of cat.courses){
   assert.ok(c.title&&c.summary&&c.syllabus?.length>0&&c.studyUrl);
@@ -163,7 +163,7 @@ test('anonymous course catalog exposes learning content but not instructor or ow
  assert.match(response.headers.get('cache-control'),/no-store/);
  const text=await response.text();
  const data=JSON.parse(text);
- assert.equal(data.courses.length,6);
+ assert.ok(data.courses.length>=6,'allow new approved courses');
  assert.equal(new Set(data.courses.map(c=>c.id)).size,6);
  for(const key of ['googleSlidesId','presentationUrl','editUrl','sourceUrl','ownerFolderUrl',
    'sourceFilename','sourceAccess','teacherTool','reviewFlags','registeredAt','taskId']){

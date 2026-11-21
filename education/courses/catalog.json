@@ -196,6 +196,41 @@
       "teacherTool": "/edu/pizza-experience/",
       "learnerTool": "/edu/pizza-experience/",
       "status": "available"
+    },
+    {
+      "id": "mutual-growth-seminar-2026",
+      "title": "상생 세미나 · 에코디와 혁신의 삶·크리스천의 투자 철학",
+      "year": 2026,
+      "fields": [
+        "faith-community-finance"
+      ],
+      "audiences": [
+        "residents-university"
+      ],
+      "summary": "지역 주민과 목포대학교 학생을 위한 2시간 상생 세미나. 개최일·신청 방법은 추후 확정.",
+      "durationMinutes": 120,
+      "dateStatus": "unconfirmed",
+      "venueStatus": "unconfirmed",
+      "delivery": "seminar",
+      "syllabus": [
+        "개회 및 취지 설명 (14:00–14:10)",
+        "에코디(Eco-Do)와 혁신의 삶: 생태계 회복과 책임 (14:10–14:35)",
+        "나눔과 회복의 공동체 및 실천 (14:35–15:00)",
+        "휴식 (15:00–15:10)",
+        "크리스천의 투자 철학: 청지기 정신 (15:10–15:25)",
+        "성경적 재정관리와 선한 투자 (15:25–15:50)",
+        "나의 실천 약속과 마무리 (15:50–16:00)"
+      ],
+      "studyUrl": "/edu/study/mutual-growth-2026/",
+      "teacherTool": "",
+      "learnerTool": "/edu/study/mutual-growth-2026/",
+      "resources": [
+        {
+          "label": "상생 세미나 공개 안내·발표자료",
+          "url": "/edu/study/mutual-growth-2026/"
+        }
+      ],
+      "status": "available"
     }
   ],
   "fields": [
@@ -213,6 +248,11 @@
       "id": "experience",
       "label": "현장·체험",
       "description": "직접 만들고 참여하는 실습·체험교육"
+    },
+    {
+      "id": "faith-community-finance",
+      "label": "신앙·공동체·생활경제",
+      "description": "신앙의 일상 실천, 지역 상생과 책임 있는 재정관리"
     }
   ],
   "audiences": [
@@ -231,6 +271,10 @@
     {
       "id": "children",
       "label": "어린이·학생"
+    },
+    {
+      "id": "residents-university",
+      "label": "지역 주민·대학생"
     }
   ]
 }

@@ -11,7 +11,7 @@ const education=(path)=>new URL(path,ROOT);
 test('all registered courses have one direct /edu source URL, including learner handouts and trainer resources',async()=>{
  const json=JSON.parse(await read('education/courses/catalog.json'));
  assert.equal(new Set(json.courses.map(c=>c.id)).size,json.courses.length);
- assert.equal(json.courses.length,6);
+ assert.ok(json.courses.length>=6,'preserve the baseline catalog while allowing new courses');
  let checked=0;
  for(const c of json.courses){
   const routes=[c.studyUrl,c.teacherTool,c.learnerTool,...(c.resources||[]).map(r=>r.url)].filter(Boolean);
@@ -33,7 +33,7 @@ const pages=[
  'education/index.html','education/admission/index.html','education/study/index.html',
  'education/study/academy/index.html','education/study/ai-bootcamp/index.html',
  'education/study/ai-bootcamp/studio/index.html','education/study/ai-bootcamp/documents/index.html',
- 'education/study/cold-safety-2026/index.html','education/study/farm-marketing/index.html',
+ 'education/study/cold-safety-2026/index.html','education/study/mutual-growth-2026/index.html','education/study/farm-marketing/index.html',
  'education/pizza-experience/index.html','education/factchat/index.html',
  'education/course-hub/index.html','education/course-hub/signin.html',
  'education/study/live/index.html','education/study/live/lab/index.html',
@@ -123,4 +123,26 @@ test('feedback and consenting screen-share QR targets are same-origin canonical 
  assert.equal(join.searchParams.get('r'),'a'.repeat(32));
  assert.equal(join.hash,'#k='+'b'.repeat(64));
  assert.ok(!join.searchParams.has('k'),'do not expose participant secret to server request logs');
+});
+
+test('mutual growth seminar is a single direct-route course and CSP-safe static presentation',async()=>{
+ const c=JSON.parse(await read('education/courses/catalog.json'));
+ const matching=c.courses.filter(x=>x.id==='mutual-growth-seminar-2026');
+ assert.equal(matching.length,1);
+ const course=matching[0];
+ assert.equal(course.studyUrl,'/edu/study/mutual-growth-2026/');
+ assert.ok(course.resources.every(x=>x.url.startsWith('/edu/')));
+ const [html,js,css]=await Promise.all([
+  read('education/study/mutual-growth-2026/index.html'),
+  read('education/study/mutual-growth-2026/app.js'),
+  read('education/study/mutual-growth-2026/style.css')
+ ]);
+ assert.match(html,/src="\.\/app\.js"/);
+ assert.match(html,/href="\.\/style\.css"/);
+ assert.doesNotMatch(html,/<script(?![^>]*src=)|<style>|\sonclick=/);
+ assert.match(html,/개최일 미확정/);
+ assert.match(html,/예약 미확인/);
+ assert.match(js,/const slides=/);
+ assert.equal((js.match(/^\['/gm)||[]).length,16);
+ assert.match(css,/@media print/);
 });

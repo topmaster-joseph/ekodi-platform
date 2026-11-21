@@ -59,9 +59,9 @@ try{
  const navigationQueue=inputPaths.map(path=>BASE+path);
  const attempted=new Set(),checkedLinks=new Set();
  const originCatalog=await ctx.request.get(BASE+'courses/catalog.json',{maxRedirects:0,timeout:22000});
- assert(originCatalog.status()===200,'canonical six-course catalog returned '+originCatalog.status());
+ assert(originCatalog.status()===200,'canonical course catalog returned '+originCatalog.status());
  const catalog=await originCatalog.json();
- assert(Array.isArray(catalog.courses)&&catalog.courses.length===6,'six canonical registered courses required');
+ assert(Array.isArray(catalog.courses)&&catalog.courses.length>=6,'at least the original six canonical registered courses required');
  for(const course of catalog.courses){
   for(const role of ['courses','learn','teach'])navigationQueue.push(BASE+role+'/'+course.id+'/');
   for(const link of [course.studyUrl,course.learnerTool,...(course.resources||[]).map(r=>r.url)].filter(Boolean)){
