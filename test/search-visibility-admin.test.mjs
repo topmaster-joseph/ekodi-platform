@@ -104,7 +104,11 @@ test('EKODI native Chromium Search Visibility GSC action uses only synthetic rea
   assert.match(coverage,/googleScenario==='not_configured'/);
   assert.match(coverage,/googleScenario='connected'/);
   assert.match(coverage,/googleScenario='no_rows'/);
-  assert.match(coverage,/googleReadRequests\.length!==3/);
+  assert.match(coverage,/googleScenario='zero_impressions'/);
+  assert.match(coverage,/googleReadRequests\.length!==4/);
+  // The verifier must track the UI's own empty-data wording (11/21 post-promotion failure).
+  assert.ok(ui.includes('이 기간 Google 검색 성과 자료가 없습니다') && coverage.includes('이 기간 Google 검색 성과 자료가 없습니다'));
+  assert.ok(ui.includes('노출이 없어 평균 순위는 계산되지 않습니다') && coverage.includes('노출이 없어 평균 순위는 계산되지 않습니다'));
   assert.match(coverage,/page\.unroute\(googleRoute,mockGoogleRead\)/);
   assert.match(coverage,/synthetic-readonly-ui/);
   assert.match(ui,/data-sv-google-read/);
