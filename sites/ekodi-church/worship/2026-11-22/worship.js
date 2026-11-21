@@ -35,6 +35,13 @@
     ]
   },
   {
+    "title": "입례찬송",
+    "kicker": "Processional Hymn",
+    "lines": [
+      "다같이"
+    ]
+  },
+  {
     "title": "공동고백",
     "kicker": "Community Confession",
     "lines": [
@@ -42,8 +49,8 @@
     ]
   },
   {
-    "title": "입례찬송",
-    "kicker": "Processional Hymn",
+    "title": "회개찬송",
+    "kicker": "Hymn of Repentance",
     "lines": [
       "다같이"
     ]
@@ -53,13 +60,6 @@
     "kicker": "Congregational Prayer",
     "lines": [
       "맡은이"
-    ]
-  },
-  {
-    "title": "헌금찬송",
-    "kicker": "Offertory Hymn",
-    "lines": [
-      "다같이"
     ]
   },
   {
@@ -78,7 +78,7 @@
   },
   {
     "title": "말씀선포",
-    "kicker": "Proclamation of the Word · 공동의 유익을 위한 은사",
+    "kicker": "Proclamation of the Word",
     "lines": [
       "공동의 유익을 위한 은사",
       "정찬균 목사"
