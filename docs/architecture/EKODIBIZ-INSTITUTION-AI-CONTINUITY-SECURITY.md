@@ -35,7 +35,7 @@ Owner: EKODI Orchestrator · EKODIBIZ (기존 AI 구매·결제 위탁계약과 
 
 ## 3. 필수 Worker secrets (예시 구조, 실제 비밀 금지)
 
-- `INSTITUTION_AI_TENANTS_JSON`: 기관 ID별 `{ "status": "active", "keys": { "submit": ["..."], "assistant": ["..."], "read": ["..."], "approve": ["..."], "execute": ["..."], "backup": ["..."], "restore": ["..."] } }` JSON. 키는 각각 32바이트 이상 고강도 난수; 이전 키+신규 키를 최대 3개까지 일시 병행 후 폐기한다
+- `INSTITUTION_AI_TENANTS_JSON`: 기관 ID별 `{ "status": "active", "keys": { "submit": ["..."], "assistant": ["..."], "read": ["..."], "approve": ["..."], "execute": ["..."], "backup": ["..."], "restore": ["..."], "route": ["..."] } }` JSON. 키는 각각 32바이트 이상 고강도 난수; 이전 키+신규 키를 최대 3개까지 일시 병행 후 폐기한다
 - `INSTITUTION_AI_KEYRING_JSON`: `{ "v1": "<32바이트 이상 마스터>", "v2": "<교체용 마스터>" }` JSON
 - `INSTITUTION_AI_ACTIVE_KEY_VERSION`: 위 키링의 활성 버전
 - `INSTITUTION_AI_HMAC_KEY`: 별도 32바이트 이상 키; 암호화 키 회전과 무관하게 멱등 생성 지문 유지
