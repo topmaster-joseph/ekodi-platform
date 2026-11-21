@@ -186,3 +186,19 @@ test('Church source PR 195 schedule proof requires vertically stacked today-sele
   assert.match(proof,/await browser\.close\(\)/);
   assert.doesNotMatch(proof,/method:'(?:POST|PATCH|DELETE)'/);
 });
+
+
+test('read-only inline Church homepage source proof is an allowlisted guarded release trigger',async()=>{
+  const converge=await read('scripts/converge-orchestrated-pr-merge.mjs');
+  const script=await read('scripts/verify-church-homepage-production.mjs');
+  assert.match(converge,/file==='scripts\/verify-church-homepage-production\.mjs'/);
+  assert.match(converge,/if\(churchPagesTouched\)/);
+  assert.match(script,/const CHURCH_ORIGIN='https:\/\/ekodi\.kr'/);
+  assert.match(script,/expectedSourceSha/);
+  assert.match(script,/return Object\.freeze/);
+  assert.match(script,/method:'GET'/);
+  assert.match(script,/realUserAuthenticated:false,dataMutations:false,loggedInCrudVerified:false/);
+  assert.doesNotMatch(script,/\bmethod:'(?:POST|PUT|PATCH|DELETE)'/);
+  assert.doesNotMatch(script,/\bAuthorization:/);
+  assert.doesNotMatch(script,/location\.replace|window\.open/);
+});
