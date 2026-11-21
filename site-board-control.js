@@ -821,7 +821,7 @@ export async function handleSiteBoardRequest(request,env){
   // first-party GET refreshes only the Church notice category, idempotently, with
   // an audit-friendly system identity. HTTP write authorization is unchanged.
   if(method==='GET'&&route.siteId==='ekodichurch'&&(sub==='/'||sub==='/api/posts')){
-    await syncApprovedChurchMonthlyNotices(env,instance);
+    await syncApprovedChurchWeeklyNotices(env,instance);
   }
   if(method==='GET'&&sub==='/'){
     const categoryId=safeCategoryId(new URL(request.url).searchParams.get('category'));
