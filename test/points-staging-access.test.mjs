@@ -239,7 +239,10 @@ test('cleanup deletes a run-minted UUID directly even when metadata listing omit
   const calls=actionsOf(r);
   assert.equal(calls.filter(x=>x.method==='DELETE'&&x.url.endsWith('/access/service_tokens/'+id)).length,1);
   assert.doesNotMatch(JSON.stringify(calls),/other-token|another-run/);
-  assert.doesNotMatch(r.stdout,new RegExp(id));
+  // The synthetic ACCESS_PROBE line deliberately enumerates mocked API calls.
+  // Only operational output (not the test's trace) must hide the token UUID.
+  const operationalLog=r.stdout.split(/\\r?\\n/).filter(line=>!line.startsWith('ACCESS_PROBE=')).join('\\n');
+  assert.doesNotMatch(operationalLog,new RegExp(id));
 });
 test('cleanup refuses to delete a malformed run token ID and reports incomplete cleanup',()=>{
   const r=runMockAccess('close',{E2E_ACCESS_TOKEN_ID:'../../../unrelated',TEST_ACCESS_CLOSE_LIST_EMPTY:'1'});
