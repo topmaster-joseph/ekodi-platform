@@ -184,9 +184,9 @@ footer.biz{border-top:1px solid var(--line);background:#fff;padding:22px 0;font-
 @media(max-width:640px){table.list,table.list tbody,table.list tr,table.list td{display:block;width:100%}table.list tr:first-child{display:none}table.list tr{border-bottom:1px solid var(--line);padding:8px 0}table.list td{border:0;padding:3px 8px}}.tabs button{background:#fff;color:var(--ink);border:1px solid var(--line)}.tabs .count{display:inline-block;min-width:22px;margin-left:4px;padding:0 6px;border-radius:99px;background:#e7f1ec;color:var(--brand);font-size:13px;line-height:20px}.tabs button.on .count{background:#fff}.tabs button.empty .count{background:#eceeed;color:var(--muted)}.tabs button.on{background:var(--brand);color:#fff}
 .hide{display:none!important}`;
 
-function shell(title, body, { noindex = false, description = '', scripts = '' } = {}) {
+function shell(title, body, { noindex = false, description = '', scripts = '', canonical = PUBLIC_PATH } = {}) {
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escapeHtml(title)}</title>${noindex ? '<meta name="robots" content="noindex,nofollow">' : `<meta name="description" content="${escapeHtml(description || '누구나 후원하고, 에코디 회원은 직접 펀딩을 기획·운영하는 에코디 펀딩')}"><link rel="canonical" href="https://ekodi.kr${PUBLIC_PATH}">`}
+<title>${escapeHtml(title)}</title>${noindex ? '<meta name="robots" content="noindex,nofollow">' : `<meta name="description" content="${escapeHtml(description || '누구나 후원하고, 에코디 회원은 직접 펀딩을 기획·운영하는 에코디 펀딩')}"><link rel="canonical" href="https://ekodi.kr${escapeHtml(canonical)}">`}
 <style>${CSS}</style></head><body>
 <header class="top"><div class="wrap bar"><a class="brand" href="${PUBLIC_PATH}">에코디 펀딩</a><nav><a href="${PUBLIC_PATH}">펀딩 둘러보기</a><a href="${GUIDE_PATH}">펀딩 안내</a><a href="${STUDIO_PATH}">펀딩 만들기</a></nav></div></header>
 ${body}
@@ -220,7 +220,7 @@ export function renderGuide() {
 <tr><td>증권형</td><td>준비 중(3단계)</td><td>금융위원회에 등록한 온라인소액투자중개업자만 모집할 수 있습니다. 에코디는 사업계획 준비를 돕고 등록업체로 연결합니다.</td></tr>
 <tr><td>대출형</td><td>준비 중(3단계)</td><td>온라인투자연계금융업자로 등록한 회사만 중개할 수 있습니다. 에코디는 모집하지 않습니다.</td></tr></table>
 <h2>펀딩을 열려면</h2><ol><li>에코디 계정으로 로그인해 <a href="${STUDIO_PATH}">펀딩 만들기</a>에서 계획서를 작성합니다.</li><li>심사를 요청하면 에코디비즈가 내용과 반환 정책을 확인합니다.</li><li>지금(1단계)은 에코디 소속 조직의 펀딩부터 공개 모금을 엽니다. 회원 개인·단체의 펀딩은 후원금 정산 대행 계약이 끝나는 대로 순서대로 열립니다.</li></ol>
-<h2>후원자 보호</h2><p class="story">${escapeHtml(DEFAULT_REFUND_POLICY)}</p></main>`, { description: '에코디 펀딩의 종류(후원형·기부형·증권형·대출형)와 개설 절차, 후원자 보호 규칙' });
+<h2>후원자 보호</h2><p class="story">${escapeHtml(DEFAULT_REFUND_POLICY)}</p></main>`, { description: '에코디 펀딩의 종류(후원형·기부형·증권형·대출형)와 개설 절차, 후원자 보호 규칙', canonical: GUIDE_PATH });
 }
 
 export function renderCampaign(c, { now = new Date(), payment = { ready: false } } = {}) {
@@ -245,7 +245,7 @@ ${v.open ? `<button type="button" data-pick="${escapeHtml(r.id)}">이것으로 �
 <p class="muted">개설: ${escapeHtml(v.organizerName)} (${escapeHtml(v.ownerOrgLabel)}) · 문의 <a href="mailto:${escapeHtml(v.contactEmail)}">${escapeHtml(v.contactEmail)}</a></p></section>
 <aside><div class="card"><b style="font-size:24px">${won(v.raisedAmount)}</b><p class="muted">목표 ${won(v.goalAmount)} · ${v.pct}% · 후원자 ${v.backerCount}명</p>${meter(v)}
 <p class="muted">모금 기간 ${escapeHtml(v.startsOn)} ~ ${escapeHtml(v.endsOn)}</p></div>${closedNote}${payNote}
-<h2>${v.kind === 'donation' ? '후원 금액' : '리워드'} 선택</h2>${rewards}${v.open && payment.ready ? form : v.status === 'closed' ? '' : interest}</aside></div></main>`, { description: v.summary, scripts: client });
+<h2>${v.kind === 'donation' ? '후원 금액' : '리워드'} 선택</h2>${rewards}${v.open && payment.ready ? form : v.status === 'closed' ? '' : interest}</aside></div></main>`, { description: v.summary, scripts: client, canonical: `${PUBLIC_PATH}/c/${v.slug}` });
 }
 
 export function renderResult(ok, message, slug = '') {
@@ -312,14 +312,31 @@ function authClientHelpers() {
   const SUPABASE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   const SESSION_KEY = 'ekodi-funding-session';
   function stored() { try { const v = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); return v?.accessToken ? v : null; } catch { return null; } }
-  function central() {
-    try { const v = JSON.parse(localStorage.getItem('sb-renzehysxirjilvdxacv-auth-token') || 'null'); if (v?.access_token && (!v.expires_at || v.expires_at > Date.now() / 1000 + 60)) return { accessToken: v.access_token }; } catch {}
+  const CENTRAL_KEY = 'sb-renzehysxirjilvdxacv-auth-token';
+  // The central EKODI login (ekodi.kr/auth) keeps its Supabase session on this same origin. Access tokens live
+  // about an hour; like every other EKODI page we renew it with the stored refresh token instead of asking the
+  // person to log in again ("이미 로그인되어 있으면 다시 로그인하지 않는다").
+  async function central() {
+    let v = null;
+    try { v = JSON.parse(localStorage.getItem(CENTRAL_KEY) || 'null'); } catch { v = null; }
+    if (v?.access_token && (!v.expires_at || v.expires_at > Date.now() / 1000 + 60)) return { accessToken: v.access_token };
+    if (v?.refresh_token) {
+      try {
+        const r = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', { method: 'POST', headers: { apikey: SUPABASE_KEY, 'content-type': 'application/json' }, body: JSON.stringify({ refresh_token: v.refresh_token }) });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d.access_token) {
+          const next = { ...v, ...d, expires_at: d.expires_at || Math.floor(Date.now() / 1000) + Number(d.expires_in || 3600) };
+          try { localStorage.setItem(CENTRAL_KEY, JSON.stringify(next)); } catch {}
+          return { accessToken: d.access_token };
+        }
+      } catch {}
+    }
     try { const t = sessionStorage.getItem('ekodi-auth-token'); if (t) return { accessToken: t }; } catch {}
     return null;
   }
   async function session() {
     const params = new URLSearchParams(location.hash.slice(1)); const hash = params.get('ekodi_token');
-    if (!hash) return stored() || central();
+    if (!hash) return (await central()) || stored();
     const r = await fetch(SUPABASE_URL + '/auth/v1/verify', { method: 'POST', headers: { apikey: SUPABASE_KEY, 'content-type': 'application/json' }, body: JSON.stringify({ token_hash: hash, type: params.get('ekodi_type') || 'email' }) });
     const d = await r.json().catch(() => ({})); if (!r.ok || !d.access_token) throw new Error('로그인 연결에 실패했습니다.');
     const v = { accessToken: d.access_token }; sessionStorage.setItem(SESSION_KEY, JSON.stringify(v)); history.replaceState(null, '', location.pathname + location.search); return v;
@@ -338,7 +355,12 @@ function studioClient(cfg) {
   async function api(path, options = {}) {
     const r = await fetch(cfg.api + path, { ...options, cache: 'no-store', headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' } });
     const d = await r.json().catch(() => ({}));
-    if (r.status === 401) { auth.forget(); auth.login(); throw new Error('로그인이 필요합니다.'); }
+    if (r.status === 401) {
+      auth.forget();
+      const again = !options.retried && await auth.session();
+      if (again?.accessToken && again.accessToken !== token) { token = again.accessToken; return api(path, { ...options, retried: true }); }
+      auth.login(); throw new Error('로그인이 필요합니다.');
+    }
     if (!r.ok) throw Object.assign(new Error(d.error || '처리하지 못했습니다.'), { data: d });
     return d;
   }
@@ -384,15 +406,17 @@ function studioClient(cfg) {
     if (!c.refundPolicy) $('f_refundPolicy').value = cfg.refund;
     $('rewards').innerHTML = ''; (c.rewards?.length ? c.rewards : [{}]).forEach(rewardRow);
     const locked = c.status && !['draft', 'rejected'].includes(c.status);
-    document.querySelectorAll('#form input,#form select,#form textarea,#form button').forEach(n => n.disabled = Boolean(locked));
+    document.querySelectorAll('#form input,#form select,#form textarea,#form button:not([data-pane]):not(#btnWithdraw)').forEach(n => n.disabled = Boolean(locked));
     $('formTitle').textContent = editing ? `편집: ${c.title || ''} (${cfg.status[c.status] || ''})` : '새 펀딩 계획서';
     $('reviewNote').textContent = c.reviewNote ? '심사 의견: ' + c.reviewNote : '';
-    $('btnSubmit').classList.toggle('hide', !editing); $('btnWithdraw').classList.toggle('hide', c.status !== 'review');
+    $('btnSubmit').classList.toggle('hide', !editing || locked); $('btnWithdraw').classList.toggle('hide', c.status !== 'review');
+    $('btnSave').classList.toggle('hide', Boolean(locked));
     $('btnWithdraw').disabled = false; $('editor').classList.remove('hide');
     const counts = markPanes(locked ? [] : (c.problems || []));
     if (!keepPane) showPane(Object.keys(counts)[0] && !locked ? paneOf((c.problems || [])[0]) : 'basic');
     const [type, text] = nextStep(c);
-    if (editing) say(c.problems?.length && !locked ? '심사 요청 전에 아래를 고쳐 주세요.' : `상태: ${cfg.status[c.status] || ''} — ${text}`, c.problems?.length && !locked ? 'err' : type, locked ? [] : (c.problems || []));
+    const lockedNote = { review: '운영자 심사 중이라 수정할 수 없습니다. 고치려면 아래 \'심사 요청 취소\'를 누르세요.', live: '모금 중인 펀딩은 후원자 보호를 위해 내용을 바꿀 수 없습니다.' + (me?.isOperator ? '' : ' 바꿀 내용이 있으면 운영자에게 알려 주세요.'), waiting_payout: '승인되어 정산대행 준비를 기다리는 중이라 수정할 수 없습니다.', closed: '종료된 펀딩입니다.' }[c.status];
+    if (editing) say(locked ? `${cfg.status[c.status] || ''} — ${lockedNote || text}` : c.problems?.length ? '심사 요청 전에 아래를 고쳐 주세요.' : `상태: ${cfg.status[c.status] || ''} — ${text}`, locked ? type : c.problems?.length ? 'err' : type, locked ? [] : (c.problems || []));
   }
   function collect() {
     const body = {}; for (const k of ['slug', 'title', 'summary', 'story', 'organizerName', 'contactEmail', 'goalAmount', 'startsOn', 'endsOn', 'refundPolicy', 'kind']) body[k] = $('f_' + k).value;
@@ -451,7 +475,12 @@ function adminClient(cfg) {
   async function api(path, options = {}) {
     const r = await fetch(cfg.api + path, { ...options, cache: 'no-store', headers: { authorization: 'Bearer ' + token, 'content-type': 'application/json' } });
     const d = await r.json().catch(() => ({}));
-    if (r.status === 401) { auth.forget(); auth.login(); throw new Error('로그인이 필요합니다.'); }
+    if (r.status === 401) {
+      auth.forget();
+      const again = !options.retried && await auth.session();
+      if (again?.accessToken && again.accessToken !== token) { token = again.accessToken; return api(path, { ...options, retried: true }); }
+      auth.login(); throw new Error('로그인이 필요합니다.');
+    }
     if (!r.ok) throw Object.assign(new Error(d.error || '처리하지 못했습니다.'), { data: d });
     return d;
   }
@@ -470,13 +499,19 @@ ${['draft', 'rejected', 'review'].includes(c.status) && c.problems?.length ? `<d
 <details><summary>리워드 ${c.rewards.length}개 · 소개 보기</summary><p class="story">${esc(c.summary)}\n\n${esc(c.story)}</p><ul>${c.rewards.map(r => `<li>${esc(r.title)} · ${wonf(r.amount)} · ${esc(cfg.delivery[r.delivery])}${r.limit ? ` · ${r.limit}개` : ''}</li>`).join('')}</ul></details>
 <input placeholder="심사 의견(보완 요청 시 필수)" data-note="${esc(c.id)}" maxlength="500" style="margin:8px 0">
 <div class="row" style="justify-content:flex-start">${c.status === 'review' || (c.status === 'draft' && cfg.orgs[c.ownerOrg]) ? `<button data-act="approve" data-id="${esc(c.id)}"${c.problems?.length ? ' disabled title="확인필요 항목을 먼저 고쳐 주세요"' : ''}>승인</button>` : ''}${c.status === 'review' ? `<button class="ghost" data-act="reject" data-id="${esc(c.id)}">보완 요청</button>` : ''}
-${['live', 'waiting_payout'].includes(c.status) ? `<button class="ghost" data-act="close" data-id="${esc(c.id)}">모금 종료</button>` : ''}<button class="ghost" data-pledges="${esc(c.id)}">후원 내역</button></div><div data-out="${esc(c.id)}"></div></div>`).join('') : '<p class="muted">해당하는 펀딩이 없습니다.</p>';
+${['live', 'waiting_payout'].includes(c.status) ? `<button class="ghost" data-act="close" data-id="${esc(c.id)}">모금 종료</button>` : ''}<button class="ghost" data-pledges="${esc(c.id)}">후원 내역</button>${c.interestCount ? `<button class="ghost" data-interest="${esc(c.id)}" data-slug="${esc(c.slug)}">알림 신청 명단 ${c.interestCount}명 내려받기</button>` : `<span class="muted">알림 신청 0명</span>`}</div><div data-out="${esc(c.id)}"></div></div>`).join('') : '<p class="muted">해당하는 펀딩이 없습니다.</p>';
     document.querySelectorAll('[data-act]').forEach(b => b.onclick = async () => {
       const id = b.dataset.id; const note = document.querySelector(`[data-note="${id}"]`).value;
-      const labels = { approve: '승인하면 시작일부터 공개 모금이 열립니다(결제가 준비된 경우). 승인할까요?', reject: '보완을 요청할까요?', close: '모금을 지금 종료할까요? 되돌릴 수 없습니다.' };
+      const labels = { approve: '승인하면 시작일부터 공개 모금이 열립니다(결제가 준비된 경우). 승인할까요?', reject: '보완을 요청할까요?', close: '모금을 지금 종료할까요? 알림 신청 이메일도 함께 삭제되며 되돌릴 수 없습니다.' };
       if (!confirm(labels[b.dataset.act])) return;
       try { const d = await api(`/admin/campaigns/${id}/${b.dataset.act}`, { method: 'POST', body: JSON.stringify({ note }) }); say(d.message, 'ok'); await load(); }
       catch (x) { say(x.message + (x.data?.errors ? ' — ' + x.data.errors.join(' / ') : ''), 'err'); }
+    });
+    document.querySelectorAll('[data-interest]').forEach(b => b.onclick = async () => {
+      const r = await fetch(`${cfg.api}/admin/campaigns/${b.dataset.interest}/interest.csv`, { headers: { authorization: 'Bearer ' + token }, cache: 'no-store' });
+      if (!r.ok) { say('명단을 내려받지 못했습니다.', 'err'); return; }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = `funding-${b.dataset.slug}-interest.csv`; a.click(); URL.revokeObjectURL(a.href);
+      say('알림 신청 명단을 내려받았습니다. 결제가 열리면 이 명단에 안내 메일을 보내 주세요. 모금을 종료하면 명단은 자동 삭제됩니다.', 'ok');
     });
     document.querySelectorAll('[data-pledges]').forEach(b => b.onclick = async () => {
       const d = await api(`/admin/campaigns/${b.dataset.pledges}/pledges`);
@@ -524,7 +559,7 @@ export function renderStudio({ digitalApproved = false } = {}) {
 <section class="pane hide" data-for="rewards"><div class="rw-head"><span>이름 · 설명</span><span>금액(원)</span><span>전달 방식</span><span>수량</span><span></span></div><div id="rewards"></div>
 <button type="button" class="ghost" id="btnAddReward">+ 선택지 추가</button></section>
 <section class="pane hide" data-for="refund"><label for="f_refundPolicy">반환·환불 정책</label><textarea id="f_refundPolicy" maxlength="2000" style="min-height:200px"></textarea></section>
-<div class="actionbar"><div id="stateBottom" class="ab-msg"></div><div class="ab-btns"><button type="submit" class="ghost">저장</button><button type="button" id="btnSubmit" class="hide">저장하고 심사 요청</button><button type="button" id="btnWithdraw" class="ghost hide">심사 요청 취소</button></div></div></form>
+<div class="actionbar"><div id="stateBottom" class="ab-msg"></div><div class="ab-btns"><button type="submit" class="ghost" id="btnSave">저장</button><button type="button" id="btnSubmit" class="hide">저장하고 심사 요청</button><button type="button" id="btnWithdraw" class="ghost hide">심사 요청 취소</button></div></div></form>
 </div></div></main>`,
   { noindex: true, scripts: `${inline(studioClient, `{...${JSON.stringify(cfg)},helpers:${authClientHelpers.toString()}}`)}` });
 }
@@ -644,12 +679,18 @@ export function createApp({ store, authenticate, pay, notify = null, extraHeader
     if (parts[0] !== 'campaigns') return J({ error: 'not_found' }, 404);
     if (parts.length === 1 && method === 'GET') {
       const p = await paymentState();
-      const campaigns = (await store.listCampaigns({})).map(c => ({ ...ownView(c), problems: validateCampaign(c, { forSubmit: true, digitalApproved }) }));
+      const campaigns = await Promise.all((await store.listCampaigns({})).map(async c => ({ ...ownView(c), problems: validateCampaign(c, { forSubmit: true, digitalApproved }), interestCount: await store.countInterest(c.id) })));
       return J({ campaigns, payment: { ready: Boolean(p.ready), mode: p.mode || 'none', reason: p.reason || (p.ready ? '' : '결제 미개통') } });
     }
     const c = await store.getCampaign(parts[1]);
     if (!c) return J({ error: '펀딩을 찾을 수 없습니다.' }, 404);
     if (parts[2] === 'pledges' && method === 'GET') return J({ pledges: await store.listPledges(c.id) });
+    if (parts[2] === 'interest.csv' && method === 'GET') {
+      const rows = await store.listInterest(c.id);
+      await audit(me.email, 'funding.interest_export', c.id, { count: rows.length });
+      const csv = '\uFEFF이메일,동의일시\r\n' + rows.map(r => `${String(r.email).replace(/[",\r\n]/g, '')},${r.consentAt}`).join('\r\n') + '\r\n';
+      return new Response(csv, { status: 200, headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="funding-${c.slug}-interest.csv"`, 'cache-control': 'no-store', ...SECURITY, ...extraHeaders } });
+    }
     if (method !== 'POST') return J({ error: 'not_found' }, 404);
     const body = await readJson(request) || {};
     const note = clean(body.note, 500);
@@ -674,8 +715,10 @@ export function createApp({ store, authenticate, pay, notify = null, extraHeader
     if (parts[2] === 'close') {
       if (!['live', 'waiting_payout'].includes(c.status)) return J({ error: '모금 중이거나 대기 중인 펀딩만 종료할 수 있습니다.' }, 409);
       await store.updateCampaign(c.id, { status: 'closed', reviewNote: note || c.reviewNote, updatedAt: now });
-      await audit(me.email, 'funding.close', c.id);
-      return J({ status: 'closed', message: '모금을 종료했습니다. 목표 미달이면 반환 정책에 따라 결제 취소를 진행해 주세요.' });
+      // 알림 신청 때 '펀딩 종료 시 삭제'로 동의받았으므로 종료와 함께 지운다.
+      const removed = await store.deleteInterest(c.id);
+      await audit(me.email, 'funding.close', c.id, { interestDeleted: removed });
+      return J({ status: 'closed', interestDeleted: removed, message: `모금을 종료했습니다. 알림 신청 이메일 ${removed}건을 약속대로 삭제했습니다. 목표 미달이면 반환 정책에 따라 결제 취소를 진행해 주세요.` });
     }
     return J({ error: 'not_found' }, 404);
   }
@@ -791,6 +834,11 @@ export function createApp({ store, authenticate, pay, notify = null, extraHeader
     if (!['GET', 'HEAD'].includes(method)) return J({ error: '허용되지 않은 요청입니다.' }, 405);
     if (path === PUBLIC_PATH) return H(renderHome(await store.listCampaigns({ statuses: ['live', 'waiting_payout'] }), clock()), 200, method, 'public, max-age=60');
     if (path === GUIDE_PATH) return H(renderGuide(), 200, method, 'public, max-age=300');
+    if (path === `${PUBLIC_PATH}/sitemap.xml`) {
+      const live = await store.listCampaigns({ statuses: ['live', 'waiting_payout'] });
+      const urls = [PUBLIC_PATH, GUIDE_PATH, ...live.map(c => `${PUBLIC_PATH}/c/${c.slug}`)].map(p => `  <url><loc>${escapeHtml(origin + p)}</loc><changefreq>daily</changefreq></url>`).join('\n');
+      return new Response(method === 'HEAD' ? null : `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`, { status: 200, headers: { 'content-type': 'application/xml; charset=utf-8', 'cache-control': 'public, max-age=600', ...SECURITY, ...extraHeaders } });
+    }
     if (path === STUDIO_PATH) return H(renderStudio({ digitalApproved }), 200, method);
     if (path === ADMIN_PATH) return H(renderAdmin(), 200, method);
     const m = /^\/funding\/c\/([a-z0-9-]{3,40})(?:\/(success|fail))?$/.exec(path);
