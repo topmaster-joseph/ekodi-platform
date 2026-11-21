@@ -32,3 +32,10 @@ test('apply is manual, main-only; push only plans', () => {
   assert.match(wf, /test "\$GITHUB_REF" = 'refs\/heads\/main'/);
   assert.match(wf, /if: github\.event_name == 'workflow_dispatch' && inputs\.mode == 'apply'\n\s+run: node scripts\/cloudflare-zone-traffic-shield\.mjs --apply/);
 });
+
+test('re-running against the live ruleset is a no-op (server-echoed fields ignored)', async () => {
+  const { same } = await import('../scripts/cloudflare-zone-traffic-shield.mjs');
+  const [wanted] = desiredRules().http_ratelimit;
+  const live = { ...wanted, id: 'r1', version: '1', last_updated: 'x', ratelimit: { ...wanted.ratelimit, requests_to_origin: false } };
+  assert.equal(same([live], mergeRules([live], [wanted])), true);
+});
