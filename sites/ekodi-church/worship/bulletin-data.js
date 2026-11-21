@@ -22,6 +22,74 @@
     return '';
   }
 
+
+  // Effective-dated service order: preserve every worship bulletin before 2026-11-22.
+  const orderEffectiveDate = '2026-11-22';
+  const newOrder = [
+    ['경배찬양', 'Praise & Worship', '다같이'],
+    ['예배부름', 'Call to Worship', '인도자'],
+    ['공동고백', 'Community Confession', '다같이'],
+    ['입례찬송', 'Processional Hymn', '다같이'],
+    ['대표기도', 'Congregational Prayer', '맡은이'],
+    ['헌금찬송', 'Offertory Hymn', '다같이'],
+    ['말씀봉독', 'Scripture Reading', '다같이'],
+    ['말씀찬송', 'Hymn before the Sermon', '다같이'],
+    ['말씀선포', 'Proclamation of the Word', '설교자'],
+    ['말씀기도', 'Prayer in Response to the Word', '다같이'],
+    ['결단찬송', 'Hymn of Commitment', '다같이'],
+    ['교회소식', 'Church Announcements', '인도자'],
+    ['파송찬송', 'Sending Hymn', '다같이'],
+    ['주기도문', "The Lord's Prayer", '다같이']
+  ];
+  const hasNewOrder = date >= orderEffectiveDate;
+  function applyNewWorshipLayout() {
+    if (!hasNewOrder) return;
+    const sheet = Array.from(pages.querySelectorAll('.bp-sheet')).find(s => s.querySelector('.bp-order'));
+    if (!sheet) return;
+    const cols = sheet.querySelector('.bp-cols');
+    if (!cols || cols.children.length !== 2) return;
+    const [left, right] = cols.children;
+    const order = left.querySelector('.bp-order');
+    const tableEl = order && order.querySelector('table');
+    if (!tableEl) return;
+
+    // Retain verified, date-specific Scripture and sermon captions when a
+    // weekly bulletin supplies them; never re-use those values as a template.
+    const previousRows = Array.from(tableEl.querySelectorAll('tr'));
+    const details = (ko, pattern) => {
+      const match = previousRows.find(r => r.cells[0]?.textContent?.trim() === ko);
+      const label = match?.cells[1]?.textContent?.trim() || '';
+      return (label.match(pattern)?.[1] || '').trim().slice(0, 100);
+    };
+    const scripture = details('말씀읽기', /^Scripture Reading\s*:\s*(.+)$/i) || details('말씀봉독', /^Scripture Reading\s*:\s*(.+)$/i);
+    const sermon = details('말씀나눔', /^Sermon\s*[-–:]\s*(.+)$/i) || details('말씀선포', /^Proclamation of the Word\s*[-–:]\s*(.+)$/i);
+    const rows = newOrder.map(([ko, en, actor]) => {
+      const description = en + (ko === '말씀봉독' && scripture ? ': ' + scripture : '') + (ko === '말씀선포' && sermon ? ' · ' + sermon : '');
+      return '<tr><td>' + esc(ko) + '</td><th scope="row">' + esc(description) + '</th><td>' + esc(actor) + '</td></tr>';
+    }).join('');
+    tableEl.innerHTML = rows;
+
+    const sponsors = right.querySelector('[data-b="sponsors"]');
+    const questions = right.querySelector('[data-b="questions"]');
+    const sponsorsHeading = sponsors?.previousElementSibling;
+    const questionsHeading = questions?.previousElementSibling;
+    // Page two: left = cooperation, committee, one reflection;
+    // right = prominently placed complete Order of Worship.
+    if (sponsors && sponsorsHeading) left.prepend(sponsorsHeading, sponsors);
+    if (questions && questionsHeading) left.append(questionsHeading, questions);
+    right.prepend(order);
+    pages.dataset.worshipLayout = orderEffectiveDate;
+    if (questions) Array.from(questions.querySelectorAll('li')).slice(1).forEach(item => item.remove());
+
+    if (!document.querySelector('link[data-worship-layout-css]')) {
+      const css = document.createElement('link');
+      css.rel = 'stylesheet';
+      css.dataset.worshipLayoutCss = orderEffectiveDate;
+      css.href = new URL('./bulletin-layout-20261122.css', script.src).href;
+      document.head.appendChild(css);
+    }
+  }
+
   function table(head, body, extra = '') {
     return `<table class="bp-grid ${extra}">${head.length ? '<tr>' + head.map(h => `<th>${esc(h)}</th>`).join('') + '</tr>' : ''}${body.map(r => '<tr>' + r.map(c => `<td>${esc(c)}</td>`).join('') + '</tr>').join('')}</table>`;
   }
@@ -46,7 +114,7 @@
       const committee = rows(b.committee);
       if (committee.length > 1 && block('committee')) block('committee').innerHTML = table(committee[0], committee.slice(1));
       if (Array.isArray(b.sponsors) && block('sponsors')) block('sponsors').innerHTML = '<ul class="bp-sponsors">' + b.sponsors.filter(Boolean).map(a => `<li>${esc(a)}</li>`).join('') + '</ul>';
-      if (Array.isArray(b.questions) && block('questions')) block('questions').innerHTML = '<ol class="bp-q">' + b.questions.filter(Boolean).map(a => `<li>${esc(a)}</li>`).join('') + '</ol>';
+      if (Array.isArray(b.questions) && block('questions')) block('questions').innerHTML = '<ol class="bp-q">' + b.questions.filter(Boolean).slice(0, hasNewOrder ? 1 : undefined).map(a => `<li>${esc(a)}</li>`).join('') + '</ol>';
     }
     const photo = block('photo');
     if (photo) {
@@ -84,5 +152,6 @@
     const row = Array.isArray(list) ? list[0] : null;
     if (row) render(row.bulletin, row.photo_url);
   }
+  applyNewWorshipLayout();
   load().catch(() => { /* keep the prepared bulletin */ });
 })();
