@@ -14,6 +14,7 @@ export const ADMIN_SERVICE_CATALOG = Object.freeze([
   { id:'management', name:'에코디경영', basePath:'/management', group:'business' },
   { id:'support', name:'지원사업 AI', basePath:'/support', group:'business' },
   { id:'money', name:'에코디 머니', basePath:'/money', group:'business' },
+  { id:'funding', name:'에코디 펀딩', basePath:'/funding', group:'business', kind:'site', siteRelation:'user' },
   { id:'pay', name:'에코디 페이', basePath:'/pay', group:'business' },
   { id:'insurance', name:'보험', basePath:'/insurance', group:'professional' },
   { id:'community', name:'커뮤니티', basePath:'/community', group:'community' },

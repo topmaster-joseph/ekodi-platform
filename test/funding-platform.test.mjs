@@ -296,3 +296,47 @@ test('isolated staging serves sample data and fails closed', async () => {
   assert.equal(pledge.status, 503);
   assert.equal((await staging.fetch(new Request(`${ORIGIN}/api/funding/admin/me`))).status, 401);
 });
+
+test('operator phone notices: submit and paid send PII-free notices with an admin link; failures never break the flow', async () => {
+  const sent = [];
+  const store = createMemoryStore();
+  const app = createApp({
+    store, clock: () => NOW,
+    notify: async notice => { sent.push(notice); if (sent.length === 1) throw new Error('push down'); return { ok: true }; },
+    pay: { async state() { return { ready: true, mode: 'live', clientKey: 'live_ck_x' }; }, async confirm(a) { return { orderId: a.orderId, totalAmount: a.amount, status: 'DONE' }; } },
+    authenticate: async () => ({ data: SESSIONS.op }),
+  });
+  const call = async (path, body, method = 'POST') => (await app(new Request(ORIGIN + path, { method, headers: { authorization: 'Bearer op', 'content-type': 'application/json' }, body: JSON.stringify(body) }))).json();
+  const created = await call('/api/funding/studio/campaigns', { ...draft(), ownerOrg: 'publishing' });
+  const submitted = await call(`/api/funding/studio/campaigns/${created.campaign.id}/submit`, {});
+  assert.match(submitted.message, /심사를 요청/, 'a failing notifier does not break submission');
+  await call(`/api/funding/admin/campaigns/${created.campaign.id}/approve`, {});
+  const o = await call('/api/funding/public/campaigns/test-book/pledge', pledgeBody());
+  await call('/api/funding/public/confirm', { paymentKey: 'pk_notify1', orderId: o.orderId, amount: o.amount });
+  assert.equal(sent.length, 2);
+  assert.deepEqual(sent.map(n => n.subject), ['펀딩 심사 요청', '펀딩 후원 완료']);
+  for (const n of sent) {
+    assert.equal(n.source, 'funding');
+    assert.equal(n.link, 'https://ekodi.kr/funding/admin');
+    assert.doesNotMatch(JSON.stringify(n), /backer@example\.com|010-1234-5678|홍길동/, 'no backer personal data');
+  }
+  const { normalizeNotice } = await import('../operator-notify.js').catch(() => ({}));
+  if (normalizeNotice) for (const n of sent) assert.ok(!normalizeNotice(n).error, `operator RPC accepts the notice: ${normalizeNotice(n).error}`);
+});
+
+test('admin page may be framed by the platform super admin (same origin only); public pages may not', async () => {
+  const h = harness();
+  const admin = await h.call('/funding/admin');
+  assert.equal(admin.headers.get('x-frame-options'), 'SAMEORIGIN');
+  assert.equal(admin.headers.get('content-security-policy'), "frame-ancestors 'self'");
+  assert.equal((await h.call('/funding')).headers.get('x-frame-options'), 'DENY');
+});
+
+test('worker operator notify is off in staging, without the binding, or unless enabled', async () => {
+  const { createOperatorNotify } = await import('../funding-worker.js');
+  const binding = { notify: async n => n };
+  assert.equal(createOperatorNotify({ OPERATOR_NOTIFY: binding }), null);
+  assert.equal(createOperatorNotify({ FUNDING_OPERATOR_NOTIFY_ENABLED: 'true' }), null);
+  assert.equal(createOperatorNotify({ FUNDING_OPERATOR_NOTIFY_ENABLED: 'true', OPERATOR_NOTIFY: binding, DATA_MODE: 'isolated-staging' }), null);
+  assert.equal(typeof createOperatorNotify({ FUNDING_OPERATOR_NOTIFY_ENABLED: 'true', OPERATOR_NOTIFY: binding }), 'function');
+});

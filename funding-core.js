@@ -495,7 +495,7 @@ const same = (a, b) => a.replace(/\/+$/, '') === b;
  * pay: { state(): Promise<{ready, mode, clientKey, profile, reason}>, confirm({paymentKey, orderId, amount}): Promise<toss payment> }
  * authenticate(request): Promise<{data:{userId,email,isOperator}}|{response}>
  */
-export function createApp({ store, authenticate, pay, extraHeaders = {}, digitalApproved = false, origin = 'https://ekodi.kr', clock = () => new Date() }) {
+export function createApp({ store, authenticate, pay, notify = null, extraHeaders = {}, digitalApproved = false, origin = 'https://ekodi.kr', clock = () => new Date() }) {
   const J = (d, s = 200) => json(d, s, extraHeaders);
   const H = (b, s = 200, m = 'GET', cache = 'no-store') => html(b, s, m, extraHeaders, cache);
   const paymentState = async () => {
@@ -503,6 +503,12 @@ export function createApp({ store, authenticate, pay, extraHeaders = {}, digital
   };
   async function audit(actor, action, target, detail = {}) {
     try { await store.audit({ actor: clean(actor, 254) || 'public', action, target: clean(target, 120), detail: JSON.stringify(detail).slice(0, 2000), createdAt: clock().toISOString() }); } catch { /* audit must not break the flow */ }
+  }
+  // EKODI-OPERATOR-NOTIFY-001: PII-free phone notice with a deep link; never blocks or fails the user flow.
+  let pendingNotices = [];
+  function tell(subject, lines, link = `${origin}${ADMIN_PATH}`) {
+    if (typeof notify !== 'function') return;
+    pendingNotices.push(Promise.resolve().then(() => notify({ source: 'funding', subject: clean(subject, 120), lines: lines.map(l => clean(l, 300)).filter(Boolean), link })).catch(() => null));
   }
   async function session(request) {
     const r = await authenticate(request);
@@ -555,6 +561,7 @@ export function createApp({ store, authenticate, pay, extraHeaders = {}, digital
       if (errors.length) return J({ error: '심사 요청 전에 보완할 점이 있습니다.', errors }, 422);
       const next = { ...c, status: 'review', updatedAt: clock().toISOString() };
       await store.updateCampaign(c.id, { status: 'review', updatedAt: next.updatedAt }); await audit(me.email, 'funding.submit', c.id);
+      tell('펀딩 심사 요청', [`펀딩: ${c.title}`, `개설: ${c.organizerName || '회원'} (${PHASE1_ORGS[c.ownerOrg] || '회원 개설'})`, `목표 ${won(c.goalAmount)} · ${c.startsOn} ~ ${c.endsOn}`]);
       return J({ campaign: ownView(next), message: '심사를 요청했습니다. 에코디비즈가 확인한 뒤 결과를 알려 드립니다.' });
     }
     if (parts.length === 3 && method === 'POST' && parts[2] === 'withdraw') {
@@ -695,12 +702,14 @@ export function createApp({ store, authenticate, pay, extraHeaders = {}, digital
       if (!changed) { await store.releaseRaise(campaign.id, pledge.amount); return J({ error: '이미 처리된 후원입니다.' }, 409); }
       await store.incrementBackers(campaign.id);
       await audit(pledge.backerEmail, 'funding.paid', campaign.id, { orderId, amount: pledge.amount });
+      const after = await store.getCampaign(campaign.id);
+      tell('펀딩 후원 완료', [`펀딩: ${campaign.title}`, `후원 ${won(pledge.amount)} · 누적 ${won(after?.raisedAmount ?? 0)} (${after?.backerCount ?? 0}명)`]);
       return J({ ok: true, orderId, message: '후원이 완료되었습니다. 영수증과 안내는 이메일로 확인해 주세요.' });
     }
     return J({ error: 'not_found' }, 404);
   }
 
-  return async function handle(request) {
+  async function route(request) {
     const url = new URL(request.url);
     const method = request.method;
     const path = url.pathname.replace(/\/+$/, '') || '/';
@@ -732,5 +741,23 @@ export function createApp({ store, authenticate, pay, extraHeaders = {}, digital
       return H(renderCampaign(c, { now: clock(), payment: await paymentState() }), 200, method);
     }
     return H(renderResult(false, '페이지를 찾을 수 없습니다.'), 404, method);
+  }
+
+  return async function handle(request, ctx) {
+    pendingNotices = [];
+    const response = await route(request);
+    if (pendingNotices.length) {
+      const all = Promise.allSettled(pendingNotices);
+      if (ctx?.waitUntil) ctx.waitUntil(all); else await all;
+    }
+    const path = new URL(request.url).pathname.replace(/\/+$/, '');
+    if (path === ADMIN_PATH && response.headers.get('content-type')?.startsWith('text/html')) {
+      // The platform super admin (ekodi.kr/admin) embeds registered site admins same-origin only.
+      const headers = new Headers(response.headers);
+      headers.set('x-frame-options', 'SAMEORIGIN');
+      headers.set('content-security-policy', "frame-ancestors 'self'");
+      return new Response(response.body, { status: response.status, headers });
+    }
+    return response;
   };
 }
