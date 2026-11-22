@@ -21,6 +21,7 @@ on:
       - 'migrations/202611211000_funding_phase1.sql'
       - 'migrations/202611211900_funding_pilot_owner_fix.sql'
       - 'migrations/202611221000_funding_payout_prep.sql'
+      - 'migrations/202611221400_funding_direct_mode_embed.sql'
       - 'funding-payout.js'
       - 'wrangler.funding.toml'
       - 'wrangler.funding.staging.toml'
@@ -63,6 +64,8 @@ jobs:
           grep -Fq 'goal_amount < 10000000' migrations/202611211000_funding_phase1.sql
           grep -Fq 'raised_amount < 10000000' migrations/202611211000_funding_phase1.sql
           ! grep -Eiq '\bDROP\b' migrations/202611211000_funding_phase1.sql
+          ! grep -Eiq '\bDROP\b' migrations/202611221400_funding_direct_mode_embed.sql
+          grep -Fq 'reported_amount < 10000000' migrations/202611221400_funding_direct_mode_embed.sql
           grep -Fq 'ekodi.kr/funding*' wrangler.funding.toml
           grep -Fq 'ekodi.kr/api/funding*' wrangler.funding.toml
           grep -Fq 'entrypoint = "EkodiPayGateway"' wrangler.funding.toml
@@ -113,6 +116,14 @@ jobs:
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.funding.toml --file migrations/202611211000_funding_phase1.sql
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.funding.toml --file migrations/202611211900_funding_pilot_owner_fix.sql
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.funding.toml --file migrations/202611221000_funding_payout_prep.sql
+          # EKODI-FUNDING-004: ADD COLUMN is not re-runnable, so apply it only while the column is missing.
+          have=$(npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.funding.toml --json \
+            --command "SELECT COUNT(*) AS n FROM pragma_table_info('funding_campaigns') WHERE name='direct_pledge_url'" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);console.log(Number(j?.[0]?.results?.[0]?.n ?? -1))})')
+          if [[ "$have" == "0" ]]; then
+            npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.funding.toml --file migrations/202611221400_funding_direct_mode_embed.sql
+          elif [[ "$have" != "1" ]]; then
+            echo "::error::could not read funding_campaigns schema (got '$have')"; exit 1
+          fi
       - name: Deploy production worker
         shell: bash
         run: |
@@ -131,8 +142,13 @@ jobs:
             adm_code=$(curl -sS -o /tmp/fd-adm.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/funding/admin/campaigns' || true)
             list_code=$(curl -sS -o /tmp/fd-list.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/funding/public/campaigns' || true)
             missing_code=$(curl -sS -o /tmp/fd-missing.json -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/funding/public/campaigns/ekodi-verify-no-such-campaign' || true)
+            embed_code=$(curl -sS -o /tmp/fd-embed.html -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/funding/embed/ekodi-verify-no-such-campaign' || true)
+            curl -sS -D /tmp/fd-list.h -o /dev/null --connect-timeout 5 --max-time 15 'https://ekodi.kr/api/funding/public/campaigns' || true
             map_code=$(curl -sS -o /tmp/fd-map.xml -w '%{http_code}' --connect-timeout 5 --max-time 15 'https://ekodi.kr/funding/sitemap.xml' || true)
-            if [[ "$home_code" == 200 && "$guide_code" == 200 && "$studio_code" == 200 && "$admin_code" == 200 && "$me_code" == 401 && "$adm_code" == 401 && "$list_code" == 200 && "$missing_code" == 404 && "$map_code" == 200 ]] \
+            if [[ "$home_code" == 200 && "$guide_code" == 200 && "$studio_code" == 200 && "$admin_code" == 200 && "$me_code" == 401 && "$adm_code" == 401 && "$list_code" == 200 && "$missing_code" == 404 && "$map_code" == 200 && "$embed_code" == 404 ]] \
+              && grep -Fq '직접후원' /tmp/fd-guide.html \
+              && grep -Fq '제공하지 않음' /tmp/fd-guide.html \
+              && grep -Fiq 'access-control-allow-origin: *' /tmp/fd-list.h \
               && grep -Fq '에코디 펀딩' /tmp/fd-home.html \
               && grep -Fq '213-13-01959' /tmp/fd-home.html \
               && grep -Fq '증권형' /tmp/fd-guide.html \
@@ -145,5 +161,5 @@ jobs:
             fi
             sleep 5
           done
-          echo "Production verification failed: home=$home_code guide=$guide_code studio=$studio_code admin=$admin_code me=$me_code admin_api=$adm_code list=$list_code missing=$missing_code sitemap=$map_code"
+          echo "Production verification failed: home=$home_code guide=$guide_code studio=$studio_code admin=$admin_code me=$me_code admin_api=$adm_code list=$list_code missing=$missing_code sitemap=$map_code embed=$embed_code"
           exit 1

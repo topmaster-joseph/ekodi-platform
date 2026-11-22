@@ -87,7 +87,7 @@ test('studio requires EKODI login; members plan, edit, submit and withdraw only 
   assert.equal((await h.call('/api/funding/studio/me')).status, 401);
   const me = await h.call('/api/funding/studio/me', { as: 'member' });
   assert.deepEqual(Object.keys(me.data.orgs), ['member']);
-  const created = await h.call('/api/funding/studio/campaigns', { method: 'POST', as: 'member', body: { ...draft(), ownerOrg: 'publishing' } });
+  const created = await h.call('/api/funding/studio/campaigns', { method: 'POST', as: 'member', body: { ...draft({ directPledgeUrl: 'https://give.example.org/book' }), ownerOrg: 'publishing' } });
   assert.equal(created.status, 201);
   assert.equal(created.data.campaign.ownerOrg, 'member', 'members cannot claim an EKODI organisation');
   const id = created.data.campaign.id;
@@ -102,20 +102,93 @@ test('studio requires EKODI login; members plan, edit, submit and withdraw only 
   assert.equal(bad.status, 422);
 });
 
-test('admin: operator only; member campaigns wait for payout contract, org campaigns go live', async () => {
+test('admin: operator only; member campaigns go live in direct mode (no EKODI payment), org campaigns go live', async () => {
   const h = harness();
   assert.equal((await h.call('/api/funding/admin/campaigns', { as: 'member' })).status, 403);
-  const member = await liveCampaign(h, { slug: 'member-one' }, { as: 'member', ownerOrg: 'member' });
-  assert.equal(member.status, 'waiting_payout');
+  // 회원 펀딩은 직접후원 주소 없이는 심사 요청 불가
+  const noUrl = await h.call('/api/funding/studio/campaigns', { method: 'POST', as: 'member', body: draft({ slug: 'member-nourl' }) });
+  assert.equal(noUrl.status, 201);
+  const sub = await h.call(`/api/funding/studio/campaigns/${noUrl.data.campaign.id}/submit`, { method: 'POST', as: 'member', body: {} });
+  assert.equal(sub.status, 422);
+  assert.ok(sub.data.errors.some(e => e.includes('직접')));
+  const member = await liveCampaign(h, { slug: 'member-one', directPledgeUrl: 'https://church.example.org/give' }, { as: 'member', ownerOrg: 'member' });
+  assert.equal(member.status, 'live');
   const org = await liveCampaign(h, { slug: 'org-one' });
   assert.equal(org.status, 'live');
   const memberPledge = await h.call('/api/funding/public/campaigns/member-one/pledge', { method: 'POST', body: pledgeBody() });
   assert.equal(memberPledge.status, 409);
-  assert.equal(memberPledge.data.code, 'PAYOUT_NOT_READY');
+  assert.equal(memberPledge.data.code, 'DIRECT_ONLY');
+  assert.equal(memberPledge.data.directPledgeUrl, 'https://church.example.org/give');
+  assert.equal(h.confirms.length, 0);
+  const page = await h.call('/funding/c/member-one');
+  assert.match(page.data, /개설자 페이지에서 후원/);
+  assert.match(page.data, /church\.example\.org\/give/);
+  assert.doesNotMatch(page.data, /tosspayments/);
+  assert.equal((await h.call('/api/funding/public/campaigns/member-one/interest', { method: 'POST', body: { email: 'a@b.co', agree: true } })).status, 404);
   const list = await h.call('/api/funding/admin/campaigns', { as: 'op' });
-  assert.equal(list.data.campaigns.length, 2);
+  assert.equal(list.data.campaigns.length, 3);
   const reject = await h.call(`/api/funding/admin/campaigns/${org.id}/reject`, { method: 'POST', as: 'op', body: {} });
   assert.equal(reject.status, 409, 'only review campaigns can be rejected');
+});
+
+test('direct mode: bad URLs rejected; organizer reports progress below the public cap only', async () => {
+  const h = harness();
+  for (const bad of ['http://x.example.com', 'javascript:alert(1)', 'https://', 'ftp://a.b']) {
+    const r = await h.call('/api/funding/studio/campaigns', { method: 'POST', as: 'member', body: draft({ slug: 'bad-url', directPledgeUrl: bad }) });
+    assert.equal(r.status, 422, bad);
+  }
+  const { id } = await liveCampaign(h, { slug: 'report-me', directPledgeUrl: 'https://give.example.org' }, { as: 'member', ownerOrg: 'member' });
+  assert.equal((await h.call(`/api/funding/studio/campaigns/${id}/report`, { method: 'POST', as: 'other', body: { amount: 1, backers: 1 } })).status, 404);
+  assert.equal((await h.call(`/api/funding/studio/campaigns/${id}/report`, { method: 'POST', as: 'member', body: { amount: -1, backers: 1 } })).status, 422);
+  const cap = await h.call(`/api/funding/studio/campaigns/${id}/report`, { method: 'POST', as: 'member', body: { amount: PUBLIC_CAP_KRW, backers: 3 } });
+  assert.equal(cap.status, 422); assert.equal(cap.data.code, 'PUBLIC_CAP');
+  const ok = await h.call(`/api/funding/studio/campaigns/${id}/report`, { method: 'POST', as: 'member', body: { amount: 500_000, backers: 12 } });
+  assert.equal(ok.status, 200, JSON.stringify(ok.data));
+  const pub = await h.call('/api/funding/public/campaigns/report-me');
+  assert.equal(pub.data.campaign.mode, 'direct');
+  assert.equal(pub.data.campaign.raisedAmount, 500_000);
+  assert.equal(pub.data.campaign.backerCount, 12);
+  assert.equal(pub.data.campaign.pct, 50);
+  const org = await liveCampaign(h, { slug: 'org-two' });
+  assert.equal((await h.call(`/api/funding/studio/campaigns/${org.id}/report`, { method: 'POST', as: 'op', body: { amount: 1, backers: 1 } })).status, 409);
+});
+
+test('embed widget and public read API work from other sites; drafts stay hidden', async () => {
+  const h = harness();
+  await liveCampaign(h, { slug: 'embed-me' });
+  const embed = await h.call('/funding/embed/embed-me');
+  assert.equal(embed.status, 200);
+  assert.match(embed.headers.get('content-security-policy'), /frame-ancestors \*/);
+  assert.equal(embed.headers.get('x-frame-options'), null);
+  assert.equal(embed.headers.get('x-ekodi-footer-traffic'), 'embed-card');
+  assert.match(embed.data, /에코디 펀딩/);
+  assert.match(embed.data, /https:\/\/ekodi\.kr\/funding\/c\/embed-me/);
+  assert.doesNotMatch(embed.data, /<script/);
+  const api = await h.call('/api/funding/public/campaigns/embed-me');
+  assert.equal(api.headers.get('access-control-allow-origin'), '*');
+  const created = await h.call('/api/funding/studio/campaigns', { method: 'POST', as: 'member', body: draft({ slug: 'hidden-one' }) });
+  assert.equal(created.status, 201);
+  assert.equal((await h.call('/funding/embed/hidden-one')).status, 404);
+  assert.equal((await h.call('/funding/embed/no-such')).status, 404);
+  const xss = await h.call('/funding/embed/%3Cscript%3E');
+  assert.equal(xss.status, 404);
+  const pledge = await h.call('/api/funding/public/campaigns/embed-me/pledge', { method: 'POST', body: pledgeBody() });
+  assert.equal(pledge.headers.get('access-control-allow-origin'), 'https://ekodi.kr' === pledge.headers.get('access-control-allow-origin') ? 'https://ekodi.kr' : null, 'writes never get wildcard CORS');
+});
+
+test('equity and loan funding are not offered anywhere (B·C excluded)', async () => {
+  const h = harness();
+  const studio = await h.call('/funding/studio');
+  assert.doesNotMatch(studio.data, /value="equity"|value="loan"/);
+  assert.doesNotMatch(studio.data, /data-pane="payout"|정산 계좌/, 'payout-account entry point stays hidden (B excluded)');
+  assert.match(studio.data, /직접후원 주소/);
+  const admin = await h.call('/funding/admin');
+  assert.doesNotMatch(admin.data, /data-f="settle"|data-f="waiting_payout"/);
+  assert.match((await h.call('/funding/guide')).data, /제공하지 않음/);
+  assert.doesNotMatch((await h.call('/funding/guide')).data, /정산 대행 계약/);
+  const r = await h.call('/api/funding/studio/campaigns', { method: 'POST', as: 'member', body: draft({ slug: 'eq', kind: 'equity' }) });
+  assert.equal(r.status, 422);
+  assert.ok(r.data.errors.some(e => e.includes('제공하지 않습니다')));
 });
 
 test('public: drafts stay hidden; pages render business info and guide', async () => {

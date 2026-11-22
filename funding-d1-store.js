@@ -8,6 +8,7 @@ const campaign = r => r && ({
   organizerUserId: r.organizer_user_id, organizerEmail: r.organizer_email, organizerName: r.organizer_name, contactEmail: r.contact_email,
   goalAmount: Number(r.goal_amount), raisedAmount: Number(r.raised_amount), backerCount: Number(r.backer_count),
   startsOn: r.starts_on, endsOn: r.ends_on, refundPolicy: r.refund_policy, rewards: parse(r.rewards_json, []),
+  directPledgeUrl: r.direct_pledge_url || '', reportedAmount: Number(r.reported_amount || 0), reportedBackers: Number(r.reported_backers || 0), reportedAt: r.reported_at || '',
   status: r.status, reviewNote: r.review_note, approvedBy: r.approved_by, approvedAt: r.approved_at, createdAt: r.created_at, updatedAt: r.updated_at,
 });
 const pledge = r => r && ({
@@ -24,7 +25,7 @@ const settlement = r => r && ({
 const CAMPAIGN_COLS = {
   slug: 'slug', title: 'title', summary: 'summary', story: 'story', kind: 'kind', ownerOrg: 'owner_org', organizerName: 'organizer_name',
   contactEmail: 'contact_email', goalAmount: 'goal_amount', startsOn: 'starts_on', endsOn: 'ends_on', refundPolicy: 'refund_policy',
-  rewards: 'rewards_json', status: 'status', reviewNote: 'review_note', approvedBy: 'approved_by', approvedAt: 'approved_at', updatedAt: 'updated_at',
+  rewards: 'rewards_json', directPledgeUrl: 'direct_pledge_url', reportedAmount: 'reported_amount', reportedBackers: 'reported_backers', reportedAt: 'reported_at', status: 'status', reviewNote: 'review_note', approvedBy: 'approved_by', approvedAt: 'approved_at', updatedAt: 'updated_at',
 };
 const PLEDGE_COLS = { status: 'status', paymentKey: 'payment_key', method: 'method', approvedAt: 'approved_at', receiptUrl: 'receipt_url', updatedAt: 'updated_at' };
 
@@ -47,9 +48,9 @@ export function createD1Store(DB) {
     async getCampaign(id) { return campaign(await DB.prepare('SELECT * FROM funding_campaigns WHERE id=?').bind(id).first()); },
     async getCampaignBySlug(slug) { return campaign(await DB.prepare('SELECT * FROM funding_campaigns WHERE slug=?').bind(slug).first()); },
     async createCampaign(c) {
-      await DB.prepare(`INSERT INTO funding_campaigns (id,slug,title,summary,story,kind,owner_org,organizer_user_id,organizer_email,organizer_name,contact_email,goal_amount,raised_amount,backer_count,starts_on,ends_on,refund_policy,rewards_json,status,review_note,created_at,updated_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,0,0,?,?,?,?,?,?,?,?)`).bind(c.id, c.slug, c.title, c.summary, c.story, c.kind, c.ownerOrg, c.organizerUserId, c.organizerEmail, c.organizerName, c.contactEmail,
-        c.goalAmount, c.startsOn, c.endsOn, c.refundPolicy, JSON.stringify(c.rewards || []), c.status, c.reviewNote || '', c.createdAt, c.updatedAt).run();
+      await DB.prepare(`INSERT INTO funding_campaigns (id,slug,title,summary,story,kind,owner_org,organizer_user_id,organizer_email,organizer_name,contact_email,goal_amount,raised_amount,backer_count,starts_on,ends_on,refund_policy,rewards_json,direct_pledge_url,status,review_note,created_at,updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,0,0,?,?,?,?,?,?,?,?,?)`).bind(c.id, c.slug, c.title, c.summary, c.story, c.kind, c.ownerOrg, c.organizerUserId, c.organizerEmail, c.organizerName, c.contactEmail,
+        c.goalAmount, c.startsOn, c.endsOn, c.refundPolicy, JSON.stringify(c.rewards || []), c.directPledgeUrl || '', c.status, c.reviewNote || '', c.createdAt, c.updatedAt).run();
     },
     async updateCampaign(id, patch) {
       const { parts, values } = sets(CAMPAIGN_COLS, patch);

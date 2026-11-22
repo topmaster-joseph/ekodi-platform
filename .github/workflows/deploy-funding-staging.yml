@@ -70,6 +70,8 @@ jobs:
           if (page.status !== 200 || !(await page.text()).includes('스테이징 예시')) throw new Error('staging campaign page mismatch');
           const pledge = await worker.fetch(new Request('https://staging.invalid/api/funding/public/campaigns/sample-new-book/pledge', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"rewardId":"r1"}' }));
           if (pledge.status !== 503) throw new Error('staging payments must stay closed');
+          const embed = await worker.fetch(new Request('https://staging.invalid/funding/embed/sample-new-book'));
+          if (embed.status !== 200 || !/frame-ancestors \*/.test(embed.headers.get('content-security-policy') || '') || (await embed.text()).includes('<script')) throw new Error('staging embed card contract mismatch');
           const api = await worker.fetch(new Request('https://staging.invalid/api/funding/studio/me'));
           const payload = await api.json();
           if (api.status !== 401 || payload.error !== 'staging_auth_required') throw new Error('staging studio API must fail closed');
