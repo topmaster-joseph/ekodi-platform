@@ -26,6 +26,7 @@ on:
       - 'wrangler.qtin-order.toml'
       - 'wrangler.qtin-order.staging.toml'
       - 'test/qtin-order.test.mjs'
+      - 'scripts/verify-qtin-shell-tabs-native.mjs'
       - 'scripts/converge-orchestrated-pr-merge.mjs'
       - '.github/workflows/deploy-qtin-order.yml'
       - '.github/workflows/deploy-qtin-order-staging.yml'
@@ -74,6 +75,22 @@ jobs:
           ! grep -Eq '^\s*TOSS_SECRET_KEY\s*=' wrangler.qtin-order.toml
           grep -Fq 'DATA_MODE = "isolated-staging"' wrangler.qtin-order.staging.toml
           ! grep -Fq '[[d1_databases]]' wrangler.qtin-order.staging.toml
+      - name: Test Church/Mission shared shell and responsive book tabs in isolated Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$CHROME_BIN"
+          npm install --no-save --package-lock=false puppeteer-core@24.16.0
+          CHROME_BIN="$CHROME_BIN" node scripts/verify-qtin-shell-tabs-native.mjs
+      - name: Preserve isolated QTIN visual regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qtin-church-mission-shell-tabs-fixture
+          path: /tmp/qtin-shell-tabs-proof/fixture-*.png
+          if-no-files-found: warn
+          retention-days: 7
       - name: Verify platform guardrails
         shell: bash
         run: |
@@ -129,6 +146,22 @@ jobs:
         run: |
           set -euo pipefail
           npx --yes wrangler@${WRANGLER_VERSION} deploy --config wrangler.qtin-order.toml
+      - name: Verify deployed Church/Mission QTIN shell and tabs in read-only Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$CHROME_BIN"
+          npm install --no-save --package-lock=false puppeteer-core@24.16.0
+          CHROME_BIN="$CHROME_BIN" node scripts/verify-qtin-shell-tabs-native.mjs --production
+      - name: Preserve production QTIN responsive visual proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qtin-church-mission-shell-tabs-production
+          path: /tmp/qtin-shell-tabs-proof/production-*.png
+          if-no-files-found: warn
+          retention-days: 7
       - name: Verify production order page, health and admin boundary
         shell: bash
         run: |
