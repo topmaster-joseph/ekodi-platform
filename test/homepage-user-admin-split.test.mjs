@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import {
-  ekodiBizHomepageRoute, isEkodiBizHomepageAdminPath, isEkodiBizHomepageLegacyPath,
+  ekodiBizHomepageRoute, isEkodiBizHomepageAdminPath,
   ekodiBizHomepageServiceHtml, ekodiBizHomepageAdminHtml, EKODIBIZ_HOMEPAGE_SERVICE_URL,
 } from '../ekodibiz-homepage-service-page.js';
 import { RESERVED_WORKSPACE_SLUGS, isPublicWorkspacePath } from '../workspace-route-policy.js';
@@ -11,21 +11,18 @@ import { RESERVED_WORKSPACE_SLUGS, isPublicWorkspacePath } from '../workspace-ro
 const req = (path, method = 'GET') => [new Request(`https://ekodi.kr${path}`, { method }), new URL(`https://ekodi.kr${path}`)];
 const read = (p) => readFile(new URL(`../${p}`, import.meta.url), 'utf8');
 
-test('user page lives at /homepage, admin at /homepage/admin, legacy paths 301 to /homepage', async () => {
+test('user page lives at /homepage, admin at /homepage/admin, legacy /ekodibiz/homepage paths fully retired', async () => {
   assert.equal(EKODIBIZ_HOMEPAGE_SERVICE_URL, 'https://ekodi.kr/homepage');
   const user = ekodiBizHomepageRoute(...req('/homepage'));
   assert.equal(user.status, 200); assert.equal(user.headers.get('x-ekodi-route'), 'ekodibiz-homepage-service');
   const admin = ekodiBizHomepageRoute(...req('/homepage/admin'));
   assert.equal(admin.status, 200); assert.equal(admin.headers.get('x-ekodi-route'), 'ekodibiz-homepage-admin');
   assert.match(admin.headers.get('x-robots-tag'), /noindex/); assert.equal(admin.headers.get('cache-control'), 'no-store');
-  for (const p of ['/ekodibiz/homepage', '/ekodibiz/homepage-service', '/ekodibiz/web-subscription/']) {
-    const r = ekodiBizHomepageRoute(...req(`${p}?x=1`)); assert.equal(r.status, 301, p); assert.equal(r.headers.get('location'), '/homepage?x=1');
-  }
+  for (const p of ['/ekodibiz/homepage', '/ekodibiz/homepage-service', '/ekodibiz/web-subscription/']) assert.equal(ekodiBizHomepageRoute(...req(p)), null, `${p} fully retired, no redirect`);
   assert.equal(ekodiBizHomepageRoute(...req('/homepage', 'POST')), null);
   assert.equal(ekodiBizHomepageRoute(...req('/homepage/x')), null);
   assert.equal(ekodiBizHomepageRoute(...req('/homepage', 'HEAD')).body, null);
   assert.equal(isEkodiBizHomepageAdminPath('/homepage/admin/'), true);
-  assert.equal(isEkodiBizHomepageLegacyPath('/homepage'), false);
 });
 
 test('"homepage" is a reserved platform service name, not a workspace slug', () => {
