@@ -6,7 +6,7 @@ export function tenantLivePage(tenant){
   const name=esc(tenant.name),title=esc(tenant.title),home=esc(tenant.home),path=esc(tenant.path),robots=esc(tenant.robots||'index,follow');
   const missionShell=tenant.workspace==='ekodimission';
   const churchShell=tenant.apiTenant==='ekodichurch'&&tenant.path==='/live/church/';
-  const assetVersion=churchShell?'20261122-worship-companion':'20261107-1';
+  const assetVersion=churchShell?'20261123-fresh-language':'20261107-1';
   const shellHead=churchShell?'<link rel="stylesheet" href="/tenant-live-church.css">':missionShell?'<link rel="stylesheet" href="/ekodimission/assets/shell.css">':'';
   const header=churchShell?"<header class=\"church-live-site-header site-header\" id=\"top\">\n    <a class=\"church-live-brand\" href=\"/ekodichurch/\" aria-label=\"에코디교회 홈\"><span class=\"brand-mark\" aria-hidden=\"true\">E</span><span><strong>에코디교회</strong><small>EKODI CHURCH</small></span></a>\n    <button type=\"button\" id=\"churchLiveMenu\" class=\"church-live-menu\" aria-controls=\"churchLiveNav\" aria-expanded=\"false\" aria-label=\"메뉴 열기\"><span></span><span></span></button>\n    <nav id=\"churchLiveNav\" aria-label=\"에코디교회 주요 메뉴\">\n      <a href=\"/ekodichurch/#worship\">예배안내</a>\n      <a href=\"/ekodichurch/#online\" aria-current=\"page\">온라인</a>\n      <a href=\"/ekodichurch/#location\">오시는 길</a>\n      <a href=\"/qtin/church\">큐티인 신청</a>\n      <a href=\"/ekodichurch/my/\">마이페이지</a>\n    </nav>\n    <div class=\"church-live-actions\"><span id=\"liveState\">방송 확인 중</span><a href=\"/ekodichurch/#online\">교회 홈</a></div>\n  </header>"
     :missionShell
@@ -26,7 +26,14 @@ export function tenantLivePage(tenant){
 
   // Church-only companion: one media engine, separate published worship materials.
   const churchViewerGuide=churchShell?`<section id="churchLiveGuide" class="church-live-guide" aria-label="예배와 모임 진행 안내">
-    <div class="church-guide-heading"><div><small>ORDER OF SERVICE · LIVE</small><h2>예배·모임 진행 안내</h2></div><span id="churchGuideDate">자료 확인 중</span></div>
+    <div class="church-guide-heading"><div><small>ORDER OF SERVICE · LIVE</small><h2 id="churchGuideHeading">예배·모임 진행 안내</h2></div><span id="churchGuideDate">자료 확인 중</span></div>
+    <div class="church-guide-language">
+      <label for="churchGuideLanguage" id="churchGuideLanguageLabel">안내 언어</label>
+      <select id="churchGuideLanguage" aria-label="안내 자료 표시 언어">
+        <option value="ko">한국어</option><option value="en">English</option><option value="zh">中文</option><option value="ja">日本語</option><option value="vi">Tiếng Việt</option><option value="mn">Монгол</option>
+      </select>
+      <span id="churchGuideLanguageNote">진행 안내만 번역합니다. 설교·PPT 원문과 통역 음성은 별도입니다.</span>
+    </div>
     <div class="church-view-options" role="group" aria-label="화면 배치">
       <button type="button" data-church-view="split" aria-pressed="true">안내 + 영상</button>
       <button type="button" data-church-view="video" aria-pressed="false">영상 집중</button>
