@@ -17,7 +17,7 @@ create table if not exists public.volunteer_pledges (
 );
 create index if not exists volunteer_pledges_activity_status_idx on public.volunteer_pledges(activity_id,status,created_at);
 alter table public.volunteer_pledges enable row level security;
-revoke all on table public.volunteer_pledges from public,anon,authenticated;
+revoke all on table public.volunteer_pledges from public, anon, authenticated, service_role;
 
 create table if not exists public.volunteer_pledge_audit (
  id bigint generated always as identity primary key,
@@ -29,7 +29,7 @@ create table if not exists public.volunteer_pledge_audit (
  created_at timestamptz not null default now()
 );
 alter table public.volunteer_pledge_audit enable row level security;
-revoke all on table public.volunteer_pledge_audit from public,anon,authenticated;
+revoke all on table public.volunteer_pledge_audit from public, anon, authenticated, service_role;
 
 -- The campaign belongs to the existing Mission tenant; future campaigns can
 -- point at any explicitly authorized tenant, with no parallel person database.
