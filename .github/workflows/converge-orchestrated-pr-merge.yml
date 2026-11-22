@@ -34,8 +34,12 @@ jobs:
   converge:
     runs-on: ubuntu-latest
     timeout-minutes: 12
+    # EKODI-RELEASE-WORKFLOWS-TOKEN-002: the owner-issued workflows token is a production
+    # environment secret; it is used only to retry a merge GITHUB_TOKEN cannot perform.
+    environment: production
     env:
       GH_TOKEN: ${{ github.token }}
+      GH_WORKFLOWS_TOKEN: ${{ secrets.EKODI_RELEASE_WORKFLOWS_TOKEN }}
       POST_MERGE_RECONCILE_BRANCH: ${{ inputs.post_merge_reconcile_branch || '' }}
     steps:
       - uses: actions/checkout@v7

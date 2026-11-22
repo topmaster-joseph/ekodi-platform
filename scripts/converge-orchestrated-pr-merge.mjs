@@ -6,6 +6,12 @@ import { fileURLToPath } from 'node:url';
 import { safeGitHubHttpDiagnostic } from './github-http-diagnostic.mjs';
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
 const token=String(process.env.GH_TOKEN||'').trim();
+// EKODI-RELEASE-WORKFLOWS-TOKEN-002 (owner approval 2026-11-22): GITHUB_TOKEN can never merge a
+// change to .github/workflows (HTTP 403 "Resource not accessible by integration"). Only then is the
+// exact-SHA merge retried once with the owner-issued, repo-scoped workflows token. Every other
+// call — and every ordinary merge — keeps using GITHUB_TOKEN.
+const workflowsToken=String(process.env.GH_WORKFLOWS_TOKEN||'').trim();
+function integrationScopeRefusal(response,data){return response?.status===403&&/Resource not accessible by integration/i.test(String(data?.message||''));}
 // Post-merge reconcile (RECOVERY-POST-MERGE-LANES-001): dispatched on main by the release
 // provenance recovery after an immediate merge, naming the merged orchestrator branch.
 const reconcileBranch=String(process.env.POST_MERGE_RECONCILE_BRANCH||'').trim();
@@ -27,7 +33,9 @@ async function api(path,init={}){
       return {r:{ok:true,status:204,headers:new Headers()},data:{}};
     }
   }
-  const r=await fetch('https://api.github.com/repos/'+repo+path,{...init,headers:{authorization:`Bearer ${token}`,accept:'application/vnd.github+json','x-github-api-version':'2022-11-28','content-type':'application/json',...(init.headers||{})}});
+  const {token:overrideToken,...rest}=init;
+  init=rest;
+  const r=await fetch('https://api.github.com/repos/'+repo+path,{...init,headers:{authorization:`Bearer ${overrideToken||token}`,accept:'application/vnd.github+json','x-github-api-version':'2022-11-28','content-type':'application/json',...(init.headers||{})}});
   const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={raw:text}};
   if(!r.ok && [401,403,429].includes(r.status)) console.error(safeGitHubHttpDiagnostic({status:r.status,headers:r.headers,data}));
   return {r,data};
@@ -1149,7 +1157,12 @@ for(let cycle=0;cycle<180;cycle++){
   }
 
   await retireUnapprovedReleaseRuns();
-  const merged=await api('/pulls/'+pr.number+'/merge',{method:'PUT',body:JSON.stringify({sha:headSha,merge_method:'squash',commit_title:fresh.title})});
+  const mergeBody=JSON.stringify({sha:headSha,merge_method:'squash',commit_title:fresh.title});
+  const merged=await api('/pulls/'+pr.number+'/merge',{method:'PUT',body:mergeBody}).then(first=>{
+    if(!(integrationScopeRefusal(first.r,first.data)&&workflowsToken))return first;
+    console.log(JSON.stringify({ok:true,action:'merge-retry-workflows-token',pr:pr.number,headSha}));
+    return api('/pulls/'+pr.number+'/merge',{method:'PUT',token:workflowsToken,body:mergeBody});
+  });
   if(merged.r.ok&&merged.data?.merged===true){
     await dispatchPostMergeDeploys();
     console.log(JSON.stringify({ok:true,action:'merged',pr:pr.number,mergeSha:merged.data.sha,taskId,branch,authority:'ekodi-orchestrator'}));

@@ -25,3 +25,15 @@ test('the workflows token is used for exactly one call: creating the exact-SHA o
 test('without the secret the previous GITHUB_TOKEN behaviour is unchanged',()=>{
   assert.match(script,/authorization:`Bearer \$\{token\|\|ghToken\}`/);
 });
+
+const converge=await readFile(new URL('../scripts/converge-orchestrated-pr-merge.mjs',import.meta.url),'utf8');
+const convergeWorkflow=await readFile(new URL('../.github/workflows/converge-orchestrated-pr-merge.yml',import.meta.url),'utf8');
+
+test('converge uses the workflows token only to retry a merge GITHUB_TOKEN was refused (403 integration scope)',()=>{
+  assert.match(convergeWorkflow,/environment: production\n\s+env:\n\s+GH_TOKEN: \$\{\{ github\.token \}\}\n\s+GH_WORKFLOWS_TOKEN: \$\{\{ secrets\.EKODI_RELEASE_WORKFLOWS_TOKEN \}\}/);
+  const uses=[...converge.matchAll(/token:workflowsToken/g)];
+  assert.equal(uses.length,1);
+  assert.match(converge,/if\(!\(integrationScopeRefusal\(first\.r,first\.data\)&&workflowsToken\)\)return first;[\s\S]{0,200}api\('\/pulls\/'\+pr\.number\+'\/merge',\{method:'PUT',token:workflowsToken,body:mergeBody\}\)/);
+  assert.doesNotMatch(converge,/console\.[a-z]+\([^)]*workflowsToken\b(?!\))/);
+  assert.match(converge,/authorization:`Bearer \$\{overrideToken\|\|token\}`/);
+});
