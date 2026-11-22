@@ -59,7 +59,19 @@ const admin=document.querySelector('[data-volunteer-admin]');
 if(admin){
  const status=admin.querySelector('[data-admin-status]'),login=admin.querySelector('[data-admin-login]'),wrap=admin.querySelector('[data-admin-table]'),rows=admin.querySelector('[data-pledge-rows]');
  const campaign='2026-coal-delivery';
- const accessToken=()=>window.EKODIMissionAuth?.getToken?.()||sessionStorage.getItem('ekodi-auth-token')||'';
+ const accessToken=()=>{
+   // Reuse the same first-party session candidates as the existing Mission shell.
+   const fromMission=window.EKODIMissionAuth?.getToken?.()||window.EKODI_MY_AUTH?.getAccessToken?.()||'';
+   if(fromMission)return fromMission;
+   try{
+     for(const store of [sessionStorage,localStorage]){
+       const direct=store.getItem('ekodi-auth-token');if(direct)return direct;
+       const current=store.getItem('sb-renzehysxirjilvdxacv-auth-token');
+       if(current){const token=JSON.parse(current)?.access_token;if(token)return token;}
+     }
+   }catch{}
+   return '';
+ };
  async function call(action,extra={}){
   const token=accessToken();if(!token)throw new Error('관리자 로그인이 필요합니다.');
   const r=await fetch(api+'admin/pledges',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+token},body:JSON.stringify({action,campaign,...extra}),cache:'no-store'});
