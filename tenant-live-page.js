@@ -26,7 +26,14 @@ export function tenantLivePage(tenant){
 
   // Church-only companion: one media engine, separate published worship materials.
   const churchViewerGuide=churchShell?`<section id="churchLiveGuide" class="church-live-guide" aria-label="예배와 모임 진행 안내">
-    <div class="church-guide-heading"><div><small>ORDER OF SERVICE · LIVE</small><h2>예배·모임 진행 안내</h2></div><span id="churchGuideDate">자료 확인 중</span></div>
+    <div class="church-guide-heading"><div><small>ORDER OF SERVICE · LIVE</small><h2 id="churchGuideHeading">예배·모임 진행 안내</h2></div><span id="churchGuideDate">자료 확인 중</span></div>
+    <div class="church-guide-language">
+      <label for="churchGuideLanguage" id="churchGuideLanguageLabel">안내 언어</label>
+      <select id="churchGuideLanguage" aria-label="안내 자료 표시 언어">
+        <option value="ko">한국어</option><option value="en">English</option><option value="zh">中文</option><option value="ja">日本語</option><option value="vi">Tiếng Việt</option><option value="mn">Монгол</option>
+      </select>
+      <span id="churchGuideLanguageNote">진행 안내만 번역합니다. 설교·PPT 원문과 통역 음성은 별도입니다.</span>
+    </div>
     <div class="church-view-options" role="group" aria-label="화면 배치">
       <button type="button" data-church-view="split" aria-pressed="true">안내 + 영상</button>
       <button type="button" data-church-view="video" aria-pressed="false">영상 집중</button>
