@@ -427,3 +427,166 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
   const start=Math.max(0,buttons.findIndex(b=>b.dataset.tab===saved));
   select(start>=0?start:0);
 })();
+
+
+/* Church-only guide: official public worship packet + server-owned presentation cursor.
+ * A viewer can navigate locally; only the authorized broadcast host can publish changes.
+ */
+(()=>{
+  'use strict';
+  if(document.body?.dataset.tenant!=='ekodichurch'||location.pathname!=='/live/church/')return;
+  const $=id=>document.getElementById(id), guide=$('churchLiveGuide');
+  if(!guide||!$('churchHostGuide'))return;
+  const params=new URLSearchParams(location.search);
+  const activity=['sunday','prayer','fellowship','event','mission'].includes(params.get('activity'))?params.get('activity'):'sunday';
+  const ISO=/^20\d{2}-\d{2}-\d{2}$/;
+  const meeting={
+    prayer:['모임 시작','말씀 읽기','기도 제목 나눔','함께 기도','마침'],
+    fellowship:['환영과 소개','말씀 또는 주제','함께 나눔','서로를 위한 기도','마무리'],
+    event:['모임 안내','순서 안내','주제 진행','질문과 나눔','마무리'],
+    mission:['사역 안내','현장 이야기','함께 나눔','기도와 협력','마무리']
+  };
+  let date='',deck='',steps=[],slides=[],index=0,revision=0,room='',role='',busy=false,following=true,tab='order';
+  const status=msg=>{$('churchGuideStatus').textContent=msg};
+  const hostStatus=msg=>{$('churchHostGuideStatus').textContent=msg};
+  const count=()=>slides.length||steps.length||1;
+  function todayKst(){
+    const values=Object.fromEntries(new Intl.DateTimeFormat('en',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));
+    return values.year+'-'+values.month+'-'+values.day;
+  }
+  function tabTo(name){
+    if(name==='slides'&&!slides.length)return;
+    tab=name;
+    $('churchGuideOrder').hidden=name!=='order';$('churchGuideSlides').hidden=name!=='slides';
+    $('churchGuideOrderTab').setAttribute('aria-selected',String(name==='order'));
+    $('churchGuideSlidesTab').setAttribute('aria-selected',String(name==='slides'));
+  }
+  function viewTo(name){
+    if(!['split','video','guide'].includes(name))return;
+    $('viewerView').dataset.churchView=name;
+    document.querySelectorAll('[data-church-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.churchView===name)));
+    try{sessionStorage.setItem('ekodi:church:live-view',name)}catch{}
+  }
+  function render(){
+    index=Math.max(0,Math.min(count()-1,index));
+    $('churchGuideCount').textContent=(index+1)+' / '+count();
+    $('churchHostProgress').textContent=(index+1)+' / '+count();
+    $('churchGuidePrev').disabled=index===0;$('churchGuideNext').disabled=index>=count()-1;
+    $('churchHostPrev').disabled=busy||role!=='host'||index===0;
+    $('churchHostNext').disabled=busy||role!=='host'||index>=count()-1;
+    $('churchGuideSlidesTab').disabled=!slides.length;
+    if(!slides.length&&tab==='slides')tabTo('order');
+    const slide=slides[index]||null;
+    const title=String(slide?.title||steps[index]?.[0]||'진행 안내');
+    $('churchGuideCurrent').textContent='현재 안내 · '+title.replace(/\s+/g,' ');
+    $('churchGuideSlideKicker').textContent=String(slide?.kicker||'EKODI CHURCH');
+    $('churchGuideSlideTitle').textContent=title;
+    const lines=$('churchGuideSlideLines');lines.replaceChildren();
+    for(const row of (Array.isArray(slide?.lines)?slide.lines:[]).slice(0,14)){
+      const p=document.createElement('p');p.textContent=String(row).slice(0,1000);lines.append(p);
+    }
+    const list=$('churchGuideOrderList');list.replaceChildren();
+    const found=steps.findIndex(row=>title.toLocaleLowerCase().includes(String(row[0]).toLocaleLowerCase()));
+    const current=found>=0?found:Math.min(index,steps.length-1);
+    steps.forEach((row,i)=>{
+      const li=document.createElement('li');if(i===current){li.className='active';li.setAttribute('aria-current','step')}
+      const number=document.createElement('span');number.className='order-number';number.textContent=String(i+1).padStart(2,'0');
+      const info=document.createElement('div'),strong=document.createElement('strong');strong.textContent=String(row[0]||'');info.append(strong);
+      if(row[1]){const small=document.createElement('small');small.textContent=String(row[1]);info.append(small)}
+      li.append(number,info);list.append(li);
+    });
+  }
+  async function load(){
+    if(activity!=='sunday'){
+      steps=(meeting[activity]||meeting.fellowship).map(text=>[text,'']);
+      deck='meeting-'+activity;
+      $('churchGuideDate').textContent='모임 기본 순서';
+      status('모임용 예시 순서입니다. 실제 내용은 진행자가 안내합니다. 발표자료는 방송 화면공유를 사용하세요.');
+      hostStatus('모임 순서 동기화는 방송 시작 후 활성화됩니다.');render();return;
+    }
+    try{
+      const specified=params.get('date');
+      if(specified!==null&&!ISO.test(specified))throw Error('invalid date');
+      if(specified)date=specified;
+      else{
+        const response=await fetch('/ekodichurch/worship/weekly.json',{cache:'no-store',credentials:'omit'});
+        if(!response.ok)throw Error('weekly list unavailable');
+        const list=await response.json();
+        if(list?.schema!=='ekodi.church.worship.index.v1'||!Array.isArray(list.services))throw Error('invalid weekly list');
+        const days=[...new Set(list.services.filter(item=>ISO.test(item?.date)&&item.page==='/ekodichurch/worship/'+item.date+'/').map(item=>item.date))].sort();
+        if(!days.length)throw Error('no worship packet');
+        date=days.find(item=>item>=todayKst())||days.at(-1);
+      }
+      const response=await fetch('/ekodichurch/worship/'+date+'/materials.json',{cache:'no-store',credentials:'omit'});
+      if(!response.ok)throw Error('packet unavailable');
+      const packet=await response.json();
+      if(packet?.schema!=='ekodi.worship.materials.v1'||packet.site!=='ekodichurch'||packet.date!==date||!Array.isArray(packet.slides)||packet.slides.length<1||packet.slides.length>120)throw Error('invalid packet');
+      slides=packet.slides;steps=Array.isArray(packet.order)?packet.order.filter(x=>Array.isArray(x)&&x.length>=2).map(x=>[String(x[0]),String(x[1])]):[];
+      deck='worship-'+date;$('churchGuideDate').textContent=date+' · 주일예배';
+      $('churchGuideSource').href='/ekodichurch/worship/'+date+'/';
+      status('공식 순서지·PPT '+slides.length+'장 연결됨 · 원본 언어로 표시');
+      hostStatus('방송 시작 뒤 다음·이전으로 발표 진행상황을 공유할 수 있습니다.');render();
+      if(role==='viewer')void readCursor();
+    }catch{
+      steps=[['예배자료 확인','공식 예배자료 게시 여부를 확인해 주세요.']];slides=[];deck='';
+      $('churchGuideDate').textContent='원본 확인 필요';
+      status('순서지·PPT를 불러오지 못했습니다. 오른쪽 영상은 정상적으로 시청할 수 있습니다.');
+      hostStatus('예배자료 게시 여부를 먼저 확인해 주세요.');render();
+    }
+  }
+  const endpoint=()=>'/api/realtime/rooms/'+encodeURIComponent(room)+'/presentation';
+  async function move(delta,asHost){
+    if(busy)return;const next=Math.max(0,Math.min(count()-1,index+delta));if(index===next)return;
+    if(!asHost){index=next;following=false;render();status('내가 직접 넘기는 중 · 진행자 따라가기로 다시 전환할 수 있습니다.');return}
+    if(role!=='host'||!room||!deck)return;
+    const previous=index;busy=true;index=next;render();
+    try{
+      const bearer=sessionStorage.getItem('ekodi-auth-token')||'';if(!bearer)throw Error('인증 필요');
+      const res=await fetch(endpoint(),{method:'PUT',cache:'no-store',headers:{authorization:'Bearer '+bearer,'content-type':'application/json'},body:JSON.stringify({deckId:deck,index:next})});
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok||data?.presentation?.index!==next)throw Error(data.error||'서버 동기화 거부');
+      revision=Number(data.presentation.revision)||revision;
+      hostStatus('현재 진행 공유 완료 · '+(next+1)+' / '+count());
+    }catch(error){index=previous;hostStatus('공유 실패 · '+error.message+' · 이전 순서 유지')}
+    finally{busy=false;render()}
+  }
+  async function readCursor(){
+    if(!following||role!=='viewer'||!room||!deck||document.visibilityState==='hidden')return;
+    try{
+      const headers=new Headers(),bearer=sessionStorage.getItem('ekodi-auth-token');
+      if(bearer)headers.set('authorization','Bearer '+bearer);
+      const res=await fetch(endpoint(),{cache:'no-store',credentials:'omit',headers});
+      if(res.status===429||res.status===1027){following=false;status('서버 요청 제한으로 자동 동기화가 중지되었습니다. 자료를 직접 넘길 수 있습니다.');return}
+      if(!res.ok)throw Error('cursor unavailable');
+      const data=await res.json(),cursor=data?.presentation;
+      if(!cursor||cursor.deckId!==deck||!Number.isInteger(cursor.index)||cursor.index<0||cursor.index>=count())return;
+      const next=Number(cursor.revision)||0;
+      if(next>=revision){revision=next;index=cursor.index;render();status('진행자 따라가는 중 · '+(index+1)+' / '+count())}
+    }catch{status('진행자 동기화 확인 중 · 자료 직접 보기는 가능합니다.')}
+  }
+  window.addEventListener('ekodi:live:room',event=>{
+    const info=event.detail||{};
+    if(info.tenant!=='ekodichurch'||!/^room_[a-zA-Z0-9_-]+$/.test(String(info.roomId||'')))return;
+    if(room!==info.roomId){revision=0;index=0}
+    room=info.roomId;role=info.role==='host'?'host':'viewer';render();
+    if(role==='host')hostStatus('진행자 권한 확인됨 · 다음·이전 조작은 서버에서 권한을 다시 확인합니다.');
+    else void readCursor();
+  });
+  window.addEventListener('ekodi:live:room-ended',event=>{
+    if(event.detail?.tenant!=='ekodichurch')return;role='';room='';revision=0;render();
+    hostStatus('방송 종료 · 다음 방송에서는 새 진행상황으로 시작합니다.');
+  });
+  $('churchGuidePrev').addEventListener('click',()=>void move(-1,false));
+  $('churchGuideNext').addEventListener('click',()=>void move(1,false));
+  $('churchHostPrev').addEventListener('click',()=>void move(-1,true));
+  $('churchHostNext').addEventListener('click',()=>void move(1,true));
+  $('churchGuideFollow').addEventListener('click',()=>{following=true;void readCursor();status('진행자 진행상황을 확인하고 있습니다.')});
+  document.querySelectorAll('[data-church-view]').forEach(button=>button.addEventListener('click',()=>viewTo(button.dataset.churchView)));
+  document.querySelectorAll('[data-church-material]').forEach(button=>button.addEventListener('click',()=>tabTo(button.dataset.churchMaterial)));
+  try{viewTo(sessionStorage.getItem('ekodi:church:live-view')||'split')}catch{viewTo('split')}
+  tabTo('order');void load();
+  const poll=setInterval(()=>{if(role==='viewer')void readCursor()},15000);
+  addEventListener('pagehide',()=>clearInterval(poll),{once:true});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&role==='viewer')void readCursor()});
+})();
+
