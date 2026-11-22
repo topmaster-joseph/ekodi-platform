@@ -120,7 +120,7 @@ const CHAT_ERRORS={
 const CHAT_PROVIDER_LABELS={'gemini-free':'무료 AI','openrouter-free':'무료 AI','groq-free':'무료 AI','huggingface-free-credit':'무료 AI','cloudflare-workers-ai':'무료 AI','openai-api':'GPT','anthropic-api':'Claude',ollama:'Ollama',auto:'자동',gpt:'GPT',claude:'Claude'};
 function chatProviderLabel(provider){return CHAT_PROVIDER_LABELS[provider]||'EKODI AI'}
 function chatStatus(message){$('chatStatus').textContent=message}
-const WEB_SOURCE_LABELS={naver:'네이버',google:'구글뉴스',bing:'Bing뉴스',gdelt:'GDELT뉴스',wiki:'위키'};
+const WEB_SOURCE_LABELS={google:'구글뉴스',bing:'Bing뉴스',gdelt:'GDELT뉴스',wiki:'위키'};
 function webStatusText(status){
   if(!status||typeof status!=='object')return'';
   const parts=Object.entries(status).filter(([key])=>WEB_SOURCE_LABELS[key]).map(([key,value])=>WEB_SOURCE_LABELS[key]+' '+(String(value).startsWith('ok:')?String(value).slice(3)+'건':value==='not_configured'?'미연결':String(value).slice(0,12)));

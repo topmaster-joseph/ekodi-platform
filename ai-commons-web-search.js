@@ -1,5 +1,6 @@
 // Free, keyless-first web evidence for AI Commons answers. Results are untrusted data, never instructions.
-// Order: Naver Search API (free quota, only when keys exist) -> Google News RSS -> Korean Wikipedia.
+// Sources: Google News RSS, Bing News RSS, GDELT news and Korean Wikipedia (all keyless).
+// Naver Search is deliberately excluded: its API HUB terms forbid using search results for AI summarisation.
 export const COMMONS_WEB_LIMITS=Object.freeze({query:80,perSource:4,total:6,snippet:220,context:1500,timeoutMs:6000});
 const FRESHNESS=/(최신|최근|오늘|어제|내일|현재|지금|요즘|이번\s?(주|달|해)|올해|뉴스|속보|발표|공고|일정|가격|시세|환율|날씨|몇\s?월|20[2-3]\d년|latest|today|current|news)/i;
 export function commonsQuestionNeedsWeb(text){return FRESHNESS.test(String(text||''))}
@@ -34,19 +35,6 @@ export function commonsWebQuery(text){
 function isoDate(value){const time=Date.parse(value||'');return Number.isFinite(time)?new Date(time).toISOString().slice(0,10):''}
 async function fetchWithTimeout(fetchImpl,url,init={}){
   return fetchImpl(url,{...init,signal:AbortSignal.timeout(COMMONS_WEB_LIMITS.timeoutMs)});
-}
-async function naverSearch(query,env,fetchImpl){
-  const id=String(env?.NAVER_SEARCH_CLIENT_ID||'').trim(),secret=String(env?.NAVER_SEARCH_CLIENT_SECRET||'').trim();
-  if(!id||!secret)return[];
-  const headers={'X-Naver-Client-Id':id,'X-Naver-Client-Secret':secret,accept:'application/json'};
-  const out=[];
-  for(const [kind,label] of [['news','네이버 뉴스'],['webkr','네이버 웹문서']]){
-    const response=await fetchWithTimeout(fetchImpl,`https://openapi.naver.com/v1/search/${kind}.json?display=${COMMONS_WEB_LIMITS.perSource}&sort=${kind==='news'?'date':'sim'}&query=${encodeURIComponent(query)}`,{headers});
-    if(!response.ok){if(!out.length&&kind==='webkr')throw new Error("http_"+response.status);continue}
-    const data=await response.json().catch(()=>({}));
-    for(const item of Array.isArray(data.items)?data.items:[])out.push({title:plainText(item.title,120),url:safeHttpsUrl(item.originallink||item.link),snippet:plainText(item.description),source:label,date:isoDate(item.pubDate)});
-  }
-  return out;
 }
 export function parseNewsRss(xml){
   const items=[];
@@ -98,11 +86,11 @@ function sourceStatus(result){
   return/^http_\d{3}$/.test(message)||message==='timeout'?message:'error';
 }
 async function runSources(query,env,fetchImpl){
-  const names=['naver','google','bing','gdelt','wiki'];
-  const settled=await Promise.allSettled([naverSearch(query,env,fetchImpl),googleNews(query,fetchImpl),bingNews(query,fetchImpl),gdeltNews(query,fetchImpl),
+  const names=['google','bing','gdelt','wiki'];
+  const settled=await Promise.allSettled([googleNews(query,fetchImpl),bingNews(query,fetchImpl),gdeltNews(query,fetchImpl),
     wikipedia(commonsWebKeywords(query).slice(0,2).join(' ')||query,fetchImpl)]);
   const status={};
-  settled.forEach((result,i)=>{status[names[i]]=names[i]==='naver'&&!String(env?.NAVER_SEARCH_CLIENT_ID||'').trim()?'not_configured':sourceStatus(result)});
+  settled.forEach((result,i)=>{status[names[i]]=sourceStatus(result)});
   return{settled,status};
 }
 function collect(settled,seen,sources){

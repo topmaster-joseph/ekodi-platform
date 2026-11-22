@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
 import {
   defaultWindow, targetIssueFor, inPreparationWindow, campaignState, parseIssueTitle, titleMatchesIssue, isQtinFamily,
-  extractItemIds, parseProductDetail, buildOrderDraft, assessConfirmation, csvEscape, normalizePhone, newOrderId, isValidTossOrderId, kstToUtc, CHURCH_PICKUP_ADDRESS,
+  extractItemIds, parseProductDetail, qtinAudienceGroup, buildOrderDraft, assessConfirmation, csvEscape, normalizePhone, newOrderId, isValidTossOrderId, kstToUtc, CHURCH_PICKUP_ADDRESS,
 } from '../qtin-order-core.js';
 import worker, { handleRequest, syncCampaign, runScheduled, confirmPayment, handleWebhook, renderOrderPage, renderAdminPage } from '../qtin-order-worker.js';
 
@@ -925,4 +925,76 @@ test('QTIN in-page Google login never exposes orders after an admin 403 response
   assert.equal(browser.elements.get('adminWorkspace').hidden, true);
   assert.match(browser.elements.get('state').textContent, /권한 없음/);
   assert.match(browser.elements.get('adminAuthMessage').textContent, /관리자 권한이 없습니다/);
+});
+
+
+test('QTIN catalog audience labels derive only from product series and never affect checkout validation',()=>{
+  const cases=[
+    ['큐티인(QTIN)(작은글씨) 2026년 12월호','adult'],
+    ['큐티인(QTIN)(큰글씨) 2026년 12월호','adult'],
+    ['QTIN Young 2026년 12월호','youth'],
+    ['QTin Teens 2026년 12월호','youth'],
+    ['어린이 큐티인(저학년) 2026년 12월호','children'],
+    ['QTin Kids 2026년 12월호','children'],
+    ['큐티인 샛별 2026년 12월호','preschool'],
+    ['QTin Stars 2026년 12월호','preschool'],
+    ['QTin Sparks 2026년 12월호','preschool']
+  ];
+  for(const [name,audience] of cases)assert.equal(qtinAudienceGroup(name,name),audience,name);
+  assert.equal(qtinAudienceGroup('Unlisted QTM format',''), 'adult');
+});
+
+test('Church and Mission QTIN pages share one purchase engine but match the correct parent header and footer',()=>{
+  const fixture={
+    campaign:{id:'2026-12',year:2026,month:12,state:'open',opensAt:'2026-11-20T15:00:00Z',closesAt:'2026-11-25T14:59:00Z'},
+    products:[
+      {id:'b1',qtmItemId:'p1',series:'큐티인(QTIN)(큰글씨)',name:'큐티인(QTIN)(큰글씨) 2026년 12월호',salePrice:4500,listPrice:5000,imageUrl:'',productUrl:'https://www.qtm.or.kr/shop/p1'},
+      {id:'b2',qtmItemId:'p2',series:'QTin Teens',name:'QTin Teens 2026년 12월호',salePrice:4800,listPrice:5000,imageUrl:'',productUrl:'https://www.qtm.or.kr/shop/p2'},
+      {id:'b3',qtmItemId:'p3',series:'어린이 큐티인',name:'어린이 큐티인 2026년 12월호',salePrice:4400,listPrice:5000,imageUrl:'',productUrl:'https://www.qtm.or.kr/shop/p3'},
+      {id:'b4',qtmItemId:'p4',series:'QTin Stars',name:'QTin Stars 2026년 12월호',salePrice:4500,listPrice:5000,imageUrl:'',productUrl:'https://www.qtm.or.kr/shop/p4'}
+    ],
+    payment:{ready:false,testMode:false,widget:false}
+  };
+  for(const org of ['church','mission']){
+    const page=renderOrderPage(fixture,{org,scriptNonce:'synthetic-nonce'});
+    assert.match(page,/name="viewport" content="width=device-width,initial-scale=1"/);
+    assert.match(page,/class="qtin-site-header/);
+    assert.match(page,/class="qtin-site-footer/);
+    assert.match(page,/data-qtin-tab="all"/);
+    for(const key of ['adult','youth','children','preschool'])assert.match(page,new RegExp('data-qtin-tab="'+key+'"'));
+    assert.match(page,/class="qtin-catalog-tabs" role="tablist"/);
+    assert.match(page,/id="qtinBookGrid" class="grid" role="tabpanel"/);
+    assert.match(page,/data-id="b1" data-price="4500" data-audience="adult"/);
+    assert.match(page,/data-id="b2" data-price="4800" data-audience="youth"/);
+    assert.match(page,/data-id="b3" data-price="4400" data-audience="children"/);
+    assert.match(page,/data-id="b4" data-price="4500" data-audience="preschool"/);
+    assert.match(page,/function setAudience\(active, shouldFocus=false\)/);
+    assert.match(page,/book\.hidden=active!=='all'/);
+    assert.match(page,/const books = \[\.\.\.document\.querySelectorAll\('\.book'\)\]/);
+    assert.match(page,/function items\(\) \{ return books\.map/);
+    assert.match(page,/role="status" aria-live="polite"/);
+    assert.match(page,/id="buyerForm"/);
+    assert.match(page,/id="payDialog"/);
+    assert.match(page,/id="payCard"/);
+    assert.match(page,/data-step="1"/);
+    assert.match(page,/\.qtin-catalog \.book\[hidden\]\{display:none!important\}/);
+    assert.doesNotMatch(page,/<iframe[^>]*src="\/qtin/);
+    if(org==='church'){
+      assert.match(page,/href="\/ekodichurch\/devotion\/"[^>]*>매일묵상/);
+      assert.match(page,/href="\/qtin\/church" aria-current="page"/);
+      assert.match(page,/에코디교회 정찬균/);
+      assert.match(page,/고유번호 307-82-82097/);
+      assert.doesNotMatch(page,/사업자 소재지/);
+    }else{
+      assert.match(page,/href="\/ekodimission\/history">연혁/);
+      assert.match(page,/href="\/ekodimission\/activities">활동/);
+      assert.match(page,/href="\/qtin\/mission" aria-current="page"/);
+      assert.match(page,/EKODI MISSION/);
+      assert.match(page,/곁을 내어주며/);
+      assert.doesNotMatch(page,/에코디교회 정찬균/);
+    }
+  }
+  const general=renderOrderPage(fixture,{org:''});
+  assert.match(general,/EKODI QTIN/);
+  assert.doesNotMatch(general,/href="\/qtin\/church" aria-current="page"/);
 });
