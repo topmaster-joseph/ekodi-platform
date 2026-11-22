@@ -127,17 +127,38 @@ export async function mailActor(request, env) {
   const token=bearer(request); if(!token)return null;
   try{const [user,raw]=await Promise.all([supabaseJson('/auth/v1/user',token,env),supabaseJson('/rest/v1/rpc/current_site_activity_contexts',token,env,{method:'POST',body:'{}'})]);
     if(!user?.id||!user?.email)return null; const contexts=(Array.isArray(raw)?raw:[]).map(item=>({workspaceId:String(item?.tenant_id||''),workspaceKey:String(item?.workspace_key||''),workspaceSlug:String(item?.tenant||'').toLowerCase(),workspaceName:String(item?.workspace_name||item?.tenant||''),workspaceKind:String(item?.workspace_kind||'organization'),authorizationRole:String(item?.authorization_role||''),activityRole:String(item?.activity_role||''),activityRoleLabel:String(item?.activity_role_label||''),canManage:WRITE_ROLES.has(String(item?.authorization_role||''))})).filter(x=>x.workspaceId&&x.workspaceSlug);
-    return{userId:String(user.id),email:String(user.email).toLowerCase(),emailVerified:Boolean(user.email_confirmed_at),contexts};}catch(error){console.error('EKODI Mail actor',error?.message||error);return null}
+    const actor={userId:String(user.id),email:String(user.email).toLowerCase(),emailVerified:Boolean(user.email_confirmed_at),contexts};
+    actor.personKeys=await linkedPersonKeys(env,actor);
+    return actor;}catch(error){console.error('EKODI Mail actor',error?.message||error);return null}
 }
+// One person, several verified EKODI logins: MAIL_LINKED_PERSON_EMAILS="a@x,b@y;c@z" (groups split by ';').
+export function linkedEmailGroup(env,email){
+  const me=String(email||'').trim().toLowerCase();if(!me)return[];
+  for(const group of String(env?.MAIL_LINKED_PERSON_EMAILS||'').split(';')){
+    const members=group.split(',').map(x=>x.trim().toLowerCase()).filter(x=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
+    if(members.length>1&&members.includes(me))return[...new Set(members)];
+  }
+  return[];
+}
+async function linkedPersonKeys(env,actor){
+  const keys=new Set([actor.userId]);
+  const group=actor.emailVerified?linkedEmailGroup(env,actor.email):[];
+  if(group.length&&env?.DB){
+    try{const rows=await env.DB.prepare(`SELECT DISTINCT owner_key FROM mail_accounts WHERE owner_type='person' AND lower(created_by_email) IN (${group.map(()=>'?').join(',')})`).bind(...group).all();
+      for(const r of rows.results||[])if(r.owner_key)keys.add(String(r.owner_key));}catch(error){console.error('EKODI Mail linked identities',error?.message||error)}
+  }
+  return[...keys];
+}
+function personKeysOf(actor){return Array.isArray(actor?.personKeys)&&actor.personKeys.length?actor.personKeys:[actor.userId]}
 function providerForEmail(email,requested=''){const v=String(requested||'').trim().toLowerCase();if(ACCOUNT_PROVIDERS[v])return v;const d=String(email||'').split('@').pop().toLowerCase();if(['gmail.com','googlemail.com'].includes(d))return'gmail';if(['outlook.com','hotmail.com','live.com'].includes(d))return'outlook';if(d==='naver.com')return'naver';if(['daum.net','hanmail.net'].includes(d))return'daum';if(d==='kakao.com')return'kakao';return'generic-imap'}
 function publicAccount(r){return{id:Number(r.id),ownerType:r.owner_type,ownerKey:r.owner_key,workspaceSlug:r.workspace_slug||'',provider:r.provider,providerLabel:ACCOUNT_PROVIDERS[r.provider]?.label||r.provider,emailAddress:r.email_address,displayName:r.display_name||r.email_address,connectorMode:r.connector_mode,connectionStatus:r.connection_status,enabled:Boolean(r.enabled),lastSyncAt:r.last_sync_at||null,lastError:r.last_error||'',credentialStored:Boolean(r.credential_ref)}}
-async function accountsForActor(db,actor){const personal=await db.prepare(`SELECT * FROM mail_accounts WHERE owner_type='person' AND owner_key=? ORDER BY display_name,email_address`).bind(actor.userId).all();const work=await Promise.all(actor.contexts.map(c=>db.prepare(`SELECT * FROM mail_accounts WHERE owner_type='workspace' AND owner_key=? ORDER BY display_name,email_address`).bind(c.workspaceId).all()));return[...personal.results.map(r=>({...publicAccount(r),ownerLabel:'개인'})),...work.flatMap((x,i)=>x.results.map(r=>({...publicAccount(r),ownerLabel:actor.contexts[i].workspaceName})))]}
+async function accountsForActor(db,actor){const keys=personKeysOf(actor);const personal=await db.prepare(`SELECT * FROM mail_accounts WHERE owner_type='person' AND owner_key IN (${keys.map(()=>'?').join(',')}) ORDER BY display_name,email_address`).bind(...keys).all();const work=await Promise.all(actor.contexts.map(c=>db.prepare(`SELECT * FROM mail_accounts WHERE owner_type='workspace' AND owner_key=? ORDER BY display_name,email_address`).bind(c.workspaceId).all()));return[...personal.results.map(r=>({...publicAccount(r),ownerLabel:'개인'})),...work.flatMap((x,i)=>x.results.map(r=>({...publicAccount(r),ownerLabel:actor.contexts[i].workspaceName})))]}
 
 async function accountsVisibleForActor(db,actor){const rows=await accountsForActor(db,actor);return Promise.all(rows.map(async a=>{if(a.ownerType==='person')return{...a,permissions:{read:true,send:true,manage:true}};const grant=await db.prepare(`SELECT can_read,can_send,can_manage FROM mail_account_grants WHERE account_id=? AND principal_type='person' AND principal_key=?`).bind(a.id,actor.userId).first();const context=actor.contexts.find(c=>c.workspaceId===a.ownerKey);return{...a,permissions:{read:Boolean(grant?.can_read),send:Boolean(grant?.can_send),manage:Boolean(grant?.can_manage)||Boolean(context?.canManage)}}}))}
 export async function accountAccess(db, actor, accountId) {
   const id=Number(accountId||0); if(!Number.isInteger(id)||id<1)return null;
   const row=await db.prepare('SELECT * FROM mail_accounts WHERE id=? AND enabled=1').bind(id).first(); if(!row)return null;
-  if(row.owner_type==='person'){if(row.owner_key!==actor.userId)return null;return{row,permissions:{read:true,send:true,manage:true}}}
+  if(row.owner_type==='person'){if(!personKeysOf(actor).includes(row.owner_key))return null;return{row,permissions:{read:true,send:true,manage:true}}}
   const context=actor.contexts.find(c=>c.workspaceId===row.owner_key); if(!context)return null;
   const grant=await db.prepare(`SELECT can_read,can_send,can_manage FROM mail_account_grants WHERE account_id=? AND principal_type='person' AND principal_key=?`).bind(id,actor.userId).first();
   return{row,context,permissions:{read:Boolean(grant?.can_read),send:Boolean(grant?.can_send),manage:Boolean(grant?.can_manage)||Boolean(context.canManage)}};
