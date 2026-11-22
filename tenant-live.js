@@ -475,7 +475,7 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
   function viewTo(name){
     if(!['split','video','guide'].includes(name))return;
     $('viewerView').dataset.churchView=name;
-    document.querySelectorAll('[data-church-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.churchView===name)));
+    document.querySelectorAll('button[data-church-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.churchView===name)));
     try{sessionStorage.setItem('ekodi:church:live-view',name)}catch{}
   }
   function render(){
@@ -526,7 +526,13 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
         if(list?.schema!=='ekodi.church.worship.index.v1'||!Array.isArray(list.services))throw Error('invalid weekly list');
         const days=[...new Set(list.services.filter(item=>ISO.test(item?.date)&&item.page==='/ekodichurch/worship/'+item.date+'/').map(item=>item.date))].sort();
         if(!days.length)throw Error('no worship packet');
-        date=days.find(item=>item>=todayKst())||days.at(-1);
+        // A published packet is eligible only for this worship week; never label an old Sunday as today's.
+        const anchor=Date.parse(todayKst()+'T00:00:00Z');
+        const daysAway=item=>Math.round((Date.parse(item+'T00:00:00Z')-anchor)/86400000);
+        const upcoming=days.find(item=>daysAway(item)>=0&&daysAway(item)<=6);
+        const recent=days.slice().reverse().find(item=>daysAway(item)<0&&daysAway(item)>=-3);
+        date=upcoming||recent||'';
+        if(!date)throw Error('no_current_published_worship');
       }
       const response=await fetch('/ekodichurch/worship/'+date+'/materials.json',{cache:'no-store',credentials:'omit'});
       if(!response.ok)throw Error('packet unavailable');
@@ -541,7 +547,7 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
     }catch{
       steps=[['예배자료 확인','공식 예배자료 게시 여부를 확인해 주세요.']];slides=[];deck='';
       $('churchGuideDate').textContent='원본 확인 필요';
-      status('순서지·PPT를 불러오지 못했습니다. 오른쪽 영상은 정상적으로 시청할 수 있습니다.');
+      status('이번 주 공개 예배자료가 아직 없습니다. 지난 주보를 오늘 자료로 표시하지 않으며, 오른쪽 영상은 시청 가능합니다.');
       hostStatus('예배자료 게시 여부를 먼저 확인해 주세요.');render();
     }
   }
@@ -592,7 +598,7 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
   $('churchHostPrev').addEventListener('click',()=>void move(-1,true));
   $('churchHostNext').addEventListener('click',()=>void move(1,true));
   $('churchGuideFollow').addEventListener('click',()=>{following=true;void readCursor();status('진행자 진행상황을 확인하고 있습니다.')});
-  document.querySelectorAll('[data-church-view]').forEach(button=>button.addEventListener('click',()=>viewTo(button.dataset.churchView)));
+  document.querySelectorAll('button[data-church-view]').forEach(button=>button.addEventListener('click',()=>viewTo(button.dataset.churchView)));
   document.querySelectorAll('[data-church-material]').forEach(button=>button.addEventListener('click',()=>tabTo(button.dataset.churchMaterial)));
   try{viewTo(sessionStorage.getItem('ekodi:church:live-view')||'split')}catch{viewTo('split')}
   tabTo('order');void load();
