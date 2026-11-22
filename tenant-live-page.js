@@ -40,7 +40,7 @@ export function tenantLivePage(tenant){
     <section id="churchGuideSlides" role="tabpanel" aria-labelledby="churchGuideSlidesTab" hidden>
       <div class="church-guide-slide" aria-live="polite"><small id="churchGuideSlideKicker"></small><h3 id="churchGuideSlideTitle">발표자료 준비 중</h3><div id="churchGuideSlideLines"></div></div>
     </section>
-    <div class="church-guide-bottom"><span id="churchGuideCount" aria-live="polite">안내 준비 중</span><div><button type="button" id="churchGuidePrev" aria-label="이전 자료">이전</button><button type="button" id="churchGuideNext" aria-label="다음 자료">다음</button></div></div>
+    <div class="church-guide-bottom"><span id="churchGuideCount" aria-live="polite">안내 준비 중</span><div><button type="button" id="churchGuideFollow">진행자 따라가기</button><button type="button" id="churchGuidePrev" aria-label="이전 자료">이전</button><button type="button" id="churchGuideNext" aria-label="다음 자료">다음</button></div></div>
     <p class="church-guide-sync" id="churchGuideStatus" role="status" aria-live="polite">공개된 예배자료를 연결하고 있습니다.</p>
     <a class="church-guide-source" id="churchGuideSource" href="/ekodichurch/#worship">공식 예배자료 열기</a>
   </section>`:'';
