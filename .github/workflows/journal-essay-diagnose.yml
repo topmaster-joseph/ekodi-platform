@@ -3,16 +3,23 @@ name: EKODI Journal Essay Diagnose
 # 읽기 전용 진단: 에코디언 주간 에세이의 작성·투고·게재 상태와 최근 출판 실행 기록을 보여준다.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/journal-essay-diagnose.yml'
+    inputs:
+      release_branch_ref:
+        description: Orchestrator-issued release branch (ai/<agent>/orch_<task-id>)
+        required: true
+        type: string
+      release_task_id:
+        description: Orchestrator task id for that release branch
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 env:
   WRANGLER_VERSION: '4.127.1'
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
 
 jobs:
   diagnose:
