@@ -14,6 +14,7 @@ import { renderBnslovePublicPage, bnslovePublicCss } from './bnslove-public-page
 import { isMnuBizWorkspaceSlug, renderMnuBizPublicPage, mnubizPublicCss } from './mnubiz-public-page.js';
 import { isMnuBizSuncheonPath, renderMnuBizSuncheonPage } from './mnubiz-suncheon-page.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { routeVolunteer } from './volunteer-module.js';
 
 const EKODIMISSION_PREFIX='/ekodimission';
 const EKODIMISSION_PUBLIC_ROUTE='ekodimission-public';
@@ -520,6 +521,8 @@ async function appShell(request,env,route='space-home',profile=DEFAULT_PAGE_PROF
 export default{
   async fetch(request,env){
     const url=new URL(request.url);
+    // Reusable, tenant-scoped Volunteer service; canonical /volunteer is direct, never a redirect.
+    if(/^\/volunteer(?:\/|$)/.test(url.pathname))return routeVolunteer(request,env,{json,withHeaders});
     const legacyAlias=url.hostname.toLowerCase()==='space.ekodi.kr';
     const canonicalRedirect=()=>{
       const target=new URL(url.pathname+url.search,'https://ekodi.kr');
