@@ -138,7 +138,9 @@
       },
       {
         "url": "https://ekodi.kr/yogurtpurple",
-        "statuses": [410],
+        "statuses": [
+          410
+        ],
         "redirect": "manual",
         "expect": [
           "삭제된 주소입니다."
@@ -690,6 +692,54 @@
           "cache-control: no-store"
         ],
         "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/volunteer",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "에코디 봉사",
+          "제12회 사랑의 연탄 배달",
+          "/volunteer/activities/2026-coal-delivery"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: volunteer-public",
+          "cache-control: no-store"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/volunteer/activities/2026-coal-delivery",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "온라인 신청서",
+          "data-volunteer-form",
+          "name=\"privacyConsent\"",
+          "농협 351-1185-2874-13"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: volunteer-public",
+          "cache-control: no-store"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/volunteer/api/campaigns/2026-coal-delivery/status",
+        "statuses": [
+          200
+        ],
+        "redirect": "manual",
+        "expect": [
+          "\"campaign\":\"2026-coal-delivery\"",
+          "\"activity_key\":\"261205-coal-delivery\""
+        ],
+        "headerExpect": [
+          "content-type: application/json",
+          "cache-control: no-store"
+        ]
       }
     ]
   }
