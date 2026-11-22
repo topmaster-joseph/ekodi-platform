@@ -125,10 +125,19 @@ jobs:
           fi
 
       - name: Install Chromium
+        shell: bash
         run: |
           set -euo pipefail
           npm install --no-save --package-lock=false playwright@1.55.0
-          npx playwright install --with-deps chromium
+          # Prefer the runner's preinstalled Chrome (same pattern as the native
+          # mission-home E2E); the Playwright browser download has been failing.
+          browser_path="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [ -n "$browser_path" ]; then
+            echo "EKODI_NATIVE_CHROME=$browser_path" >> "$GITHUB_ENV"
+            echo "Using runner browser $browser_path ($("$browser_path" --version 2>/dev/null || true))"
+          else
+            npx playwright install --with-deps chromium
+          fi
 
       - name: Create ephemeral development fixtures, member and admin session
         shell: bash
