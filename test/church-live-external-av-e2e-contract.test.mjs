@@ -11,7 +11,7 @@ test('Playwright 1.55 Chromium uses a supported pinned Ubuntu 24.04 runner',()=>
   for(const source of [workflow,legacy]){
     assert.match(source,/runs-on: ubuntu-24\.04/);
     assert.doesNotMatch(source,/runs-on: ubuntu-latest/);
-    assert.match(source,/playwright@1\.55\.0/);
+    assert.match(source,/playwright@1\.55\.1/);
     assert.match(source,/npx playwright install --with-deps chromium/);
   }
 });

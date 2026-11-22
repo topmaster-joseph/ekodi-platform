@@ -30,7 +30,7 @@ jobs:
           node --test test/verify-church-director-qr-native-public.test.mjs
       - name: Install EKODI-owned isolated Chromium
         run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium
       - name: Check real Church studio in EKODI Chromium without sign-in or mutation
         run: node scripts/verify-church-director-qr-native-public.mjs

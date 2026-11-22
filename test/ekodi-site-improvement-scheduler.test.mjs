@@ -97,7 +97,7 @@ test('cloud fallback is EKODI-owned, workspace-sandboxed, and fail-closed',async
   assert.match(worker,/dispatchCloudSiteImprovement/);
   assert.match(worker,/provider:'cloud:github-hosted-codex'/);
   assert.doesNotMatch(worker,/no_online_code_node_provider'\);/);
-  assert.match(workflow,/uses: openai\/codex-action@v1/);
+  assert.match(workflow,/uses: openai\/codex-action@[0-9a-f]{40} # v1/);
   assert.match(workflow,/permission-profile: ':workspace'/);
   assert.match(workflow,/protected boundary changed/);
   assert.match(workflow,/files\.length>25/);

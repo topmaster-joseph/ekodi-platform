@@ -13,7 +13,7 @@ test('Mall header native canary is a protected read-only release verifier, not a
   assert.match(workflow, /conclusion == 'success'/);
   assert.match(workflow, /contents: read/);
   assert.match(workflow, /runs-on: ubuntu-24\.04/);
-  assert.match(workflow, /playwright@1\.55\.0/);
+  assert.match(workflow, /playwright@1\.55\.1/);
   assert.match(workflow, /verify-header-native\.mjs/);
   assert.doesNotMatch(workflow, /wrangler deploy|workflow_dispatch:.*secret|CLOUDFLARE_API_TOKEN|GITHUB_TOKEN|toss[_-]secret/i);
 });
