@@ -522,7 +522,13 @@ export default{
   async fetch(request,env){
     const url=new URL(request.url);
     // Reusable, tenant-scoped Volunteer service; canonical /volunteer is direct, never a redirect.
-    if(/^\/volunteer(?:\/|$)/.test(url.pathname))return routeVolunteer(request,env,{json,withHeaders});
+    if(/^\/volunteer(?:\/|$)/.test(url.pathname)){
+      const response=await routeVolunteer(request,env,{json,withHeaders});
+      if(request.method==='GET'&&response.status===200&&String(response.headers.get('content-type')||'').includes('text/html')&&typeof HTMLRewriter==='function'){
+        return injectEkodiShell(response,'ekodi','public',{existingHeader:true,memberGate:'service-owned'});
+      }
+      return response;
+    }
     const legacyAlias=url.hostname.toLowerCase()==='space.ekodi.kr';
     const canonicalRedirect=()=>{
       const target=new URL(url.pathname+url.search,'https://ekodi.kr');
