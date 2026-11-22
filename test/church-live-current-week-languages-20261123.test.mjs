@@ -28,7 +28,7 @@ test('no stale archived Sunday is auto-presented as current in either canonical 
     assert.throws(()=>select(['2026-11-08'],'2026-11-23'),/no_current_published_worship/);
     assert.equal(select(['2026-11-08','2026-11-22'],'2026-11-23'),'2026-11-22');
     assert.equal(select(['2026-11-08','2026-11-22','2026-11-29'],'2026-11-23'),'2026-11-29');
-    assert.equal(select(['2026-11-08','2026-11-22'],'2026-11-27'),null);
+    assert.throws(()=>select(['2026-11-08','2026-11-22'],'2026-11-27'),/no_current_published_worship/);
   }
 });
 test('manual historical Sunday remains available by exact date, never masquerading as default',()=>{
