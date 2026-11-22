@@ -101,11 +101,15 @@ try{
             await page.click('.book:not([hidden]) button[data-step="1"]');
             await page.click('[data-qtin-tab="all"]');
             const totals=await page.evaluate(()=>({
-              adult:document.querySelector('.book[data-audience="adult"] input').value,
-              youth:document.querySelector('.book[data-audience="youth"] input').value,
+              adult:document.querySelector('.book[data-audience="adult"] input[type="number"]')?.value??null,
+              youth:document.querySelector('.book[data-audience="youth"] input[type="number"]')?.value??null,
               count:document.querySelector('#count')?.textContent,
-              total:document.querySelector('#total')?.textContent
+              total:document.querySelector('#total')?.textContent,
+              cardAudiences:[...document.querySelectorAll('.book')].map(x=>x.dataset.audience),
+              currentUrl:location.pathname,
+              bookCount:document.querySelectorAll('.book').length
             }));
+            console.log('QTIN_SYNTHETIC_TAB_DIAGNOSTIC='+JSON.stringify({org,width,totals}));
             assert.equal(totals.adult,'1');
             assert.equal(totals.youth,'1');
             assert.equal(totals.count,'2권','quantity persists after switching tabs');
