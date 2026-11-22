@@ -37,7 +37,7 @@ import { workspaceTradeAdminScript } from './workspace-trade-admin-page.js';
 import { isTradePartnerPath, tradePartnerPage, tradePartnerCss, tradePartnerScript } from './workspace-trade-portal.js';
 import { tradeProductPublicRoute, tradeProductPublicPage } from './trade-product-public-page.js';
 import { isEkodiBizRefundPolicyPath, ekodiBizRefundPolicyResponse } from './ekodibiz-refund-policy-page.js';
-import { isEkodiBizHomepageServicePath, ekodiBizHomepageServiceResponse } from './ekodibiz-homepage-service-page.js';
+import { ekodiBizHomepageRoute } from './ekodibiz-homepage-service-page.js';
 import { isPublicWorkspacePath } from './workspace-route-policy.js';
 import { workspaceRouteFromPublicPath } from './workspace-route-policy.js';
 import { isInsurancePublicPath, routeInsurancePublic } from './insurance-public-route.js';
@@ -684,7 +684,7 @@ async function routePlatform(request,env,ctx){
         if(url.pathname==='/workspace-trade-portal.js')return tradePartnerScript();
         if(isTradePartnerPath(url.pathname))return injectEkodiTenantReadability(tradePartnerPage());
         if(['GET','HEAD'].includes(request.method)&&isEkodiBizRefundPolicyPath(url.pathname))return ekodiBizRefundPolicyResponse({head:request.method==='HEAD'});
-        if(['GET','HEAD'].includes(request.method)&&isEkodiBizHomepageServicePath(url.pathname))return ekodiBizHomepageServiceResponse({head:request.method==='HEAD'});
+        {const homepageRoute=ekodiBizHomepageRoute(request,url);if(homepageRoute)return homepageRoute;}
         {const tradeProduct=tradeProductPublicRoute(url.pathname);if(tradeProduct)return injectEkodiTenantReadability(tradeProductPublicPage(tradeProduct));}
         if(/^\/cheonggye\/admin\/publishing\/?$/i.test(url.pathname))return injectEkodiShell(workspaceAdminPage(url.pathname),'space','admin');
         if(url.pathname==='/ekodi-church'||url.pathname.startsWith('/ekodi-church/')){const target=new URL(request.url);target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}

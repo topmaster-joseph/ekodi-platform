@@ -69,7 +69,7 @@ html:not([data-ekodi-hpsub-authorized="true"]) .sidebar [data-section="homepage-
         <p>상담·바로 구독 신청 목록입니다. 바로 구독 신청은 홈페이지 주소가 자동으로 만들어져 비공개로 기다리며, 첫 결제를 확인한 뒤 [공개]를 누르면 바로 열립니다.</p>
       </div>
       <div class="ekodi-hpsub-actions">
-        <a href="https://ekodi.kr/ekodibiz/homepage" target="_blank" rel="noopener">신청 페이지</a>
+        <a href="https://ekodi.kr/homepage" target="_blank" rel="noopener">신청 페이지</a><a href="https://ekodi.kr/homepage/admin" target="_blank" rel="noopener">관리자 페이지</a>
         <button type="button" data-hpsub-refresh>새로고침</button>
       </div>
     </div>

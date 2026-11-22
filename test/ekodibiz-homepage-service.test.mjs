@@ -10,9 +10,9 @@ import {
 const P = HOMEPAGE_PRICING;
 
 test('path matcher accepts only canonical homepage-service paths', () => {
-  for (const p of ['/ekodibiz/homepage', '/ekodibiz/homepage/', '/ekodibiz/homepage-service', '/EKODIBIZ/Homepage', '/ekodibiz/web-subscription'])
+  for (const p of ['/homepage', '/homepage/', '/Homepage'])
     assert.equal(isEkodiBizHomepageServicePath(p), true, p);
-  for (const p of ['/homepage', '/ekodibiz', '/ekodibiz/homepage/x', '/ekodibiz/api/homepage', ''])
+  for (const p of ['/homepage/admin', '/ekodibiz/homepage', '/ekodibiz', '/homepage/x', ''])
     assert.equal(isEkodiBizHomepageServicePath(p), false, p);
 });
 
@@ -69,12 +69,12 @@ test('audience choices make the entry plan available to people, institutions and
   assert.ok(html.indexOf('id="apply"') < html.indexOf('id="plansPanel"'), 'apply tab is first');
 });
 
-test('page is split into four screen tabs with the application tab open first', () => {
+test('page is split into five screen tabs (incl. 내 홈페이지) with the application tab open first', () => {
   const html = ekodiBizHomepageServiceHtml();
   const page = html.split('id="pageTabs"')[1].split('</div>')[0];
-  assert.deepEqual([...page.matchAll(/aria-controls="([^"]+)"/g)].map((m) => m[1]), ['apply', 'plansPanel', 'typesPanel', 'rulesPanel']);
+  assert.deepEqual([...page.matchAll(/aria-controls="([^"]+)"/g)].map((m) => m[1]), ['apply', 'plansPanel', 'typesPanel', 'rulesPanel', 'minePanel']);
   assert.match(page, /id="ptab-apply" aria-controls="apply" aria-selected="true"/);
-  for (const id of ['plansPanel', 'typesPanel', 'rulesPanel']) assert.match(html, new RegExp('id="' + id + '" class="page-panel" role="tabpanel"[^>]* hidden>'));
+  for (const id of ['plansPanel', 'typesPanel', 'rulesPanel', 'minePanel']) assert.match(html, new RegExp('id="' + id + '" class="page-panel" role="tabpanel"[^>]* hidden>'));
   assert.doesNotMatch(html, /id="apply" class="page-panel" role="tabpanel"[^>]* hidden>/);
 });
 
@@ -122,8 +122,8 @@ test('estimate: base, add-ons, included features, discounts and contract terms',
 test('page shows type tabs with features and the live calculator', () => {
   const html = ekodiBizHomepageServiceHtml();
   assert.ok(html.includes(`<link rel="canonical" href="${EKODIBIZ_HOMEPAGE_SERVICE_URL}">`));
-  assert.equal((html.match(/role="tab"/g) || []).length, HOMEPAGE_TYPES.length + 4);
-  assert.equal((html.match(/role="tabpanel"/g) || []).length, HOMEPAGE_TYPES.length + 4);
+  assert.equal((html.match(/role="tab"/g) || []).length, HOMEPAGE_TYPES.length + 5);
+  assert.equal((html.match(/role="tabpanel"/g) || []).length, HOMEPAGE_TYPES.length + 5);
   assert.equal((html.match(/class="panel" role="tabpanel"[^>]* hidden>/g) || []).length, HOMEPAGE_TYPES.length - 1, 'only first type panel visible');
   for (const t of HOMEPAGE_TYPES) {
     assert.ok(html.includes(t.name), t.name);
@@ -179,7 +179,7 @@ test('response is public HTML with an own restrictive CSP and HEAD support', asy
 test('router serves the page', async () => {
   const src = await readFile(new URL('../platform-router-entry-worker.js', import.meta.url), 'utf8');
   assert.match(src, /from '\.\/ekodibiz-homepage-service-page\.js'/);
-  assert.match(src, /isEkodiBizHomepageServicePath\(url\.pathname\)\)return ekodiBizHomepageServiceResponse/);
+  assert.match(src, /const homepageRoute=ekodiBizHomepageRoute\(request,url\);if\(homepageRoute\)return homepageRoute;/);
 });
 
 test('form submission contract matches the shared contact API', async () => {
