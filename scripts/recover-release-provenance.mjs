@@ -342,7 +342,7 @@ const sharedSiteTouched=sourceFiles.some(file=>
    'live-interpretation.js','live-interpretation.css',
    'realtime-tenant-registry.js',
    'scripts/converge-orchestrated-pr-merge.mjs',
-   'platform-router-entry-worker.js','.github/workflows/deploy-site-core.yml',
+   'platform-router-entry-worker.js','platform-route-registry.js','canonical-surface-router.js','.github/workflows/deploy-site-core.yml',
    'scripts/site-core-staging-10500-recovery.mjs',
    '.github/workflows/stage-shared-site-shell.yml',
    'test/site-core-staging-10500-recovery.test.mjs'].includes(file)

@@ -489,8 +489,8 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF" = refs/heads/main
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "\${SUPABASE_SCHEMA_PREFLIGHT_MODE:-}" = management
-          test -n "\${SUPABASE_ACCESS_TOKEN:-}"
+          test "${SUPABASE_SCHEMA_PREFLIGHT_MODE:-}" = management
+          test -n "${SUPABASE_ACCESS_TOKEN:-}"
           test -f "$VOLUNTEER_MIGRATION"
           ! grep -Eiq 'drop[[:space:]]+(table|function)|truncate[[:space:]]|delete[[:space:]]+from' "$VOLUNTEER_MIGRATION"
           tmp="$(mktemp -d)"
