@@ -498,7 +498,7 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
     }
     const list=$('churchGuideOrderList');list.replaceChildren();
     const found=steps.findIndex(row=>title.toLocaleLowerCase().includes(String(row[0]).toLocaleLowerCase()));
-    const current=found>=0?found:Math.min(index,steps.length-1);
+    const current=found>=0?found:(slides.length? -1:Math.min(index,steps.length-1));
     steps.forEach((row,i)=>{
       const li=document.createElement('li');if(i===current){li.className='active';li.setAttribute('aria-current','step')}
       const number=document.createElement('span');number.className='order-number';number.textContent=String(i+1).padStart(2,'0');
