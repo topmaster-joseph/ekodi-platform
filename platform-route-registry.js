@@ -1,7 +1,7 @@
 export const PLATFORM_ROUTE_REGISTRY=Object.freeze({
   canonical:Object.freeze(['admin','my','auth','api','mcp','webhooks','health','connect']),
   platformServices:Object.freeze([
-    'ai','author','bible','books','business','cafe','cloud','community','cmpmyi','delivery','dev','developer','edu','education','energy','ekodilab','ekodimall','ekodimission','ekodipay','event','experience','finance-api','give','history','insurance','invest','journal','lab','life','live','local-commerce','login','logout','mail','mall','management','marketing','marketing-api','marketing-connect-api','marketing-publish-api','media','messenger','mission','money','o2o','office','pay','personal-finance-api','preview','promotion','privacy','publish','publishing','research','shell','singles','social','status','storage','stores','support','tax','terms','trade','try','video','work','workspace-api','www'
+    'ai','author','bible','books','business','cafe','cloud','community','cmpmyi','delivery','dev','developer','edu','education','energy','ekodilab','ekodimall','ekodimission','ekodipay','event','experience','finance-api','give','history','insurance','invest','journal','lab','life','live','local-commerce','login','logout','mail','mall','management','marketing','marketing-api','marketing-connect-api','marketing-publish-api','media','messenger','mission','money','o2o','office','pay','personal-finance-api','preview','promotion','privacy','publish','publishing','research','shell','singles','social','status','storage','stores','support','tax','terms','trade','try','video','volunteer','work','workspace-api','www'
   ]),
   retiredIdentityPrefixes:Object.freeze(['group','org','personal','project','space','user']),
 });
@@ -36,6 +36,7 @@ export const PLATFORM_EXECUTION_SURFACES=Object.freeze([
   Object.freeze({id:'personal-finance-api',prefix:'/personal-finance-api',binding:'PERSONAL_FINANCE',virtualHost:platformHost('personal-finance-api'),basePathAware:true}),
   Object.freeze({id:'publishing',prefix:'/publishing',binding:'PUBLISHING',virtualHost:platformHost('publishing')}),
   Object.freeze({id:'social',prefix:'/social',binding:'SOCIAL',virtualHost:platformHost('social')}),
+  Object.freeze({id:'volunteer',prefix:'/volunteer',binding:'SPACE',preservePrefix:true,basePathAware:true}),
   Object.freeze({id:'space',prefix:'/space',binding:'SPACE',virtualHost:platformHost('space')}),
   Object.freeze({id:'storage',prefix:'/storage',binding:'STORAGE',virtualHost:platformHost('drive'),basePathAware:true}),
   Object.freeze({id:'support',prefix:'/support',binding:'SUPPORT',preservePrefix:true,basePathAware:true}),

@@ -61,7 +61,7 @@ function canonicalSlashRedirect(request,prefix){
 function canonicalExecutionRootRedirect(request,spec){
   const path=new URL(request.url).pathname;
   const apiLike=spec.id.endsWith('-api')||spec.prefix.includes('/api/');
-  if(apiLike||spec.exact||spec.id==='ai'||path!==spec.prefix)return null;
+  if(apiLike||spec.exact||spec.id==='ai'||spec.id==='volunteer'||path!==spec.prefix)return null;
   return canonicalSlashRedirect(request,spec.prefix);
 }
 function directDocumentNavigation(request){
