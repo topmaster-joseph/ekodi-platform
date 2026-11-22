@@ -85,7 +85,7 @@ jobs:
         run: node scripts/verify-seonammedi-finance-firstparty.mjs
       - name: Install EKODI Chromium harness
         run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium
       - name: Verify actual finance/minutes links and mobile layout on both public domains
         run: node scripts/verify-seonammedi-admin-nav-native.mjs

@@ -44,7 +44,7 @@ jobs:
           node --test test/language-native-acceptance-contract.test.mjs test/homepage-published-language-contract.test.mjs
       - name: Install EKODI isolated Chromium harness
         run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium
       - name: Observe actual public pages and local synthetic readiness cases
         env:

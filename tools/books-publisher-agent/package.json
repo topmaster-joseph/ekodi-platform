@@ -9,7 +9,7 @@
     "dry-run": "node src/cli.mjs --dry-run"
   },
   "dependencies": {
-    "playwright": "latest"
+    "playwright": "1.65.1"
   },
   "engines": {
     "node": ">=20"

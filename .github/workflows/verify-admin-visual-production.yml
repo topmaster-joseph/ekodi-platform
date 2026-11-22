@@ -108,7 +108,7 @@ jobs:
         if: steps.changes.outputs.admin_visual == 'true'
         run: |
           set -euo pipefail
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium
 
       - name: Verify rendered Admin home and canonical Assist
