@@ -239,8 +239,8 @@ test('EKODI Chromium install cache is pinned and independent of paid browser ser
   assert.match(workerWorkflow,/Restore cached Chromium binaries/);
   assert.match(workerWorkflow,/uses: actions\/cache@v4/);
   assert.match(workerWorkflow,/path: ~\/\.cache\/ms-playwright/);
-  assert.match(workerWorkflow,/ekodi-native-chromium-\$\{\{ runner\.os \}\}-\$\{\{ runner\.arch \}\}-playwright-1\.55\.0-v1/);
-  assert.match(workerWorkflow,/npm install --no-save --package-lock=false playwright@1\.55\.0/);
+  assert.match(workerWorkflow,/ekodi-native-chromium-\$\{\{ runner\.os \}\}-\$\{\{ runner\.arch \}\}-playwright-1\.55\.1-v1/);
+  assert.match(workerWorkflow,/npm install --no-save --package-lock=false playwright@1\.55\.1/);
   assert.match(workerWorkflow,/npx playwright install --with-deps chromium/);
   assert.match(workerWorkflow,/Record native Chromium cache evidence/);
   assert.match(workerWorkflow,/CHROMIUM_CACHE_HIT: \$\{\{ steps\.chromium-cache\.outputs\.cache-hit \}\}/);

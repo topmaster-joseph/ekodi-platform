@@ -133,7 +133,7 @@ jobs:
 
       - name: Run Codex through EKODI short-lived broker in workspace-only sandbox
         id: codex
-        uses: openai/codex-action@v1
+        uses: openai/codex-action@306c6a196a99dcc6582530c396a19d2672d5e9ec # v1
         with:
           openai-api-key: ${{ steps.broker_token.outputs.token }}
           responses-api-endpoint: https://ekodi.kr/ai/api/site-improvement/responses

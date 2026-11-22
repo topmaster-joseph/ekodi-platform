@@ -247,7 +247,7 @@ jobs:
           node --check ekodi-site-improvement-scheduler.js
           node --check ekodi-site-improvement-oidc-broker.js
           test -f .github/workflows/site-improvement-cloud.yml
-          grep -Fq 'uses: openai/codex-action@v1' .github/workflows/site-improvement-cloud.yml
+          grep -Eq 'uses: openai/codex-action@[0-9a-f]{40} # v1' .github/workflows/site-improvement-cloud.yml
           grep -Fq "permission-profile: ':workspace'" .github/workflows/site-improvement-cloud.yml
           grep -Fq 'id-token: write' .github/workflows/site-improvement-cloud.yml
           grep -Fq 'audience=ekodi-site-improvement' .github/workflows/site-improvement-cloud.yml

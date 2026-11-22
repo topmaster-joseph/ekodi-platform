@@ -146,7 +146,7 @@ jobs:
 
   runtime-smoke:
     needs: contract
-    # Playwright 1.55.0 Chromium does not install on ubuntu-26.04 (ubuntu-latest).
+    # Playwright 1.55.x Chromium does not install on ubuntu-26.04 (ubuntu-latest).
     # Keep the browser runtime on the supported LTS image; never skip verification.
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -171,10 +171,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: ekodi-native-chromium-${{ runner.os }}-${{ runner.arch }}-playwright-1.55.0-v1
+          key: ekodi-native-chromium-${{ runner.os }}-${{ runner.arch }}-playwright-1.55.1-v1
       - name: Install isolated Chromium harness
         run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium
       - name: Record native Chromium cache evidence
         if: always()
@@ -183,7 +183,7 @@ jobs:
           CHROMIUM_CACHE_HIT: ${{ steps.chromium-cache.outputs.cache-hit }}
         run: |
           case "${CHROMIUM_CACHE_HIT}" in
-            true) echo '- Chromium binary cache: HIT (Playwright 1.55.0, pinned)' >> "$GITHUB_STEP_SUMMARY" ;;
+            true) echo '- Chromium binary cache: HIT (Playwright 1.55.1, pinned)' >> "$GITHUB_STEP_SUMMARY" ;;
             *) echo '- Chromium binary cache: MISS (isolated installation)' >> "$GITHUB_STEP_SUMMARY" ;;
           esac
       - name: Build bounded browser task

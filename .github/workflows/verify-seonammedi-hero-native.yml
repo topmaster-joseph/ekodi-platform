@@ -52,7 +52,7 @@ jobs:
           node --test test/seonammedi-hero-native.test.mjs test/seonammedi-photo-live-native.test.mjs
       - name: Install first-party Chromium harness
         run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium
       - name: Serve repository's actual static homepage
         shell: bash
@@ -109,7 +109,7 @@ jobs:
           node-version: '22'
       - name: Install first-party Chromium harness
         run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium
       - name: Verify canonical production screen and original banner bytes
         id: canonical
