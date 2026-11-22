@@ -1,0 +1,43 @@
+name: Church LIVE Worship Companion Read-only PR Guard
+
+on:
+  pull_request:
+    paths:
+      - 'tenant-live.js'
+      - 'tenant-live-page.js'
+      - 'tenant-live-church-shell.js'
+      - 'test/church-live-worship-companion-20261122.test.mjs'
+      - '.github/workflows/church-live-worship-companion-pr.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: church-live-companion-pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  church-companion-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Check syntax without accessing broadcast service
+        run: |
+          node --check tenant-live.js
+          node --check tenant-live-page.js
+          node --check tenant-live-church-shell.js
+          node --check test/church-live-worship-companion-20261122.test.mjs
+      - name: Run source, responsive, private rehearsal and tenant isolation contracts
+        run: |
+          node --test \
+            test/church-live-worship-companion-20261122.test.mjs \
+            test/church-live-canonical-rehearsal.test.mjs \
+            test/church-live-canonical-responsive-20261105.test.mjs \
+            test/tenant-live-site-routes.test.mjs

@@ -17,7 +17,8 @@ test('church-only canonical LIVE responsive stylesheet is served as CSS',()=>{
 test('studio monitor grows responsively without changing encoded landscape or portrait media',()=>{
   assert.match(css,/#studioView>\.stage:not\(\.portrait\)\{aspect-ratio:16\/10/);
   assert.match(css,/max-height:min\(76dvh,calc\(100dvh - 130px\)\)/);
-  assert.doesNotMatch(css,/body\[data-tenant="ekodichurch"\] #viewerView>\.viewer-stage/);
+  assert.match(css,/body\[data-tenant="ekodichurch"\] #viewerView>\.viewer-stage/);
+  assert.match(css,/html\[data-church-live-inline="true"\] #viewerView>\.church-live-guide\{display:none!important\}/);
   assert.match(css,/html\[data-church-live-inline=/);
 });
 
