@@ -69,3 +69,12 @@ test('church viewer changes presentation locally without sending a host write',(
   assert.match(local,/following=false/);
   assert.doesNotMatch(local,/fetch\(|method:'PUT'/);
 });
+
+test('meeting and dated worship links retain context and authorized studio sees a compact worship tab',()=>{
+  assert.match(js,/function viewerRoomLink\(roomId\)/);
+  assert.match(js,/query\.set\('activity',activity\)/);
+  assert.match(js,/query\.set\('date',date\)/);
+  assert.match(js,/viewerRoomLink\(state\.room\.id\)/);
+  assert.match(js,/\['church-host-guide','예배'\]/);
+  assert.match(js,/const worshipTab=cfg\.tenant==='ekodichurch'/);
+});
