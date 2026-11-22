@@ -85,8 +85,8 @@ begin
  if length(trim(coalesce(p_name,''))) not between 1 and 80 then raise exception 'INVALID_NAME';end if;
  if length(regexp_replace(coalesce(p_phone,''),'[^0-9]','','g')) not between 8 and 15 then raise exception 'INVALID_PHONE';end if;
  if length(coalesce(p_affiliation,''))>120 or length(coalesce(p_note,''))>500 then raise exception 'INVALID_NOTES';end if;
- if (p_mode='pledge' and p_party_size<>0) or (p_mode<>'pledge' and p_party_size not between 1 and 20) then raise exception 'INVALID_PARTY_SIZE';end if;
- if (p_mode='volunteer' and p_bricks<>0) or (p_mode<>'volunteer' and p_bricks not between 1 and 10000) then raise exception 'INVALID_BRICKS';end if;
+ if (p_mode='pledge' and coalesce(p_party_size,-1)<>0) or (p_mode<>'pledge' and coalesce(p_party_size,0) not between 1 and 20) then raise exception 'INVALID_PARTY_SIZE';end if;
+ if (p_mode='volunteer' and coalesce(p_bricks,-1)<>0) or (p_mode<>'volunteer' and coalesce(p_bricks,0) not between 1 and 10000) then raise exception 'INVALID_BRICKS';end if;
  select a.* into v_activity from public.activities a join public.tenants t on t.id=a.workspace_tenant_id
  where t.slug=lower(trim(p_workspace_slug)) and a.activity_key=p_activity_key for update;
  if not found or v_activity.activity_type<>'volunteer' or v_activity.status<>'published' or v_activity.visibility<>'public'
@@ -108,7 +108,7 @@ begin
  end if;
  if p_mode in ('pledge','both') then
   v_unit:=coalesce((v_activity.metadata->>'unit_price_krw')::integer,0);
-  if v_unit<>1300 then raise exception 'INVALID_CAMPAIGN_UNIT_PRICE';end if;
+  if v_unit<1 or v_unit>100000 or (p_bricks::bigint*v_unit::bigint)>2147483647 then raise exception 'INVALID_CAMPAIGN_UNIT_PRICE';end if;
   select * into v_existing from public.volunteer_pledges
   where activity_id=v_activity.id and person_id=v_person for update;
   if found and v_existing.status='confirmed' and v_existing.bricks<>p_bricks then
@@ -162,7 +162,8 @@ declare v public.volunteer_pledges%rowtype;v_activity public.activities%rowtype;
 begin
  select * into v from public.volunteer_pledges where id=p_pledge_id for update;
  if not found then raise exception 'VOLUNTEER_PLEDGE_NOT_FOUND';end if;
- select a.*,t.slug into v_activity,v_slug from public.activities a join public.tenants t on t.id=a.workspace_tenant_id where a.id=v.activity_id;
+ select a.* into v_activity from public.activities a where a.id=v.activity_id;
+ select t.slug into v_slug from public.tenants t where t.id=v_activity.workspace_tenant_id;
  select exists(select 1 from jsonb_array_elements(public.current_site_activity_contexts()) x
  where x->>'tenant'=v_slug and x->>'authorization_role' in ('tenant_admin','store_owner')) into v_allowed;
  if auth.uid() is null or not v_allowed then raise exception 'VOLUNTEER_ADMIN_FORBIDDEN';end if;
