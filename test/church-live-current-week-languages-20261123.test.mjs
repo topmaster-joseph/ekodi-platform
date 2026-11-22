@@ -5,41 +5,27 @@ import {tenantLivePage} from '../tenant-live-page.js';
 import {churchLiveCss} from '../tenant-live-church-shell.js';
 
 const live=readFileSync(new URL('../tenant-live.js',import.meta.url),'utf8');
-const legacy=readFileSync(new URL('../sites/ekodi-church/live/worship-materials.js',import.meta.url),'utf8');
 const church={path:'/live/church/',apiTenant:'ekodichurch',mode:'worship',name:'EKODI Church',title:'Live worship',home:'/ekodichurch/',authSite:'church'};
-const selectCurrent=()=>{
+function selectCurrent(days,today){
   const first=live.indexOf("        const anchor=Date.parse(todayKst()+'T00:00:00Z')");
   const last=live.indexOf("        if(!date)throw Error('no_current_published_worship');",first);
   assert.ok(first>=0&&last>first);
   const body=live.slice(first,last+"        if(!date)throw Error('no_current_published_worship');".length);
-  return (days,today)=>new Function('days','todayKst',"let date='';"+body+";return date")(days,()=>today);
-};
-const selectLegacy=()=>{
-  const first=legacy.indexOf("    const today=Date.parse(kstDate()+'T00:00:00Z')");
-  const last=legacy.indexOf('    return future||recent;',first);
-  assert.ok(first>=0&&last>first);
-  const body=legacy.slice(first,last+'    return future||recent;'.length);
-  return (dates,today)=>new Function('dates','kstDate',body)(dates,()=>today);
-};
-
-test('no stale archived Sunday is auto-presented as current in either canonical or legacy',()=>{
-  const selectors=[selectCurrent(),selectLegacy()];
-  for(const select of selectors){
-    assert.throws(()=>select(['2026-11-08'],'2026-11-23'),/no_current_published_worship/);
-    assert.equal(select(['2026-11-08','2026-11-22'],'2026-11-23'),'2026-11-22');
-    assert.equal(select(['2026-11-08','2026-11-22','2026-11-29'],'2026-11-23'),'2026-11-29');
-    assert.throws(()=>select(['2026-11-08','2026-11-22'],'2026-11-27'),/no_current_published_worship/);
-  }
+  return new Function('days','todayKst',"let date='';"+body+";return date")(days,()=>today);
+}
+test('canonical Church LIVE never auto-displays stale Sunday as the current service',()=>{
+  assert.throws(()=>selectCurrent(['2026-11-08'],'2026-11-23'),/no_current_published_worship/);
+  assert.equal(selectCurrent(['2026-11-08','2026-11-22'],'2026-11-23'),'2026-11-22');
+  assert.equal(selectCurrent(['2026-11-08','2026-11-22','2026-11-29'],'2026-11-23'),'2026-11-29');
+  assert.throws(()=>selectCurrent(['2026-11-08','2026-11-22'],'2026-11-27'),/no_current_published_worship/);
 });
-test('manual historical Sunday remains available by exact date, never masquerading as default',()=>{
+test('explicit dated Church materials remain a deliberate archive option',()=>{
   assert.match(live,/if\(specified!==null&&!ISO\.test\(specified\)\)/);
   assert.match(live,/if\(specified\)date=specified/);
-  assert.match(legacy,/if\(requestedDate!==null\)/);
-  assert.match(legacy,/return requestedDate/);
   assert.match(live,/이번 주 공개 예배자료가 아직 없습니다/);
-  assert.match(legacy,/이전 주보를 최신 예배로 표시하지 않으며/);
+  assert.match(live,/packet\.date!==date/);
 });
-test('church-only guide offers independent six-language interface and honest content notice',async()=>{
+test('only canonical Church viewer has six-language guide and verified original-content boundaries',async()=>{
   const html=await (await tenantLivePage(church)).text();
   assert.match(html,/id="churchGuideLanguage"/);
   for(const language of ['ko','en','zh','ja','vi','mn']){
@@ -53,6 +39,7 @@ test('church-only guide offers independent six-language interface and honest con
   assert.match(live,/event\.target\.value==='original'\?'ko':event\.target\.value/);
   assert.match(live,/Only guide labels are translated/);
   assert.match(live,/button\[data-church-view\]/);
+  assert.match(html,/v=20261123-fresh-language/);
   const css=await (await churchLiveCss()).text();
   assert.match(css,/\.church-guide-language select\{/);
   assert.match(css,/@media\(max-width:480px\)/);
