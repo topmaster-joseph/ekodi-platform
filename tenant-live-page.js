@@ -6,7 +6,7 @@ export function tenantLivePage(tenant){
   const name=esc(tenant.name),title=esc(tenant.title),home=esc(tenant.home),path=esc(tenant.path),robots=esc(tenant.robots||'index,follow');
   const missionShell=tenant.workspace==='ekodimission';
   const churchShell=tenant.apiTenant==='ekodichurch'&&tenant.path==='/live/church/';
-  const assetVersion=churchShell?'20261122-worship-companion':'20261107-1';
+  const assetVersion=churchShell?'20261123-fresh-language':'20261107-1';
   const shellHead=churchShell?'<link rel="stylesheet" href="/tenant-live-church.css">':missionShell?'<link rel="stylesheet" href="/ekodimission/assets/shell.css">':'';
   const header=churchShell?"<header class=\"church-live-site-header site-header\" id=\"top\">\n    <a class=\"church-live-brand\" href=\"/ekodichurch/\" aria-label=\"에코디교회 홈\"><span class=\"brand-mark\" aria-hidden=\"true\">E</span><span><strong>에코디교회</strong><small>EKODI CHURCH</small></span></a>\n    <button type=\"button\" id=\"churchLiveMenu\" class=\"church-live-menu\" aria-controls=\"churchLiveNav\" aria-expanded=\"false\" aria-label=\"메뉴 열기\"><span></span><span></span></button>\n    <nav id=\"churchLiveNav\" aria-label=\"에코디교회 주요 메뉴\">\n      <a href=\"/ekodichurch/#worship\">예배안내</a>\n      <a href=\"/ekodichurch/#online\" aria-current=\"page\">온라인</a>\n      <a href=\"/ekodichurch/#location\">오시는 길</a>\n      <a href=\"/qtin/church\">큐티인 신청</a>\n      <a href=\"/ekodichurch/my/\">마이페이지</a>\n    </nav>\n    <div class=\"church-live-actions\"><span id=\"liveState\">방송 확인 중</span><a href=\"/ekodichurch/#online\">교회 홈</a></div>\n  </header>"
     :missionShell
