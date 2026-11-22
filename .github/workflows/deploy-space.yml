@@ -479,6 +479,68 @@ jobs:
 
           echo 'Space Supabase production schema contract verified through the Management API before Worker release.'
 
+      - name: Guarded volunteer module schema verification and promotion
+        if: github.event_name != 'pull_request'
+        shell: bash
+        env:
+          VOLUNTEER_DEV_PROJECT: lxcxwbdwwojjkgybbqii
+          VOLUNTEER_MIGRATION: supabase/migrations/20261122140000_volunteer_module_first_campaign.sql
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "\${SUPABASE_SCHEMA_PREFLIGHT_MODE:-}" = management
+          test -n "\${SUPABASE_ACCESS_TOKEN:-}"
+          test -f "$VOLUNTEER_MIGRATION"
+          ! grep -Eiq 'drop[[:space:]]+(table|function)|truncate[[:space:]]|delete[[:space:]]+from' "$VOLUNTEER_MIGRATION"
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          cat > "$tmp/proof.sql" <<'SQL'
+          select
+            (select count(*)=1 from public.activities a join public.tenants t on t.id=a.workspace_tenant_id
+             where t.slug='ekodimission' and a.activity_key='261205-coal-delivery'
+               and a.title='제12회 사랑의 연탄 배달' and a.capacity=50
+               and a.status='published' and a.visibility='public'
+               and a.metadata->>'registration_deadline'='2026-11-27T12:00:00+09:00'
+               and a.metadata->>'unit_price_krw'='1300') as campaign,
+            to_regclass('public.volunteer_pledges') is not null as pledge_table,
+            to_regclass('public.volunteer_pledge_audit') is not null as audit_table,
+            to_regprocedure('public.volunteer_submit_application(text,text,text,text,text,integer,integer,text,boolean,boolean,text)') is not null as submit_rpc,
+            to_regprocedure('public.volunteer_campaign_public_status(text,text)') is not null as public_status_rpc,
+            to_regprocedure('public.volunteer_pledge_admin_snapshot(text,text)') is not null as operator_rpc,
+            to_regprocedure('public.volunteer_pledge_admin_confirm(uuid)') is not null as confirm_rpc,
+            coalesce((select relrowsecurity from pg_class where oid=to_regclass('public.volunteer_pledges')),false) as pledge_rls,
+            coalesce((select relrowsecurity from pg_class where oid=to_regclass('public.volunteer_pledge_audit')),false) as audit_rls,
+            not coalesce(has_table_privilege('anon',to_regclass('public.volunteer_pledges'),'SELECT'),false) as no_public_pledge_reads,
+            not coalesce(has_table_privilege('authenticated',to_regclass('public.volunteer_pledges'),'SELECT'),false) as no_member_pledge_reads;
+          SQL
+          verify() {
+            local project="$1" outfile="$2" code
+            jq -Rs '{query:.,read_only:true}' "$tmp/proof.sql" > "$tmp/read.json"
+            code=$(curl -sS --retry 2 --max-time 75 -o "$outfile" -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$project/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H "Content-Type: application/json" --data-binary @"$tmp/read.json")
+            test "$code" = 201 || { echo "Volunteer schema proof inaccessible in $project (HTTP $code)"; exit 1; }
+          }
+          ready() {
+            jq -e 'length==1 and (.[0] | all(.[]; .==true))' "$1" >/dev/null
+          }
+          verify "$VOLUNTEER_DEV_PROJECT" "$tmp/dev.json"
+          ready "$tmp/dev.json" || { echo "DEV volunteer proof failed; production migration prohibited."; cat "$tmp/dev.json"; exit 1; }
+          verify "$SUPABASE_PROJECT_REF" "$tmp/prod-before.json"
+          if ! ready "$tmp/prod-before.json"; then
+            jq -Rs '{query:.,read_only:false}' "$VOLUNTEER_MIGRATION" > "$tmp/write.json"
+            code=$(curl -sS --retry 2 --max-time 75 -o "$tmp/apply-result.json" -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H "Content-Type: application/json" --data-binary @"$tmp/write.json")
+            test "$code" = 201 || { echo "Volunteer production migration failed (HTTP $code)"; cat "$tmp/apply-result.json"; exit 1; }
+          fi
+          verify "$SUPABASE_PROJECT_REF" "$tmp/prod-after.json"
+          ready "$tmp/prod-after.json" || { echo "Volunteer production schema contract not satisfied"; cat "$tmp/prod-after.json"; exit 1; }
+          echo 'Volunteer DEV -> PROD scoped schema proof passed before Worker release.'
+
       - name: Stage and verify approved BBQ store workspace before production
         if: github.event_name != 'pull_request'
         shell: bash
