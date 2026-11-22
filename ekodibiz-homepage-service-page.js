@@ -1,5 +1,5 @@
 // EKODIBIZ 홈페이지 구독 서비스 — 화면 탭(신청·요금제·업종별 기능·이용 기준) + 단계형 신청(유형→요금제 설명→결제·추가→상담/바로 구독)
-// Canonical public page: https://ekodi.kr/homepage (예전 /ekodibiz/homepage 는 301), 관리자: https://ekodi.kr/homepage/admin
+// Canonical public page: https://ekodi.kr/homepage , 관리자: https://ekodi.kr/homepage/admin
 // 신청서는 별도 저장소 없이 기존 공개 문의 API(/mail/api/contact)로 joseph@ekodi.kr 에 전달된다.
 // 예상 구독료 계산은 estimateHomepageSubscription() 하나만 정본으로 쓰고, 같은 함수 원문을 브라우저에 그대로 싣는다.
 export const EKODIBIZ_HOMEPAGE_SERVICE_PATH = '/homepage';
@@ -20,7 +20,7 @@ export const FEATURE_STATUS = Object.freeze({
 export function featureStatus(text = '') {
   const t = String(text).trim().replace(/^S\d \+ /, '');
   if (/리뷰 모음|온라인 주문·결제|회원·포인트|POS/.test(t)) return 'planned';
-  if (/^소개 1페이지|^모바일 최적화|^보안\(SSL\)·호스팅|^방문통계|SEO\/AEO/.test(t)) return 'auto';
+  if (/^소개 1페이지|^모바일 최적화|^보안\(SSL\)·호스팅|^방문통계|SEO\/AEO|직접 올리기|^사진 \d+장/.test(t)) return 'auto';
   return 'setup';
 }
 
@@ -35,13 +35,13 @@ export const HOMEPAGE_PRICING = Object.freeze({
   taxIncluded: true,
   plans: {
     S1: { id: 'S1', name: 'S1 기본형', setup: 0, monthly: 9900, includes: { booking: false, social: 0, lang: 0, payment: false },
-      scope: '소개 1페이지(글·사진·활동 또는 서비스·전화·지도·외부 링크), 모바일 최적화, 보안(SSL)·호스팅, 방문통계, 월 1회 수정' },
+      scope: '소개 1페이지(글·사진·활동 또는 서비스·전화·지도·외부 링크), 대표 이미지·사진 6장 직접 올리기, 모바일 최적화, 보안(SSL)·호스팅, 방문통계, 월 1회 수정' },
     S2: { id: 'S2', name: 'S2 소식형', setup: 0, monthly: 19900, includes: { booking: false, social: 0, lang: 0, payment: false },
-      scope: '5~7페이지(메뉴/서비스·갤러리·소식·오시는 길), 네이버·구글 검색 등록, 기본 SEO/AEO, 문의폼, 월 3회 수정' },
+      scope: '5~7페이지(메뉴/서비스·갤러리·소식·오시는 길), 사진 20장·게시판(소식)·일정표 직접 올리기, 네이버·구글 검색 등록, 기본 SEO/AEO, 문의폼, 월 3회 수정' },
     S3: { id: 'S3', name: 'S3 운영형', setup: 0, monthly: 29900, includes: { booking: true, social: 1, lang: 0, payment: false },
-      scope: 'S2 + 예약/견적 신청·휴대폰 알림, 리뷰 모음, 소식글 AI 초안 월 4건, 소셜 자동게시 1채널, 월간 성과 리포트, 월 5회 기본 수정' },
+      scope: 'S2 + 사진 50장, 예약/견적 신청·휴대폰 알림, 리뷰 모음, 소식글 AI 초안 월 4건, 소셜 자동게시 1채널, 월간 성과 리포트, 월 5회 기본 수정' },
     S4: { id: 'S4', name: 'S4 확장형', setup: 0, monthly: 49900, includes: { booking: true, social: 1, lang: 1, payment: true },
-      scope: 'S3 + 온라인 주문·결제, 회원·포인트, POS·예약 시스템 연동, 다국어 1개, 전담 관리' },
+      scope: 'S3 + 사진 100장, 온라인 주문·결제, 회원·포인트, POS·예약 시스템 연동, 다국어 1개, 전담 관리' },
   },
   addons: { page: 2000, booking: 5000, social: 5000, lang: 5000, payment: 10000 },
   oneTime: { logo: 50000, photo: 50000 },
@@ -135,22 +135,18 @@ const won = (n) => `${Number(n).toLocaleString('ko-KR')}원`;
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // 사용자 안내·신청·내 홈페이지 관리: /homepage  ·  꼭 필요한 관리자 기능: /homepage/admin
-// 예전 주소(/ekodibiz/homepage 등)는 /homepage 로 영구 이동한다.
+// 예전 /ekodibiz/homepage 계열 주소는 완전히 폐지했다(리디렉션 없음).
 export function isEkodiBizHomepageServicePath(pathname = '') {
   return /^\/homepage\/?$/i.test(String(pathname || ''));
 }
 export function isEkodiBizHomepageAdminPath(pathname = '') {
   return /^\/homepage\/admin\/?$/i.test(String(pathname || ''));
 }
-export function isEkodiBizHomepageLegacyPath(pathname = '') {
-  return /^\/ekodibiz\/(?:homepage|homepage-service|web-subscription)\/?$/i.test(String(pathname || ''));
-}
 export function ekodiBizHomepageRoute(request, url) {
   if (!['GET', 'HEAD'].includes(request.method)) return null;
   const head = request.method === 'HEAD';
   if (isEkodiBizHomepageServicePath(url.pathname)) return ekodiBizHomepageServiceResponse({ head });
   if (isEkodiBizHomepageAdminPath(url.pathname)) return ekodiBizHomepageAdminResponse({ head });
-  if (isEkodiBizHomepageLegacyPath(url.pathname)) return new Response(null, { status: 301, headers: { location: `${EKODIBIZ_HOMEPAGE_SERVICE_PATH}${url.search}${url.hash}`, 'cache-control': 'public, max-age=3600' } });
   return null;
 }
 
@@ -165,7 +161,7 @@ async function hpToken(){var s=hpSession();if(!s)return '';var now=Math.floor(Da
 async function hpRpc(name,body){var t=await hpToken();if(!t){var e=new Error('login_required');e.code='login_required';throw e;}
   var r=await fetch(SB+'/rest/v1/rpc/'+name,{method:'POST',headers:{apikey:SBK,authorization:'Bearer '+t,'content-type':'application/json'},cache:'no-store',body:JSON.stringify(body||{})});
   var d=await r.json().catch(function(){return {};});if(!r.ok)throw new Error(d.message||('요청 실패 ('+r.status+')'));
-  if(d&&d.ok===false){var x=new Error({forbidden:'권한이 없습니다.',not_found:'대상을 찾을 수 없습니다.',invalid_phone:'전화번호를 확인해 주세요.',login_required:'로그인이 필요합니다.'}[d.error]||d.error);x.code=d.error;throw x;}return d;}
+  if(d&&d.ok===false){var x=new Error({forbidden:'권한이 없습니다.',not_found:'대상을 찾을 수 없습니다.',invalid_phone:'전화번호를 확인해 주세요.',login_required:'로그인이 필요합니다.',plan_limit:'현재 요금제에서 쓸 수 없거나 한도를 넘었습니다.',invalid_date:'날짜를 확인해 주세요.',title_required:'제목을 입력해 주세요.',too_many:'더 이상 추가할 수 없습니다.',invalid_path:'사진 경로가 올바르지 않습니다.'}[d.error]||d.error);x.code=d.error;throw x;}return d;}
 function hpLogin(back){return 'https://ekodi.kr/auth/?return_to='+encodeURIComponent(back);}
 var HP_STATUS={received:'상담 접수',provisioned:'개설됨·공개 대기',published:'공개 중',cancelled:'취소'};
 var HP_AUD={personal:'개인',business:'매장·기업',institution:'기관·학교',community:'단체',organization:'조직',event:'행사·프로젝트'};
@@ -260,7 +256,7 @@ export function ekodiBizHomepageServiceHtml() {
     .actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}button.secondary{background:transparent;color:var(--accent);border:2px solid var(--accent)}
     .st{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:800;margin-right:4px;vertical-align:1px}.st-auto{background:#1f6b4f;color:#fff}.st-setup{background:#e7eefb;color:#21437a}.st-planned{background:#f6ecd9;color:#7a4b06}.status-list{columns:1;list-style:none;padding-left:0}.status-list li{margin:.25rem 0}.legend{line-height:2}
     ${SHARED_ROW_CSS}
-    .mine-card{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px;background:var(--card);display:grid;gap:8px}.mine-card h3{margin:0}.mine-card form{display:grid;gap:8px}.admin-box{border:2px dashed var(--accent);border-radius:14px;padding:12px 14px;margin-top:14px}
+    .mine-card{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px;background:var(--card);display:grid;gap:8px}.mine-card h3{margin:0}.mine-card form{display:grid;gap:8px}.admin-box{border:2px dashed var(--accent);border-radius:14px;padding:12px 14px;margin-top:14px}.mgr-box summary{font-weight:800;cursor:pointer;min-height:40px;display:flex;align-items:center}.mgr h4{margin:.9rem 0 .3rem}.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}.thumbs figure{margin:0;display:grid;gap:4px}.thumbs img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px}.thumbs button{min-height:32px;padding:2px 8px;font-size:12px}.file{display:inline-flex;gap:8px;align-items:center;font-weight:700;margin:.4rem 0}.file input{min-height:auto;border:0;padding:0}.mgr .item{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--line)}.mgr .item button{min-height:30px;padding:2px 10px;font-size:12px}.mgr form{display:grid;gap:6px;margin-bottom:8px}
     .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
     @media(max-width:640px){.plan-grid{grid-template-columns:1fr 1fr}.topbar{position:static}.page-tabs{top:0}.page-tabs [role=tab]{padding:8px 12px;font-size:14px}.actions{grid-template-columns:1fr}}
     :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
@@ -473,15 +469,45 @@ export function ekodiBizHomepageServiceHtml() {
       '<form data-slug="'+hpEsc(r.site_slug)+'"><label>제목 <input name="headline" maxlength="120" value="'+hpEsc(r.headline||'')+'"></label><label>소개 <textarea name="intro" maxlength="1200">'+hpEsc(r.intro||'')+'</textarea></label>'+
       '<div class="row"><label>전화 <input name="phone" maxlength="20" inputmode="tel" value="'+hpEsc(r.phone||'')+'"></label><label>주소·장소 <input name="address" maxlength="200" value="'+hpEsc(r.address||'')+'"></label></div>'+
       '<label>운영시간·일정 <input name="hours" maxlength="200" value="'+hpEsc(r.hours||'')+'"></label><label>링크 (한 줄에 하나: 이름 | https://주소) <textarea name="links" placeholder="인스타그램 | https://instagram.com/...">'+hpEsc(linksToLines(r.links))+'</textarea></label>'+
-      '<button type="submit" class="primary">저장</button><span class="status" role="status"></span></form>';}
+      '<button type="submit" class="primary">저장</button><span class="status" role="status"></span></form>'+
+      '<details class="mgr-box" open><summary>사진 · 게시판 · 일정표</summary><div class="mgr" data-mgr="'+hpEsc(r.site_slug)+'"><p class="note">불러오는 중입니다.</p></div></details>';}
     else h+='<p class="note">상담 신청입니다. 담당자가 연락드린 뒤 바로 구독으로 전환하면 홈페이지 주소가 만들어집니다.</p>';
     return h+'</article>';}
+  var MEDIA=SB+'/storage/v1/object/public/homepage-media/';
+  function mediaUrl(p){return MEDIA+String(p).split('/').map(encodeURIComponent).join('/');}
+  async function shrink(file){var img=await createImageBitmap(file);var k=Math.min(1,1600/Math.max(img.width,img.height));var c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*k));c.height=Math.max(1,Math.round(img.height*k));c.getContext('2d').drawImage(img,0,0,c.width,c.height);return await new Promise(function(res){c.toBlob(res,'image/jpeg',0.85);});}
+  async function storageCall(method,name,blob){var t=await hpToken();if(!t){var e=new Error('로그인이 필요합니다.');e.code='login_required';throw e;}
+    var r=await fetch(SB+'/storage/v1/object/homepage-media/'+name,{method:method,headers:Object.assign({apikey:SBK,authorization:'Bearer '+t},blob?{'content-type':'image/jpeg','x-upsert':'false'}:{}),body:blob||undefined});
+    if(!r.ok&&method!=='DELETE')throw new Error('사진 저장에 실패했습니다 ('+r.status+')');}
+  var PLAN_NOTE='S2 이상 요금제에서 사용할 수 있습니다.';
+  function renderMgr(el,d){var L=d.limits||{},media=d.media||[],hero=media.filter(function(m){return m.kind==='hero';})[0],gal=media.filter(function(m){return m.kind==='gallery';});
+    var h='<h4>대표 이미지</h4>'+(hero?'<div class="thumbs"><figure><img src="'+hpEsc(mediaUrl(hero.path))+'" alt=""><button type="button" class="ghost" data-del-media="'+hpEsc(hero.id)+'">삭제</button></figure></div>':'<p class="note">아직 없습니다. 홈페이지 맨 위에 크게 보입니다.</p>')+
+      '<label class="file">'+(hero?'대표 이미지 바꾸기':'대표 이미지 올리기')+' <input type="file" accept="image/*" data-up="hero"></label>';
+    h+='<h4>갤러리 <span class="note">('+gal.length+' / '+(L.gallery||0)+'장)</span></h4><div class="thumbs">'+gal.map(function(m){return '<figure><img src="'+hpEsc(mediaUrl(m.path))+'" alt="" loading="lazy"><button type="button" class="ghost" data-del-media="'+hpEsc(m.id)+'">삭제</button></figure>';}).join('')+'</div>'+
+      (gal.length<(L.gallery||0)?'<label class="file">사진 추가 (여러 장 가능) <input type="file" accept="image/*" multiple data-up="gallery"></label>':'<p class="note">현재 요금제의 갤러리 한도('+(L.gallery||0)+'장)를 모두 사용했습니다.</p>');
+    h+='<h4>게시판(소식)</h4>'+(L.board?'<form data-post><input name="title" maxlength="120" placeholder="제목" required><textarea name="body" maxlength="5000" placeholder="내용"></textarea><button type="submit" class="primary">소식 올리기</button></form>'+(d.posts||[]).map(function(p){return '<div class="item"><b>'+hpEsc(p.title)+'</b> <span class="note">'+hpEsc(String(p.created_at||'').slice(0,10))+'</span> <button type="button" class="ghost" data-del-post="'+hpEsc(p.id)+'">삭제</button></div>';}).join(''):'<p class="note">'+PLAN_NOTE+'</p>');
+    h+='<h4>일정표</h4>'+(L.schedule?'<form data-event><div class="row"><input name="event_date" type="date" required><input name="event_time" maxlength="40" placeholder="시간 (예: 오전 10시)"></div><input name="title" maxlength="120" placeholder="일정 이름" required><input name="place" maxlength="120" placeholder="장소"><button type="submit" class="primary">일정 추가</button></form>'+(d.events||[]).map(function(e){return '<div class="item"><b>'+hpEsc(e.event_date)+'</b> '+hpEsc(e.event_time||'')+' '+hpEsc(e.title)+(e.place?' · '+hpEsc(e.place):'')+' <button type="button" class="ghost" data-del-event="'+hpEsc(e.id)+'">삭제</button></div>';}).join(''):'<p class="note">'+PLAN_NOTE+'</p>');
+    el.innerHTML=h+'<p class="status" role="status"></p>';}
+  async function loadMgr(slug){var el=box.querySelector('[data-mgr="'+slug+'"]');if(!el)return;try{renderMgr(el,await hpRpc('homepage_site_manage',{p_slug:slug}));}catch(e){el.innerHTML='<p class="status error">'+hpEsc(e.message)+'</p>';}}
+  function mgrOf(t){var el=t.closest('[data-mgr]');return el?{el:el,slug:el.getAttribute('data-mgr'),st:el.querySelector('.status')}:null;}
+  function say(m,txt,ok){if(m&&m.st){m.st.className='status '+(ok?'ok':'error');m.st.textContent=txt;}}
+  box.addEventListener('change',async function(e){var inp=e.target.closest('input[data-up]');if(!inp||!inp.files||!inp.files.length)return;var m=mgrOf(inp),kind=inp.getAttribute('data-up');inp.disabled=true;say(m,'사진을 올리는 중입니다.',true);
+    try{for(var i=0;i<inp.files.length;i++){var name=m.slug+'/'+Date.now().toString(36)+Math.random().toString(36).slice(2,8)+'.jpg';await storageCall('POST',name,await shrink(inp.files[i]));
+        try{var r=await hpRpc('homepage_media_add',{p_slug:m.slug,p_kind:kind,p_path:name,p_caption:null});if(r.replaced_path)await storageCall('DELETE',r.replaced_path);}catch(err){await storageCall('DELETE',name);throw err;}}
+      await loadMgr(m.slug);var nm=box.querySelector('[data-mgr="'+m.slug+'"]');if(nm)say({st:nm.querySelector('.status')},'저장했습니다.',true);}catch(err){say(m,err.message);inp.disabled=false;}});
+  box.addEventListener('click',async function(e){var b=e.target.closest('[data-del-media],[data-del-post],[data-del-event]');if(!b)return;var m=mgrOf(b);if(!window.confirm('삭제할까요?'))return;b.disabled=true;
+    try{if(b.hasAttribute('data-del-media')){var r=await hpRpc('homepage_media_delete',{p_id:b.getAttribute('data-del-media')});if(r.path)await storageCall('DELETE',r.path);}
+      else if(b.hasAttribute('data-del-post'))await hpRpc('homepage_post_delete',{p_id:b.getAttribute('data-del-post')});
+      else await hpRpc('homepage_event_delete',{p_id:b.getAttribute('data-del-event')});await loadMgr(m.slug);}catch(err){b.disabled=false;say(m,err.message);}});
+  box.addEventListener('submit',async function(e){var f=e.target.closest('form[data-post],form[data-event]');if(!f)return;e.preventDefault();var m=mgrOf(f),btn=f.querySelector('button');btn.disabled=true;
+    try{if(f.hasAttribute('data-post'))await hpRpc('homepage_post_save',{p_slug:m.slug,p_id:null,p_title:f.title.value,p_body:f.body.value});
+      else await hpRpc('homepage_event_save',{p_slug:m.slug,p_id:null,p:{title:f.title.value,event_date:f.event_date.value,event_time:f.event_time.value,place:f.place.value}});await loadMgr(m.slug);}catch(err){btn.disabled=false;say(m,err.message);}});
   async function loadAdmin(){var w=document.getElementById('adminWaiting');try{var d=await hpRpc('homepage_subscription_admin_list',{p_limit:200});var rows=(d.requests||[]).filter(function(r){return r.site_slug&&!r.published;});w.innerHTML=rows.length?rows.map(hpAdminRow).join(''):'<p class="note">공개를 기다리는 홈페이지가 없습니다.</p>';}catch(e){w.innerHTML='<p class="status error">'+hpEsc(e.message)+'</p>';}}
   async function load(){box.innerHTML='<p class="note">불러오는 중입니다.</p>';
     try{var d=await hpRpc('homepage_my_requests',{});var h='<p class="note">로그인 계정: '+hpEsc(d.email)+'</p>';
       h+=(d.requests||[]).length?d.requests.map(card).join(''):'<p>이 계정으로 접수된 신청이 없습니다. 신청할 때 쓴 이메일 계정으로 로그인했는지 확인해 주세요.</p>';
       if(d.is_admin)h+='<section class="admin-box"><h3>관리자 · 공개 대기</h3><div id="adminWaiting"><p class="note">불러오는 중입니다.</p></div><p><a href="/homepage/admin">전체 신청 관리 →</a></p></section>';
-      box.innerHTML=h;if(d.is_admin){hpBindPublish(document.getElementById('adminWaiting'),loadAdmin);loadAdmin();}
+      box.innerHTML=h;[].forEach.call(box.querySelectorAll('[data-mgr]'),function(el){loadMgr(el.getAttribute('data-mgr'));});if(d.is_admin){hpBindPublish(document.getElementById('adminWaiting'),loadAdmin);loadAdmin();}
     }catch(e){if(e.code==='login_required')box.innerHTML='<p>신청할 때 쓴 이메일 계정으로 로그인해 주세요.</p><a class="cta" href="'+hpLogin('https://ekodi.kr/homepage#mine')+'">로그인하고 내 홈페이지 관리</a>';else box.innerHTML='<p class="status error">불러오지 못했습니다: '+hpEsc(e.message)+'</p>';}}
   box.addEventListener('submit',async function(e){var f=e.target.closest('form[data-slug]');if(!f)return;e.preventDefault();var st=f.querySelector('.status'),b=f.querySelector('button');b.disabled=true;st.className='status';st.textContent='저장 중입니다.';
     try{await hpRpc('homepage_site_owner_update',{p_slug:f.getAttribute('data-slug'),p:{headline:f.headline.value,intro:f.intro.value,phone:f.phone.value,address:f.address.value,hours:f.hours.value,links:linesToLinks(f.links.value)}});st.className='status ok';st.textContent='저장했습니다. 공개 중인 홈페이지는 몇 분 안에 바뀝니다.';}
