@@ -17,7 +17,7 @@ test('canonical Church uses actual two-pane LIVE order/PPT + A/V layout, other t
   assert.match(html,/data-church-view="split"/);
   assert.match(html,/data-church-view="video"/);
   assert.match(html,/data-church-view="guide"/);
-  assert.match(html,/v=20261122-worship-companion/);
+  assert.match(html,/v=20261123-fresh-language/);
   for(const tenant of [make('/live/biz/','ekodibiz'),make('/ekodichurch/live/','ekodichurch')]){
     const other=await responseBody(tenant);
     assert.doesNotMatch(other,/id="churchLiveGuide"|id="churchHostGuide"/);

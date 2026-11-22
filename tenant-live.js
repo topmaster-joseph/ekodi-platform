@@ -457,6 +457,48 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
     event:['모임 안내','순서 안내','주제 진행','질문과 나눔','마무리'],
     mission:['사역 안내','현장 이야기','함께 나눔','기도와 협력','마무리']
   };
+
+  // Guide UI localization is intentionally distinct from translated audio/captions.
+  // Only fixed interface terms and recognized liturgy labels are localized;
+  // Scripture, names, slide copy and other published source material remain untouched.
+  const GUIDE_UI={
+    ko:['예배·모임 진행 안내','안내 언어','안내 + 영상','영상 집중','안내 집중','순서지','안내 PPT','진행자 따라가기','이전','다음','공식 예배자료 열기','현재 안내','진행 안내만 번역합니다. 설교·PPT 원문과 통역 음성은 별도입니다.'],
+    en:['Worship & meeting guide','Guide language','Guide + video','Video focus','Guide focus','Order of service','Presentation','Follow presenter','Previous','Next','Open official materials','Current item','Only guide labels are translated. Sermon, presentation text and interpreted audio are separate.'],
+    zh:['礼拜与聚会指南','导览语言','指南 + 视频','专注视频','专注指南','礼拜程序','演示文稿','跟随主持人','上一项','下一项','查看官方资料','当前项目','仅翻译导览标签。讲道、PPT 正文及传译音频均为独立内容。'],
+    ja:['礼拝・集会ガイド','案内言語','案内 + 映像','映像に集中','案内に集中','礼拝順序','発表資料','司会者に追従','前へ','次へ','公式資料を見る','現在の項目','翻訳は案内表示のみです。説教・PPT本文・通訳音声は別です。'],
+    vi:['Hướng dẫn thờ phượng & nhóm họp','Ngôn ngữ hướng dẫn','Hướng dẫn + video','Tập trung video','Tập trung hướng dẫn','Thứ tự thờ phượng','Bài trình chiếu','Theo người dẫn','Trước','Tiếp','Mở tài liệu chính thức','Mục hiện tại','Chỉ dịch nhãn hướng dẫn. Bài giảng, nội dung slide và âm thanh phiên dịch là riêng biệt.'],
+    mn:['Мөргөл ба цуглааны хөтөч','Хөтчийн хэл','Хөтөч + дүрс','Дүрсэнд төвлөрөх','Хөтөчид төвлөрөх','Мөргөлийн дараалал','Танилцуулга','Хөтлөгчийг дагах','Өмнөх','Дараах','Албан материалыг нээх','Одоогийн хэсэг','Зөвхөн хөтчийн шошгыг орчуулна. Номлол, слайд болон орчуулгын дуу тусдаа.']
+  };
+  const LITURGY={
+    en:{'예배부름':'Call to Worship','공동체 고백':'Community Confession','경배찬양':'Praise','대표기도':'Opening Prayer','헌신찬양':'Song of Dedication','성경봉독':'Scripture Reading','말씀나눔':'Sharing the Word','나눔기도':'Prayer of Sharing','결단찬양':'Response Song','교회소식':'Church Notices','주기도문':"Lord's Prayer",'입례찬송':'Entrance Hymn','회개찬송':'Confession Hymn','말씀찬송':'Hymn before the Word','파송찬송':'Sending Hymn'},
+    zh:{'예배부름':'宣召','공동체 고백':'共同体认信','경배찬양':'赞美','대표기도':'代表祷告','헌신찬양':'奉献赞美','성경봉독':'宣读圣经','말씀나눔':'分享神的话语','나눔기도':'分享祷告','결단찬양':'回应诗歌','교회소식':'教会消息','주기도문':'主祷文','입례찬송':'入堂诗','회개찬송':'认罪诗歌','말씀찬송':'讲道前诗歌','파송찬송':'差遣诗歌'},
+    ja:{'예배부름':'招詞','공동체 고백':'共同体の告白','경배찬양':'賛美','대표기도':'代表祈祷','헌신찬양':'献身の賛美','성경봉독':'聖書朗読','말씀나눔':'みことばの分かち合い','나눔기도':'分かち合いの祈り','결단찬양':'応答賛美','교회소식':'教会のお知らせ','주기도문':'主の祈り','입례찬송':'入堂賛美','회개찬송':'悔い改めの賛美','말씀찬송':'みことばの賛美','파송찬송':'派遣の賛美'},
+    vi:{'예배부름':'Kêu gọi thờ phượng','공동체 고백':'Tuyên xưng cộng đồng','경배찬양':'Ngợi khen','대표기도':'Cầu nguyện đại diện','헌신찬양':'Thánh ca dâng mình','성경봉독':'Đọc Kinh Thánh','말씀나눔':'Chia sẻ Lời Chúa','나눔기도':'Cầu nguyện chia sẻ','결단찬양':'Thánh ca đáp ứng','교회소식':'Thông báo hội thánh','주기도문':'Bài cầu nguyện Chúa dạy','입례찬송':'Thánh ca nhập lễ','회개찬송':'Thánh ca ăn năn','말씀찬송':'Thánh ca trước Lời Chúa','파송찬송':'Thánh ca sai đi'},
+    mn:{'예배부름':'Мөргөлд урих','공동체 고백':'Нийтийн итгэлийн тунхаг','경배찬양':'Магтан дуу','대표기도':'Төлөөлөх залбирал','헌신찬양':'Өөрийгөө зориулах магтан дуу','성경봉독':'Библи унших','말씀나눔':'Үгийг хуваалцах','나눔기도':'Хамтын залбирал','결단찬양':'Хариу магтан дуу','교회소식':'Чуулганы мэдээ','주기도문':'Эзэний залбирал','입례찬송':'Орох магтан дуу','회개찬송':'Гэмшлийн магтан дуу','말씀찬송':'Үгийн өмнөх магтан дуу','파송찬송':'Илгээх магтан дуу'}
+  };
+  let guideLanguage='ko',guideLanguageManual=false;
+  try{
+    const saved=sessionStorage.getItem('ekodi:church:guide-language');
+    if(saved&&Object.hasOwn(GUIDE_UI,saved)){guideLanguage=saved;guideLanguageManual=true}
+  }catch{}
+  function translatedOrder(source){
+    const original=String(source||'');
+    if(guideLanguage==='ko')return original;
+    const base=original.replace(/^\*\s*/,'').split(/\s+[—–]\s+/)[0].trim();
+    const translated=LITURGY[guideLanguage]?.[base];
+    return translated?translated+' · '+original:original;
+  }
+  function guideLanguageTo(value,manual=false){
+    if(!Object.hasOwn(GUIDE_UI,value))return;
+    guideLanguage=value;if(manual)guideLanguageManual=true;
+    const t=GUIDE_UI[value],ids=['churchGuideHeading','churchGuideLanguageLabel',null,null,null,'churchGuideOrderTab','churchGuideSlidesTab','churchGuideFollow','churchGuidePrev','churchGuideNext','churchGuideSource',null,'churchGuideLanguageNote'];
+    ids.forEach((id,i)=>{if(id&&$(id))$(id).textContent=t[i]});
+    document.querySelectorAll('button[data-church-view]').forEach((button,i)=>{if(t[i+2])button.textContent=t[i+2]});
+    $('churchGuideLanguage').value=value;
+    guide.lang=value;
+    if(manual){try{sessionStorage.setItem('ekodi:church:guide-language',value)}catch{}}
+    render();
+  }
   let date='',deck='',steps=[],slides=[],index=0,revision=0,room='',role='',busy=false,following=true,tab='order';
   const status=msg=>{$('churchGuideStatus').textContent=msg};
   const hostStatus=msg=>{$('churchHostGuideStatus').textContent=msg};
@@ -475,7 +517,7 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
   function viewTo(name){
     if(!['split','video','guide'].includes(name))return;
     $('viewerView').dataset.churchView=name;
-    document.querySelectorAll('[data-church-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.churchView===name)));
+    document.querySelectorAll('button[data-church-view]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.churchView===name)));
     try{sessionStorage.setItem('ekodi:church:live-view',name)}catch{}
   }
   function render(){
@@ -489,7 +531,7 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
     if(!slides.length&&tab==='slides')tabTo('order');
     const slide=slides[index]||null;
     const title=String(slide?.title||steps[index]?.[0]||'진행 안내');
-    $('churchGuideCurrent').textContent='현재 안내 · '+title.replace(/\s+/g,' ');
+    $('churchGuideCurrent').textContent=GUIDE_UI[guideLanguage][11]+' · '+title.replace(/\s+/g,' ');
     $('churchGuideSlideKicker').textContent=String(slide?.kicker||'EKODI CHURCH');
     $('churchGuideSlideTitle').textContent=title;
     const lines=$('churchGuideSlideLines');lines.replaceChildren();
@@ -502,7 +544,7 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
     steps.forEach((row,i)=>{
       const li=document.createElement('li');if(i===current){li.className='active';li.setAttribute('aria-current','step')}
       const number=document.createElement('span');number.className='order-number';number.textContent=String(i+1).padStart(2,'0');
-      const info=document.createElement('div'),strong=document.createElement('strong');strong.textContent=String(row[0]||'');info.append(strong);
+      const info=document.createElement('div'),strong=document.createElement('strong');strong.textContent=translatedOrder(row[0]);info.append(strong);
       if(row[1]){const small=document.createElement('small');small.textContent=String(row[1]);info.append(small)}
       li.append(number,info);list.append(li);
     });
@@ -526,7 +568,13 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
         if(list?.schema!=='ekodi.church.worship.index.v1'||!Array.isArray(list.services))throw Error('invalid weekly list');
         const days=[...new Set(list.services.filter(item=>ISO.test(item?.date)&&item.page==='/ekodichurch/worship/'+item.date+'/').map(item=>item.date))].sort();
         if(!days.length)throw Error('no worship packet');
-        date=days.find(item=>item>=todayKst())||days.at(-1);
+        // A published packet is eligible only for this worship week; never label an old Sunday as today's.
+        const anchor=Date.parse(todayKst()+'T00:00:00Z');
+        const daysAway=item=>Math.round((Date.parse(item+'T00:00:00Z')-anchor)/86400000);
+        const upcoming=days.find(item=>daysAway(item)>=0&&daysAway(item)<=6);
+        const recent=days.slice().reverse().find(item=>daysAway(item)<0&&daysAway(item)>=-3);
+        date=upcoming||recent||'';
+        if(!date)throw Error('no_current_published_worship');
       }
       const response=await fetch('/ekodichurch/worship/'+date+'/materials.json',{cache:'no-store',credentials:'omit'});
       if(!response.ok)throw Error('packet unavailable');
@@ -541,7 +589,7 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
     }catch{
       steps=[['예배자료 확인','공식 예배자료 게시 여부를 확인해 주세요.']];slides=[];deck='';
       $('churchGuideDate').textContent='원본 확인 필요';
-      status('순서지·PPT를 불러오지 못했습니다. 오른쪽 영상은 정상적으로 시청할 수 있습니다.');
+      status('이번 주 공개 예배자료가 아직 없습니다. 지난 주보를 오늘 자료로 표시하지 않으며, 오른쪽 영상은 시청 가능합니다.');
       hostStatus('예배자료 게시 여부를 먼저 확인해 주세요.');render();
     }
   }
@@ -592,10 +640,15 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
   $('churchHostPrev').addEventListener('click',()=>void move(-1,true));
   $('churchHostNext').addEventListener('click',()=>void move(1,true));
   $('churchGuideFollow').addEventListener('click',()=>{following=true;void readCursor();status('진행자 진행상황을 확인하고 있습니다.')});
-  document.querySelectorAll('[data-church-view]').forEach(button=>button.addEventListener('click',()=>viewTo(button.dataset.churchView)));
+  $('churchGuideLanguage').addEventListener('change',event=>guideLanguageTo(event.target.value,true));
+  $('viewerListenLanguage')?.addEventListener('change',event=>{
+    if(!guideLanguageManual)guideLanguageTo(event.target.value==='original'?'ko':event.target.value);
+  });
+
+  document.querySelectorAll('button[data-church-view]').forEach(button=>button.addEventListener('click',()=>viewTo(button.dataset.churchView)));
   document.querySelectorAll('[data-church-material]').forEach(button=>button.addEventListener('click',()=>tabTo(button.dataset.churchMaterial)));
   try{viewTo(sessionStorage.getItem('ekodi:church:live-view')||'split')}catch{viewTo('split')}
-  tabTo('order');void load();
+  tabTo('order');guideLanguageTo(guideLanguage);void load();
   const poll=setInterval(()=>{if(role==='viewer')void readCursor()},15000);
   addEventListener('pagehide',()=>clearInterval(poll),{once:true});
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&role==='viewer')void readCursor()});
