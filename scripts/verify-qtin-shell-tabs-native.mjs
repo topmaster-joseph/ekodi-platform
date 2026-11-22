@@ -47,6 +47,7 @@ try{
             blockedWrites.push({method:req.method(),category:u.pathname.startsWith('/qtin/api/orders')?'order-write':'auth-or-background'});
             void req.abort('blockedbyclient');return;
           }
+          if(mode==='fixture'&&req.isNavigationRequest())console.log('QTIN_UNEXPECTED_NAV_REQUEST='+JSON.stringify({org,width,path:u.pathname}));
           if(mode==='fixture'||u.origin!=='https://ekodi.kr'){
             void req.abort('blockedbyclient');return;
           }
