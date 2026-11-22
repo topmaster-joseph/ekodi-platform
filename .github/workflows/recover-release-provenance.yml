@@ -28,6 +28,9 @@ jobs:
     environment: production
     env:
       GH_TOKEN: ${{ github.token }}
+      # EKODI-RELEASE-WORKFLOWS-TOKEN-001: owner-issued, repo-scoped (Contents+Workflows write);
+      # used only to create the exact-SHA orchestrator branch. Optional; empty keeps old behaviour.
+      GH_WORKFLOWS_TOKEN: ${{ secrets.EKODI_RELEASE_WORKFLOWS_TOKEN }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
