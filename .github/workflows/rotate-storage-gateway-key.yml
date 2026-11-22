@@ -1,0 +1,119 @@
+name: Rotate Storage Gateway Key (Owner Approved)
+
+# Owner decision 2026-11-22: the original EKODI_STORAGE_GATEWAY_KEY value is not
+# recoverable (Cloudflare never reveals stored Worker secrets), so rotate it once,
+# in lock-step, to every place that must hold the same value:
+#   1. ekodi-api       (Control API, wrangler.api.toml)      — caller + public proxy
+#   2. ekodi-storage   (Storage Worker, wrangler.storage.toml) — verifier
+#   3. GitHub `production` environment secret                 — backup ACL workflows
+# The value is generated on the runner, never printed, and never leaves the runner
+# except through wrangler stdin and the GitHub sealed-box secret API.
+# Every precondition is checked before the first write so a refusal changes nothing.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type ROTATE to rotate the shared storage gateway key'
+        required: true
+      release_branch_ref:
+        description: 'Verified EKODI Orchestrator branch'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Verified EKODI Orchestrator task ID'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: rotate-storage-gateway-key
+  cancel-in-progress: false
+
+jobs:
+  rotate:
+    if: github.ref == 'refs/heads/main' && inputs.confirm == 'ROTATE'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      WRANGLER_VERSION: 4.119.0
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GH_ADMIN_TOKEN: ${{ secrets.EKODI_GITHUB_ADMIN_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+          EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+
+      - name: Preflight — credentials and GitHub environment-secret write permission
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo '::error::CLOUDFLARE_API_TOKEN missing'; exit 2; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo '::error::CLOUDFLARE_ACCOUNT_ID missing'; exit 2; }
+          test -n "$GH_ADMIN_TOKEN" || { echo '::error::EKODI_GITHUB_ADMIN_TOKEN missing; nothing was changed'; exit 2; }
+          # Probe: write and delete a harmless environment secret. If the admin token cannot
+          # write production environment secrets, stop before touching any Worker.
+          probe="$(openssl rand -hex 16)"
+          printf '%s' "$probe" | GH_TOKEN="$GH_ADMIN_TOKEN" gh secret set EKODI_SECRET_WRITE_PROBE \
+            --repo "$GITHUB_REPOSITORY" --env production >/dev/null \
+            || { echo '::error title=GitHub secret write refused::EKODI_GITHUB_ADMIN_TOKEN cannot write production environment secrets. Nothing was changed.'; exit 2; }
+          GH_TOKEN="$GH_ADMIN_TOKEN" gh secret delete EKODI_SECRET_WRITE_PROBE --repo "$GITHUB_REPOSITORY" --env production >/dev/null || true
+          # Both Workers must already list the secret name (rotation, not first provisioning).
+          for cfg in wrangler.api.toml wrangler.storage.toml; do
+            npx --yes wrangler@${WRANGLER_VERSION} secret list --config "$cfg" 2>/dev/null | grep -Fq 'EKODI_STORAGE_GATEWAY_KEY' \
+              || { echo "::error::$cfg does not hold EKODI_STORAGE_GATEWAY_KEY; nothing was changed"; exit 2; }
+          done
+          echo 'Preflight passed: Cloudflare + GitHub secret write confirmed; both Workers hold the key name.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Rotate in lock-step (API → Storage → GitHub)
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          key="$(node -e "process.stdout.write(require('node:crypto').randomBytes(48).toString('base64url'))")"
+          echo "::add-mask::$key"
+          # 1. Control API first: if Cloudflare refuses an in-place edit (undeployed latest
+          #    version after a guarded rollback), stop here — nothing else has changed.
+          printf '%s' "$key" | npx --yes wrangler@${WRANGLER_VERSION} secret put EKODI_STORAGE_GATEWAY_KEY --config wrangler.api.toml >/dev/null 2>/tmp/api.err \
+            || { sed -E 's/[A-Za-z0-9_-]{24,}/[redacted]/g' /tmp/api.err >&2; echo '::error::Control API refused the in-place secret edit; no secret was changed.'; exit 3; }
+          # 2. Storage Worker (verifier). If this fails, restore consistency is impossible
+          #    without the old value, so retry once before reporting.
+          put_storage() { printf '%s' "$key" | npx --yes wrangler@${WRANGLER_VERSION} secret put EKODI_STORAGE_GATEWAY_KEY --config wrangler.storage.toml >/dev/null 2>/tmp/storage.err; }
+          put_storage || { sleep 5; put_storage; } \
+            || { sed -E 's/[A-Za-z0-9_-]{24,}/[redacted]/g' /tmp/storage.err >&2; echo '::error title=PARTIAL ROTATION::Control API holds the new key but the Storage Worker refused it. Re-run this workflow immediately.'; exit 4; }
+          # 3. GitHub production environment secret for the backup ACL workflows.
+          printf '%s' "$key" | GH_TOKEN="$GH_ADMIN_TOKEN" gh secret set EKODI_STORAGE_GATEWAY_KEY --repo "$GITHUB_REPOSITORY" --env production >/dev/null \
+            || { echo '::error title=PARTIAL ROTATION::Workers rotated but GitHub production secret write failed. Re-run this workflow.'; exit 5; }
+          # Keep the value for the verification step only (masked, runner-local, 0600).
+          printf '%s' "$key" > "$RUNNER_TEMP/storage-gateway-key"
+          echo 'Rotated EKODI_STORAGE_GATEWAY_KEY on Control API, Storage Worker and GitHub production (value never printed).' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify the new key end-to-end (read-only)
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          key="$(cat "$RUNNER_TEMP/storage-gateway-key")"; rm -f "$RUNNER_TEMP/storage-gateway-key"
+          echo "::add-mask::$key"
+          ok=0
+          for attempt in 1 2 3 4 5 6; do
+            status="$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 30 \
+              -H "x-ekodi-storage-key: $key" https://ekodi.kr/api/storage/v1/backup-acl || true)"
+            echo "attempt $attempt: HTTP $status"
+            # 401/403 means the key is still propagating; any other answer proves acceptance.
+            if [ "$status" != 401 ] && [ "$status" != 403 ] && [ "$status" != 000 ]; then ok=1; break; fi
+            sleep 10
+          done
+          test "$ok" = 1 || { echo '::error::The new key was not accepted by ekodi.kr/api/storage within 60s.'; exit 6; }
+          echo "Storage gateway accepted the rotated key (HTTP $status)." >> "$GITHUB_STEP_SUMMARY"
