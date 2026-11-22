@@ -363,12 +363,12 @@ export function boardIdentityShell(route,html){
     .replace('</body>',footer+scripts+'</body>');
 }
 
-function page(route,posts,categoryId=''){
+export function page(route,posts,categoryId=''){
   const official=['notice','schedule','mission-notice','mission-schedule'].includes(categoryId);
   const items=posts.length?posts.map(post=>`<article><a href="${route.basePath}/post/${post.id}"><h2>${htmlEscape(post.title)}</h2></a>${official?'':`<p>${htmlEscape(post.body).slice(0,220)}</p>`}<time>${htmlEscape(String(post.createdAt||'').slice(0,10))}</time></article>`).join(''):'<p class="empty">등록된 글이 없습니다.</p>';
   return new Response(boardIdentityShell(route,`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${['mission-notice','notice'].includes(categoryId)?'공지사항':['mission-schedule','schedule'].includes(categoryId)?'주요일정':'게시판'}</title><style>body{margin:0;background:#fff;color:#111;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}main{width:min(920px,calc(100% - 28px));margin:0 auto;padding:18px 0}header{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:12px 0}h1{font-size:22px;margin:0}article{padding:15px 0;border-bottom:1px solid #e6e6e6}h2{font-size:18px;margin:0 0 7px}a{color:#111;text-decoration:none}p{white-space:pre-wrap;line-height:1.5;margin:0 0 7px}time{font-size:12px;color:#666}.empty{padding:30px 0}</style></head><body><main><header><h1>${['mission-notice','notice'].includes(categoryId)?'공지사항':['mission-schedule','schedule'].includes(categoryId)?'주요일정':'게시판'}</h1>${categoryId?`<p><a href="${route.siteId==='ekodichurch'?'/ekodichurch':'/ekodimission'}">${route.siteId==='ekodichurch'?'에코디교회':'에코디선교회'} 홈으로</a></p>`:''}</header>${items}</main></body></html>`),{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-id':boardId(route.siteId),'x-ekodi-board-independent':'true'}});
 }
-function postPage(route,post){
+export function postPage(route,post){
   if(!post)return new Response('Not Found',{status:404});
   const comments=post.comments.map(c=>`<li>${htmlEscape(c.body)} <small>${htmlEscape(c.createdAt)}</small></li>`).join('');
   return new Response(boardIdentityShell(route,`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${htmlEscape(post.title)}</title></head><body><main><p><a href="${route.basePath}">← 게시판</a></p><h1>${htmlEscape(post.title)}</h1><p style="white-space:pre-wrap">${htmlEscape(post.body)}</p><hr><ul>${comments}</ul></main></body></html>`),{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-id':boardId(route.siteId),'x-ekodi-board-independent':'true'}});
