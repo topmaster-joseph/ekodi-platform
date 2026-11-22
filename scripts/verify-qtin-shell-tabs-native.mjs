@@ -33,8 +33,16 @@ try{
       try{
         await page.setViewport({width,height:width===390?844:900,deviceScaleFactor:1});
         await page.setRequestInterception(true);
+        page.on('framenavigated',frame=>{
+          if(frame===page.mainFrame())console.log('QTIN_BROWSER_NAV='+JSON.stringify({mode,org,width,url:frame.url().split('?')[0]}));
+        });
         page.on('request',req=>{
           const u=new URL(req.url());
+          if(mode==='fixture' && req.method()==='GET' &&
+             u.origin==='https://ekodi.kr' && u.pathname==='/qtin/'+org){
+            void req.respond({status:200,contentType:'text/html; charset=utf-8',body:renderOrderPage(sample,{org,scriptNonce:'synthetic-local-ui-proof'})});
+            return;
+          }
           if(!['GET','HEAD','OPTIONS'].includes(req.method())){
             blockedWrites.push({method:req.method(),category:u.pathname.startsWith('/qtin/api/orders')?'order-write':'auth-or-background'});
             void req.abort('blockedbyclient');return;
@@ -44,11 +52,7 @@ try{
           }
           void req.continue();
         });
-        if(mode==='fixture'){
-          await page.setContent(renderOrderPage(sample,{org,scriptNonce:'synthetic-local-ui-proof'}),{waitUntil:'domcontentloaded',timeout:30000});
-        }else{
-          await page.goto('https://ekodi.kr/qtin/'+org,{waitUntil:'domcontentloaded',timeout:30000});
-        }
+        await page.goto('https://ekodi.kr/qtin/'+org,{waitUntil:'domcontentloaded',timeout:30000});
         await page.waitForSelector('.qtin-site-header .qtin-site-brand',{timeout:20000});
         const initial=await page.evaluate(()=>{
           const nav=document.querySelector('.qtin-site-menu nav');
