@@ -99,6 +99,44 @@ export function deskMessage(essay) {
   ].join('\n').slice(0, 11800);
 }
 
+// JOURNAL-ESSAY-LENGTH-20261122: 무료 Workers AI는 한 번에 350~520자만 써서(11/15~11/22 매일 draft_unusable) 900자 기준을 못 넘었다.
+// 앞부분을 쓴 뒤 '이어 쓰기'를 최대 ESSAY_CONTINUE_LIMIT번 더 요청해 한 편을 완성한다. 모두 무료 경로(writeText)만 쓴다.
+export const ESSAY_CONTINUE_LIMIT = 4;
+const ESSAY_SYSTEM = '너는 에코디저널의 필자 에코디언이다. 한국어로만 쓴다.';
+export function essayContinuePrompt(topic, soFar, last) {
+  const [, , label, brief] = topic;
+  const tail = String(soFar || '').slice(-1400);
+  return `아래는 에코디저널 에세이 「${label}」(${brief})의 앞부분입니다.
+제목과 요약을 다시 쓰지 말고, 앞 내용을 되풀이하지 말고, 이어지는 본문만 한국어로 500~800자 더 쓰세요.
+새 소제목 하나를 "## "로 시작하는 줄로 두고 그 아래에 문단을 쓰세요.${last ? '\n이번이 마지막 부분입니다. 독자가 이번 주에 해 볼 수 있는 작은 실천 하나로 글을 맺으세요.' : ''}
+지어낸 통계·인용·실존 인물·후기는 쓰지 마세요.
+
+[앞부분]
+${tail}`;
+}
+const essayBodyChars = (text, topic) => {
+  const lines = String(text || '').split('\n').filter((l) => l.trim());
+  return lines.slice(2).join('').replace(/\s/g, '').length;
+};
+// 이어 쓴 부분 앞에 붙는 '제목:'·'요약:'·'(이어서)' 같은 머리말 줄을 걷어 낸다.
+const stripContinuation = (more) => String(more || '').replace(/\r/g, '').split('\n')
+  .filter((line, i, all) => !(i < 3 && /^\s*(제목|요약|title|summary)\s*[:：]/i.test(line)) && !/^\s*[(（]?\s*이어서\s*[)）]?\s*$/.test(line)).join('\n').trim();
+export async function writeEssayDraft(writeText, topic) {
+  if (typeof writeText !== 'function') return null;
+  let text = null;
+  try { text = await writeText(ESSAY_SYSTEM, essayPrompt(topic), 2600, 'journal-essay'); } catch { text = null; }
+  if (!text || !String(text).trim()) return text;
+  text = String(text).trim();
+  for (let k = 0; k < ESSAY_CONTINUE_LIMIT && essayBodyChars(text, topic) < ESSAY_POLICY.minChars + 300; k += 1) {
+    let more = null;
+    try { more = await writeText(ESSAY_SYSTEM, essayContinuePrompt(topic, text, k === ESSAY_CONTINUE_LIMIT - 1), 1400, 'journal-essay'); } catch { more = null; }
+    const piece = stripContinuation(more);
+    if (!piece) break;
+    text = `${text}\n\n${piece}`;
+  }
+  return text;
+}
+
 /** 매일 예약 실행에서 호출. ① 검토 기간이 지난 투고를 게재 ② 7일이 지났으면 새 에세이를 쓰고 투고. */
 export async function essayTick(db, writeText, { notify = null, now = Date.now() } = {}) {
   await ensureEssayTable(db);
@@ -111,8 +149,7 @@ export async function essayTick(db, writeText, { notify = null, now = Date.now()
   const last = await db.prepare('SELECT MAX(created_at) AS last, COUNT(*) AS n FROM publishing_journal_essays').first();
   if (last?.last && now - Date.parse(last.last) < ESSAY_POLICY.everyDays * 864e5 - 3600_000) { out.skipped = 'not_due'; return out; }
   const topic = nextTopic(Number(last?.n || 0));
-  let text = null;
-  try { text = typeof writeText === 'function' ? await writeText('너는 에코디저널의 필자 에코디언이다. 한국어로만 쓴다.', essayPrompt(topic), 2600, 'journal-essay') : null; } catch { text = null; }
+  const text = await writeEssayDraft(writeText, topic);
   const parsed = parseEssay(text, topic);
   if (!parsed) { out.skipped = text ? `draft_unusable:${String(text).replace(/\s/g, '').length}` : 'draft_empty'; return out; }   // 다음 날 다시 시도
   const essay = { id: crypto.randomUUID(), slug: essaySlug(now, topic[0]), ...parsed, created_at: nowIso(now), publish_at: nowIso(now + ESSAY_POLICY.reviewHours * 3600_000) };

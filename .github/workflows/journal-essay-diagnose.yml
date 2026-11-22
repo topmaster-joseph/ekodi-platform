@@ -46,6 +46,6 @@ jobs:
             echo '```'; echo '## Recent AI factory runs'; echo '```'
             q ekodi-publishing "SELECT at,substr(result_json,1,1800) AS result FROM publishing_ai_runs ORDER BY at DESC LIMIT 8"
             echo '```'; echo '## Editor inbox'; echo '```'
-            q ekodi-auth "SELECT kind,source,created_at,seen_at FROM journal_editor_inbox ORDER BY created_at DESC LIMIT 10"
+            q ekodi-auth "SELECT kind,title,received_at,seen_at,digest_at FROM journal_editor_inbox ORDER BY received_at DESC LIMIT 10"
             echo '```'
           } | tee -a "$GITHUB_STEP_SUMMARY"
