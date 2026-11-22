@@ -167,6 +167,32 @@ async function latestVerdictRun({github,owner,repo,runs}){
   return null;
 }
 
+// Release-provenance recovery PRs carry a source change whose staging ran on the
+// source PR (pull_request runs never fire for GITHUB_TOKEN recovery PRs, and
+// main runs skip staging by design). Accept that staging only when the recovery
+// task id is derived from the recorded source commit, and only from a successful
+// `staging` job of the same deploy workflow on that exact commit.
+export function recoverySourceSha(taskId,body){
+  const match=/^orch_recovery_([a-f0-9]{32})$/i.exec(text(taskId,160));
+  if(!match)return null;
+  const source=/Source:\s*`[^`@\s]+@([a-f0-9]{40})`/i.exec(String(body||''));
+  if(!source)return null;
+  return source[1].toLowerCase().startsWith(match[1].toLowerCase())?source[1].toLowerCase():null;
+}
+async function sourceStagingJobs({github,owner,repo,run,sourceSha}){
+  if(!sourceSha)return [];
+  const response=await github.rest.actions.listWorkflowRunsForRepo({owner,repo,head_sha:sourceSha,per_page:100});
+  const candidates=(response.data?.workflow_runs||[])
+    .filter(item=>Number(item?.workflow_id)===Number(run.workflow_id)&&item?.head_sha===sourceSha&&success(item))
+    .sort((a,b)=>String(b?.created_at||'').localeCompare(String(a?.created_at||'')));
+  for(const candidate of candidates){
+    const jobs=(await github.rest.actions.listJobsForWorkflowRun({owner,repo,run_id:Number(candidate.id),per_page:100})).data?.jobs||[];
+    const staged=jobs.filter(job=>stagingJob(job)&&success(job)).map(job=>`${text(job.name,120)} (source ${sourceSha.slice(0,8)}, run ${Number(candidate.id)})`);
+    if(staged.length)return staged;
+  }
+  return [];
+}
+
 export async function collectAuthenticatedCompletionEvidence({github,owner='topmaster-joseph',repo='ekodi-platform',taskId,branchRef}={}){
   const task=text(taskId,160),branch=text(branchRef,220);
   if(!/^orch_[a-z0-9][a-z0-9_-]{15,120}$/i.test(task)||!branch.endsWith(`/${task}`))return {verified:false,reason:'invalid_task_or_branch'};
@@ -243,6 +269,7 @@ export async function collectAuthenticatedCompletionEvidence({github,owner='topm
   }
   const deployments=[];
   let hasStaging=false,hasProduction=false;
+  const sourceSha=recoverySourceSha(task,pr.body);
   for(const original of triggered){
     let run=original;
     let supersedesRunId=null;
@@ -255,6 +282,7 @@ export async function collectAuthenticatedCompletionEvidence({github,owner='topm
     const jobs=jobsResponse.data?.jobs||[];
     const stagingJobs=jobs.filter(job=>stagingJob(job)&&success(job)).map(job=>text(job.name,160));
     if(!stagingJobs.length)stagingJobs.push(...stagingEquivalentJobs(run,jobs));
+    if(!stagingJobs.length)stagingJobs.push(...await sourceStagingJobs({github,owner,repo,run,sourceSha}));
     const productionJobs=jobs.filter(job=>productionJob(job)&&success(job)).map(job=>text(job.name,160));
     if(!productionJobs.length)productionJobs.push(...productionEquivalentJobs(run,jobs));
     if(stagingJobs.length)hasStaging=true;

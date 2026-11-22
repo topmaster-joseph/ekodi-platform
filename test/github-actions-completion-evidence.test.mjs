@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { collectAuthenticatedCompletionEvidence } from '../scripts/github-actions-completion-evidence.mjs';
+import { collectAuthenticatedCompletionEvidence, recoverySourceSha } from '../scripts/github-actions-completion-evidence.mjs';
 
 const taskId='orch_00000000-0000-4000-8000-000000000123';
 const branchRef=`ai/chatgpt/${taskId}`;
@@ -393,4 +393,52 @@ test('missing merged PR reports unclaimed only when no PR and no branch exist',a
   assert.equal(none.unclaimed,true);
   assert.equal((await collectAuthenticatedCompletionEvidence({github:make({openPulls:[{number:9}]}),taskId,branchRef})).unclaimed,false);
   assert.equal((await collectAuthenticatedCompletionEvidence({github:make({branch:true}),taskId,branchRef})).unclaimed,false);
+});
+
+const sourceSha='17deab6ea83f7ff7a6ede120539480a6db42d1e5';
+const recoveryTask='orch_recovery_17deab6ea83f7ff7a6ede120539480a6';
+const recoveryBranch=`ai/chatgpt/${recoveryTask}`;
+const recoveryBody='Automatic EKODI release provenance recovery for #8122.\n\nSource: `ai/chatgpt/devotion-x-20261104@'+sourceSha+'`\n';
+
+test('recovery source SHA must be recorded and match the task id',()=>{
+  assert.equal(recoverySourceSha(recoveryTask,recoveryBody),sourceSha);
+  assert.equal(recoverySourceSha(recoveryTask,recoveryBody.replace('17deab6e','27deab6e')),null);
+  assert.equal(recoverySourceSha(taskId,recoveryBody),null);
+  assert.equal(recoverySourceSha(recoveryTask,'no source line'),null);
+});
+
+function recoveryGithub({sourceRuns,sourceJobs}){
+  const github=mockGithub({
+    pulls:[{number:8123,html_url:'https://github.com/x/pull/8123',merged_at:'2026-11-04T05:45:00Z',merge_commit_sha:mergeSha,head:{ref:recoveryBranch,sha:prHeadSha},base:{ref:'main'},body:recoveryBody}],
+    runs:[
+      {id:1,name:'CI',status:'completed',conclusion:'success',html_url:'https://example/ci'},
+      {id:2,name:'EKODI AI Orchestration Gate',status:'completed',conclusion:'success',html_url:'https://example/gate'},
+      {id:3,workflow_id:30,name:'Deploy Control API',status:'completed',conclusion:'success',head_sha:mergeSha,html_url:'https://example/deploy'},
+    ],
+    jobsByRun:{3:[{name:'validate',status:'completed',conclusion:'success'},{name:'staging',status:'completed',conclusion:'skipped'},{name:'production',status:'completed',conclusion:'success'}],77:sourceJobs},
+  });
+  const base=github.rest.actions.listWorkflowRunsForRepo;
+  github.rest.actions.listWorkflowRunsForRepo=async args=>args.head_sha===sourceSha?{data:{workflow_runs:sourceRuns}}:base(args);
+  return github;
+}
+
+test('recovery release uses staging that succeeded on the recorded source commit of the same workflow',async()=>{
+  const evidence=await collectAuthenticatedCompletionEvidence({github:recoveryGithub({
+    sourceRuns:[{id:77,workflow_id:30,name:'Deploy Control API',event:'pull_request',head_sha:sourceSha,status:'completed',conclusion:'success'}],
+    sourceJobs:[{name:'staging',status:'completed',conclusion:'success'}],
+  }),taskId:recoveryTask,branchRef:recoveryBranch});
+  assert.equal(evidence.verified,true);
+  assert.match(evidence.deployments[0].stagingJobs[0],/source 17deab6e, run 77/);
+});
+
+test('source staging from another workflow, a failed job, or a missing run is not accepted',async()=>{
+  for(const c of [
+    {sourceRuns:[{id:77,workflow_id:99,head_sha:sourceSha,status:'completed',conclusion:'success'}],sourceJobs:[{name:'staging',status:'completed',conclusion:'success'}]},
+    {sourceRuns:[{id:77,workflow_id:30,head_sha:sourceSha,status:'completed',conclusion:'success'}],sourceJobs:[{name:'staging',status:'completed',conclusion:'failure'}]},
+    {sourceRuns:[],sourceJobs:[]},
+  ]){
+    const evidence=await collectAuthenticatedCompletionEvidence({github:recoveryGithub(c),taskId:recoveryTask,branchRef:recoveryBranch});
+    assert.equal(evidence.verified,false);
+    assert.equal(evidence.reason,'staging_evidence_missing');
+  }
 });
