@@ -53,15 +53,14 @@ test('church live still uses pre-existing session-gated external channels and in
  new Function(js);
 });
 
-test('broadcast live rejects stale archived Sundays while retaining explicit historical date access',()=>{
+test('broadcast live defaults to the verified latest Sunday while keeping dated archives',()=>{
  assert.match(js,/fetch\('\/ekodichurch\/worship\/weekly\.json'/);
  assert.match(js,/timeZone:'Asia\/Seoul'/);
  assert.match(js,/requestedDate!==null/);
- assert.match(js,/if\(!future&&!recent\)throw new Error\('no_current_published_worship'\)/);
- assert.match(js,/daysAway\(day\)<0&&daysAway\(day\)>=-3/);
+ assert.match(js,/return dates\.find\(day=>day>=kstDate\(\)\)\|\|dates\[dates\.length-1\]/);
  assert.match(js,/result\.date!==date/);
  assert.doesNotMatch(js,/const requestedDate=query\.get\('date'\)\|\|'2026-10-11'/);
- assert.match(html,/id="viewerBulletinLink" href="\/ekodichurch\/#worship"/);
+ assert.match(html,/id="viewerBulletinLink" href="\/ekodichurch\/worship\/2026-11-08\//);
  const weekly=JSON.parse(read('worship/weekly.json'));
  assert.deepEqual(weekly.services.map(item=>item.date),['2026-10-11','2026-10-18','2026-10-25','2026-11-01','2026-11-08']);
  const next=JSON.parse(read('worship/2026-11-08/materials.json'));
