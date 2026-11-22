@@ -27,7 +27,14 @@
       .filter(item=>item&&ISO_DATE.test(item.date)&&item.page==='/ekodichurch/worship/'+item.date+'/')
       .map(item=>item.date))].sort();
     if(!dates.length)throw new Error('no_published_sunday');
-    return dates.find(day=>day>=kstDate())||dates[dates.length-1];
+    // Recency guard: previous Sunday is suitable for a short replay window only.
+    // Older archived bulletins must never appear by default as this week's service.
+    const today=Date.parse(kstDate()+'T00:00:00Z');
+    const daysAway=day=>Math.round((Date.parse(day+'T00:00:00Z')-today)/86400000);
+    const future=dates.find(day=>daysAway(day)>=0&&daysAway(day)<=6);
+    const recent=dates.slice().reverse().find(day=>daysAway(day)<0&&daysAway(day)>=-3);
+    if(!future&&!recent)throw new Error('no_current_published_worship');
+    return future||recent;
   }
   let packet=null;
   let slideIndex=0;
@@ -221,7 +228,7 @@
       if(roomRole==='host'&&roomId)void sendPresenterSlide();
       status((packet.date||date)+' 주일예배 · PPT '+packet.slides.length+'장과 주보 준비됨');
     }catch(error){
-      status('해당 날짜 예배자료를 불러올 수 없습니다. 영상 시청은 계속 가능합니다.');
+      status('이번 주 공개 주보·PPT가 없거나 요청한 자료를 확인할 수 없습니다. 이전 주보를 최신 예배로 표시하지 않으며 영상은 계속 시청 가능합니다.');
       $('viewerSlideTitle').textContent='자료를 확인해 주세요';
       $('viewerSlideLines').replaceChildren(make('p','방송 중인 날짜의 PPT가 아직 공개되지 않았습니다.'));
       $('viewerBulletinBody').replaceChildren(make('p','예배 주보가 아직 공개되지 않았습니다.'));
