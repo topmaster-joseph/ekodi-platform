@@ -209,6 +209,16 @@ export function parseProductDetail(html, itemId) {
 }
 
 const SERIES_ORDER = ['작은글씨', '큰글씨', 'Young', '청소년', 'Teens', '어린이', '샛별', '새싹', '영문', 'English'];
+// A presentation-only audience grouping. It NEVER changes product IDs, prices,
+// purchase validation, availability or QTM's canonical series information.
+export function qtinAudienceGroup(series, name = '') {
+  const text = (String(series || '') + ' ' + String(name || '')).normalize('NFKC').toLowerCase();
+  if (/새싹|샛별|유아|미취학|qtin\s*stars?|qtin\s*sparks?/.test(text)) return 'preschool';
+  if (/어린이|초등|qtin\s*kids?|qtin\s*junior/.test(text)) return 'children';
+  if (/청소년|청년|중고등|qtin\s*teens?|qtin\s*young/.test(text)) return 'youth';
+  return 'adult';
+}
+
 export function seriesSortOrder(name) {
   const idx = SERIES_ORDER.findIndex(key => String(name).includes(key));
   return idx === -1 ? 90 : (idx + 1) * 10;
