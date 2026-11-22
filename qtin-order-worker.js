@@ -8,7 +8,7 @@ import {
   ORGS, FULFILLMENT, QTM_ORIGIN, PENDING_TTL_MS,
   clean, escapeHtml, kstParts, campaignId, parseCampaignId, addMonth, defaultWindow, targetIssueFor,
   inPreparationWindow, campaignState, formatKst, formatWon, parseIssueTitle, titleMatchesIssue, isQtinFamily,
-  extractItemIds, parseProductDetail, parseProductIntro, seriesSortOrder, buildOrderDraft, newOrderId, isValidTossOrderId,
+  extractItemIds, parseProductDetail, parseProductIntro, seriesSortOrder, qtinAudienceGroup, buildOrderDraft, newOrderId, isValidTossOrderId,
   assessConfirmation, maskName, csvEscape, absoluteQtmUrl, SHIPPING_FEE, DELIVERY_METHODS, CHURCH_PICKUP_ADDRESS,
 } from './qtin-order-core.js';
 import * as ekodipay from './ekodipay-core.js';
@@ -510,7 +510,7 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
   const statusLine = open
     ? `신청 중 · ${escapeHtml(formatKst(campaign.closesAt))} 마감`
     : state === 'scheduled' ? `${escapeHtml(formatKst(campaign.opensAt))} 신청 시작` : `신청 마감 · 다음 신청은 매월 20일에 열립니다`;
-  const cards = products.map(p => `<article class="book" data-id="${escapeHtml(p.id)}" data-price="${p.salePrice}">
+  const cards = products.map(p => `<article class="book" data-id="${escapeHtml(p.id)}" data-price="${p.salePrice}" data-audience="${qtinAudienceGroup(p.series,p.name)}">
     <button type="button" class="cover" data-intro="${escapeHtml(p.qtmItemId || '')}" data-name="${escapeHtml(p.name)}" data-img="${escapeHtml(p.imageUrl || '')}" aria-label="${escapeHtml(p.name)} 책 소개 보기">${p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" alt="${escapeHtml(p.name)} 표지" loading="lazy" referrerpolicy="no-referrer">` : `<span class="ph">표지 준비 중</span>`}<span class="peek">책 소개</span></button>
     <div class="info"><h3>${escapeHtml(p.name)}</h3>
       <div class="price">${formatWon(p.salePrice)}${p.listPrice > p.salePrice ? `<s>${formatWon(p.listPrice)}</s>` : ''}</div>
@@ -518,9 +518,17 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
       <input type="number" min="0" max="50" value="0" inputmode="numeric" aria-label="${escapeHtml(p.name)} 수량"${open ? '' : ' disabled'}>
       <button type="button" data-step="1" aria-label="${escapeHtml(p.name)} 수량 늘리기"${open ? '' : ' disabled'}>+</button></div>
     </div></article>`).join('');
+  const audienceTabs = [
+    { key: 'all', label: '전체 도서', count: products.length },
+    { key: 'adult', label: '일반·큰글씨', count: products.filter(p => qtinAudienceGroup(p.series,p.name)==='adult').length },
+    { key: 'youth', label: '청소년·청년', count: products.filter(p => qtinAudienceGroup(p.series,p.name)==='youth').length },
+    { key: 'children', label: '어린이', count: products.filter(p => qtinAudienceGroup(p.series,p.name)==='children').length },
+    { key: 'preschool', label: '유아·새싹', count: products.filter(p => qtinAudienceGroup(p.series,p.name)==='preschool').length }
+  ].filter(tab => tab.count>0);
+  const catalogTabs = audienceTabs.map(tab => `<button type="button" role="tab" id="qtin-tab-${tab.key}" data-qtin-tab="${tab.key}" aria-controls="qtinBookGrid" aria-selected="${tab.key==='all'}" tabindex="${tab.key==='all'?'0':'-1'}">${tab.label} <span>${tab.count}</span></button>`).join('');
   const orgChoices = Object.values(ORGS).map(o => `<label class="choice"><input type="radio" name="org" value="${o.id}"${org === o.id ? ' checked' : ''}><span><strong>${o.label}</strong><small>${o.id === 'church' ? '교회 성도·부서' : o.id === 'mission' ? '선교회 회원·사역자' : '다른 교회·단체·개인'}</small></span></label>`).join('');
   const paymentNote = payment.ready ? '' : `<p class="note">온라인 결제 연결을 준비하고 있습니다. 결제가 열리면 바로 신청하실 수 있습니다.</p>${payment.testMode ? '<p class="note" id="testNote" hidden><strong>테스트 결제 모드(관리자 전용)</strong> · 실제 금액이 청구되지 않으며, 이 신청은 집계·발주에 포함되지 않습니다.</p>' : ''}`;
-  const body = `<header class="top"><div class="wrap">
+  const body = `${qtinPortalHeader(org)}<header class="top"><div class="wrap">
   <div class="eyebrow">EKODI · 큐티인 함께 구입</div>
   <h1>${escapeHtml(issue)} 큐티인 신청</h1>
   <p class="lead">날마다 같은 말씀 앞에 서는 기쁨을 함께 나눕니다. 에코디교회와 에코디선교회가 매월 다음달 큐티인을 한 번에 모아 구입합니다. 가격은 QTM 온라인 판매가격 그대로이며, 결제가 확인된 신청만 완료됩니다.</p>
@@ -528,7 +536,7 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
   ${data.dataMode === 'isolated-staging' ? '<div class="staging">ISOLATED STAGING · 샘플 데이터이며 신청·결제가 저장되지 않습니다.</div>' : ''}
 </div></header>
 <main class="wrap">
-  ${products.length ? `<section class="grid" aria-label="${escapeHtml(issue)} 도서">${cards}</section>` : `<div class="empty">${open || state === 'scheduled' ? `${escapeHtml(issue)} 도서 정보를 QTM에서 확인하고 있습니다. 잠시 후 다시 열어 주세요.` : '이번 달 신청이 마감되었습니다. 다음달 20일에 새 큐티인 신청이 열립니다.'}</div>`}
+  ${products.length ? `<section class="qtin-catalog" aria-labelledby="qtinCatalogTitle"><div class="qtin-catalog-head"><div><p>BOOK SELECTION · ${escapeHtml(issue)}</p><h2 id="qtinCatalogTitle">도서 선택</h2><p>대상별 탭으로 찾아보세요. 탭을 바꿔도 선택한 도서와 수량은 유지됩니다.</p></div><span class="qtin-catalog-count">전체 ${products.length}종</span></div><div class="qtin-catalog-tabs" role="tablist" aria-label="대상별 큐티인 도서">${catalogTabs}</div><p class="qtin-catalog-result" id="qtinCatalogResult" role="status" aria-live="polite">전체 ${products.length}종</p><div id="qtinBookGrid" class="grid" role="tabpanel" aria-labelledby="qtin-tab-all" tabindex="0">${cards}</div></section>` : `<div class="empty">${open || state === 'scheduled' ? `${escapeHtml(issue)} 도서 정보를 QTM에서 확인하고 있습니다. 잠시 후 다시 열어 주세요.` : '이번 달 신청이 마감되었습니다. 다음달 20일에 새 큐티인 신청이 열립니다.'}</div>`}
   <section class="panel" id="account" aria-labelledby="accountTitle"><h2 id="accountTitle">구글 계정으로 신청하기</h2>
     <div id="signedOut">
       <p class="note">책을 고르신 뒤 구글 계정으로 로그인하면 연락처를 입력하고 바로 결제하실 수 있습니다. 다음 달에는 입력하신 정보가 자동으로 채워집니다.</p>
@@ -580,12 +588,13 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
 </form></dialog>
 <div class="bar"><div class="wrap"><div class="total">합계 <b id="total">0원</b> · <span id="count">0권</span></div>
   <div class="pay"><button class="btn" id="loginCta" type="button" disabled>구글 로그인하고 신청</button><button class="btn" id="payCard" type="button" hidden disabled>카드로 결제</button><button class="btn alt" id="payTransfer" type="button" hidden disabled>계좌이체</button></div></div></div>
-<footer class="wrap">책은 교회에서 일괄 수령 후 나누어 드리며, 택배를 선택하시면 원하는 곳으로 보내 드립니다(배송비 ${formatWon(SHIPPING_FEE)}). 표지 이미지·가격 출처: <a href="${QTM_ORIGIN}/" rel="noopener" target="_blank">QTM 큐티선교회</a> 온라인 스토어. 결제·구매대행: EKODIBIZ(사업자 213-13-01959, 통신판매업 2023-전남무안-0153). 문의 010-3501-8542</footer>
+<div class="qtin-order-legal wrap">책은 교회에서 일괄 수령 후 나누어 드리며, 택배를 선택하시면 원하는 곳으로 보내 드립니다(배송비 ${formatWon(SHIPPING_FEE)}). 표지 이미지·가격 출처: <a href="${QTM_ORIGIN}/" rel="noopener" target="_blank">QTM 큐티선교회</a> 온라인 스토어. 결제·구매대행: EKODIBIZ(사업자 213-13-01959, 통신판매업 2023-전남무안-0153). 문의 010-3501-8542</div>
+${qtinPortalFooter(org)}
 <script nonce="${scriptNonce}">window.__QTIN__=${JSON.stringify({ campaignId: campaign.id, open, paymentReady: Boolean(payment.ready), testMode: Boolean(payment.testMode), widget: Boolean(payment.widget), org, shippingFee: SHIPPING_FEE }).replace(/</g, '\\u003c')};</script>
 <script src="https://js.tosspayments.com/v2/standard"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script nonce="${scriptNonce}">${clientScript(orderClient)}</script>`;
-  return shell(`${issue} 큐티인 신청 · EKODI`, body, scriptNonce);
+  return shell(`${issue} 큐티인 신청 · EKODI`, body, scriptNonce, `<style>${QTIN_PORTAL_CSS}</style>`);
 }
 
 // Wrangler bundles with esbuild keepNames, which inserts __name(fn, "name") calls into
