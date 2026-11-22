@@ -65,7 +65,7 @@ function shell({ title, description, canonical, robots, jsonLd = '', body }) {
 <title>${esc(title)}</title><meta name="description" content="${esc(description)}"><meta name="robots" content="${robots}"><link rel="canonical" href="${esc(canonical)}">
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(description)}"><meta property="og:url" content="${esc(canonical)}"><meta property="og:type" content="website">
 <style>${CSS}</style>${jsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ''}</head><body>${body}
-<footer data-site-shell="footer">이 홈페이지는 <a href="https://ekodi.kr/ekodibiz/homepage">에코디비즈 홈페이지 구독</a>으로 운영됩니다.</footer></body></html>`;
+<footer data-site-shell="footer">이 홈페이지는 <a href="https://ekodi.kr/homepage">에코디비즈 홈페이지 구독</a>으로 운영됩니다.</footer></body></html>`;
 }
 
 export function renderHomepageSiteHtml(site, slug) {
