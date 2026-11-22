@@ -14,9 +14,8 @@ const fakeFetch=calls=>async(url,init)=>{
   return new Response('',{status:404});
 };
 
-test('keyless sources are used when Naver keys are absent, and unsafe links are dropped',async()=>{
+test('keyless sources are used and unsafe links are dropped',async()=>{
   const calls=[];const result=await searchCommonsWeb('무안군 AI 지원사업 최신 공고 알려줘?',{},fakeFetch(calls));
-  assert.ok(!calls.some(c=>c.url.includes('openapi.naver.com')),'no Naver call without keys');
   assert.deepEqual(result.sources.map(s=>s.source),['전남일보','위키백과']);
   assert.equal(result.sources[0].title,'무안군 AI 지원사업 공고');
   assert.equal(result.sources[0].date,'2026-11-18');
@@ -24,13 +23,6 @@ test('keyless sources are used when Naver keys are absent, and unsafe links are 
   assert.equal(result.sources[1].snippet,'무안군 은 전라남도의 군');
 });
 
-test('Naver search is used first when keys exist and keys stay in headers only',async()=>{
-  const calls=[];const result=await searchCommonsWeb('무안 소식',{NAVER_SEARCH_CLIENT_ID:'id',NAVER_SEARCH_CLIENT_SECRET:'secret'},fakeFetch(calls));
-  assert.equal(result.sources[0].source,'네이버 뉴스');
-  assert.equal(result.sources[0].title,'무안 소식');
-  assert.ok(calls.every(c=>!c.url.includes('secret')));
-  assert.ok(result.sources.length<=COMMONS_WEB_LIMITS.total);
-});
 
 test('a failing source never breaks the answer path',async()=>{
   const result=await searchCommonsWeb('무안',{},async()=>{throw new Error('network')});
@@ -101,7 +93,7 @@ test('per-source status explains empty results and a narrower retry runs once',a
   assert.equal(result.sources[0].source,'무안신문');
   assert.equal(result.sources[0].url,'https://news.example.kr/b');
   assert.equal(result.status.google,'http_503');
-  assert.equal(result.status.naver,'not_configured');
+  assert.equal(result.status.naver,undefined);
   assert.equal(urls.filter(u=>u.includes('bing.com')).length,2);
 });
 
@@ -110,22 +102,19 @@ test('worker returns non-secret web status and client explains it',()=>{
   assert.match(read('ai-control/commons.js'),/function webStatusText\(status\)/);
 });
 
-test('GDELT news joins keyless sources and Naver auth failures are visible',async()=>{
-  const fetchImpl=async url=>{
-    const u=String(url);
+
+
+test('Naver Search is never used for AI answers, even when keys exist (API HUB terms forbid AI summarisation)',async()=>{
+  const urls=[];
+  const fetchImpl=async url=>{const u=String(url);urls.push(u);
     if(u.startsWith('https://api.gdeltproject.org/'))return Response.json({articles:[{url:'https://news.example.kr/g',title:'무안군 소식',seendate:'20261121T010000Z',domain:'news.example.kr'},{url:'http://insecure.kr',title:'x'}]});
-    if(u.startsWith('https://openapi.naver.com/'))return new Response('',{status:401});
     return new Response('',{status:404});
   };
-  const result=await searchCommonsWeb('무안군 소식',{NAVER_SEARCH_CLIENT_ID:'a',NAVER_SEARCH_CLIENT_SECRET:'b'},fetchImpl);
-  assert.equal(result.status.naver,'http_401');
+  const result=await searchCommonsWeb('무안군 소식',{NAVER_SEARCH_CLIENT_ID:'a',NAVER_SEARCH_CLIENT_SECRET:'b',NAVER_CLIENT_ID:'c',NAVER_CLIENT_SECRET:'d'},fetchImpl);
+  assert.ok(!urls.some(u=>/naver/i.test(u)));
+  assert.deepEqual(Object.keys(result.status).sort(),['bing','gdelt','google','wiki']);
   assert.equal(result.status.gdelt,'ok:1');
   assert.deepEqual(result.sources.map(s=>[s.source,s.date,s.url]),[['news.example.kr','2026-11-21','https://news.example.kr/g']]);
-});
-
-test('AI Control deploy installs Naver search keys only as a pair and never prints them',()=>{
-  const wf=read('.github/workflows/deploy-ai-control.yml');
-  assert.match(wf,/AI_NAVER_SEARCH_CLIENT_ID: \$\{\{ secrets\.AI_CONTROL_NAVER_SEARCH_CLIENT_ID \|\| secrets\.NAVER_CLIENT_ID \}\}/);
-  assert.match(wf,/if \(process\.env\.AI_NAVER_SEARCH_CLIENT_ID && process\.env\.AI_NAVER_SEARCH_CLIENT_SECRET\) \{/);
-  assert.doesNotMatch(wf,/echo[^\n]*NAVER_SEARCH/);
+  assert.doesNotMatch(read('ai-commons-web-search.js'),/openapi\.naver\.com|naverapihub/);
+  assert.doesNotMatch(read('.github/workflows/deploy-ai-control.yml'),/NAVER/);
 });
