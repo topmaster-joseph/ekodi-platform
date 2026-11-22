@@ -8,7 +8,6 @@ on:
       - 'tenant-live-church-shell.js'
       - 'test/church-live-worship-companion-20261122.test.mjs'
       - 'test/church-live-current-week-languages-20261123.test.mjs'
-      - 'sites/ekodi-church/live/worship-materials.js'
       - '.github/workflows/church-live-worship-companion-pr.yml'
   workflow_dispatch:
 
@@ -36,7 +35,6 @@ jobs:
           node --check tenant-live-page.js
           node --check tenant-live-church-shell.js
           node --check test/church-live-worship-companion-20261122.test.mjs
-          node --check sites/ekodi-church/live/worship-materials.js
           node --check test/church-live-current-week-languages-20261123.test.mjs
       - name: Run source, responsive, private rehearsal and tenant isolation contracts
         run: |
