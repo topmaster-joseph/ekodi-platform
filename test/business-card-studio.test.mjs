@@ -17,6 +17,9 @@ test('EKODI card studio ships at canonical original path and is linked from EKOD
 });
 test('latest approved card content retained without image-generated invented numbers',()=>{
  for(const value of ['비비큐 무안청계점','피자마루 목포대점','청계면상인회','박은희','061 453 8295','신한 110 248 100718','정찬균','010 3501 8542','ekodi.kr/mission','cgma4989@gmail.com','신한 100 037 318876','청춘이 계속되는 거리'])assert.ok(source.includes(value),value);
+ assert.match(source,/https:\/\/ekodi\.kr\/bbqcg/);
+ assert.match(source,/https:\/\/ekodi\.kr\/pizzamaru/);
+ assert.doesNotMatch(source,/pizzamaru\.ekodi\.kr|ekodi\.kr\/bbq'/);
  assert.match(source,/QR 목적지/);
  assert.match(source,/new QRCode/);
  assert.match(source,/qrData/);
