@@ -7,12 +7,20 @@ const source=readFileSync(new URL('business-card-studio/cards.js',root),'utf8');
 const html=readFileSync(new URL('business-card-studio/index.html',root),'utf8');
 const build=readFileSync(new URL('scripts/build.mjs',root),'utf8');
 const biz=readFileSync(new URL('ekodibiz/index.html',root),'utf8');
-test('EKODI card studio ships at canonical original path and is linked from EKODIBIZ',()=>{
+const siteWorker=readFileSync(new URL('site-worker.js',root),'utf8');
+test('EKODI card studio ships at /bizcards and is linked from EKODIBIZ',()=>{
  assert.match(build,/business-card-studio.*bizcards/);
  assert.match(biz,/href="\/bizcards"/);
  assert.match(html,/<script defer src="\/o2o-qr-vendor\.js"/);
  assert.ok(html.includes('href="https://ekodi.kr/bizcards"'));
  assert.ok(html.includes('src="/bizcards/cards.js"'));
+ assert.ok(html.includes('href="/bizcards/cards.css"'));
+ assert.ok(siteWorker.includes("url.pathname === '/bizcards'"));
+ assert.ok(siteWorker.includes("'/bizcards/' : url.pathname"));
+ assert.ok(!html.includes('/ekodibiz/cards/'));
+ assert.ok(!biz.includes('href="/ekodibiz/cards/"'));
+ assert.ok(!build.includes('`${output}ekodibiz/cards`'));
+
  assert.match(html,/id="approve"/);assert.match(html,/id="download" disabled/);
  assert.match(html,/id="request" disabled/);assert.match(html,/aria-disabled="true"/);
  assert.doesNotMatch(html,/<script>(?!<\/script>)/);
