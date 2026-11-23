@@ -229,6 +229,7 @@ on:
       - 'test/church-member-home.test.mjs'
       - 'church-reports-admin.js'
       - 'church-reports-admin.css'
+      - 'church-sign.woff2'
       - 'workspace-trade-admin-page.js'
       - 'workspace-trade-portal.js'
       - 'mail-user-page.js'

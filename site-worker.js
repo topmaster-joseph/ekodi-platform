@@ -224,6 +224,8 @@ const ADMIN_ASSETS = new Set([
   '/release-control-admin.js',
   '/church-reports-admin.css',
   '/church-reports-admin.js',
+  '/church-sign.woff2',
+  '/church-sign-font-LICENSE.txt',
   '/books-admin.css',
   '/books-admin.js',
   '/books-finance-admin.css',

@@ -32,6 +32,7 @@
     html[data-seamless-sso="1"] #authStatus,
     html[data-seamless-sso="1"] #accessStatus{text-align:center}
     .account-choice{display:grid;gap:10px;margin-top:14px}.account-choice.hide{display:none}
+    html[data-ekodi-login-routing] body::after{content:'로그인 중입니다… 잠시만 기다려 주세요';position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(246,247,244,.88);color:#1d4d3a;font-weight:700;font-size:1.05rem;cursor:progress}
   </style>
 </head>
 <body>
