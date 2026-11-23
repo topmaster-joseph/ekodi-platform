@@ -12,3 +12,7 @@ PR head CI/security/orchestration all green, protected merge, guarded Operating 
 
 ## Safety
 No direct main push, no unguarded workflow dispatch, no payment enablement or unverified menu/price, no private Opera tabs. Report success only after actual production run and live proof.
+
+## Post-sync required CI refresh
+
+The EKODI convergent merger synchronized PR #10315 against current protected main, changing its exact head to afc48117fed4c4c8e16d4c38c9eca82490b0ea65. The resulting bot-generated PR checks reported action_required without executable jobs. This owner-authored documentation-only update re-requests authentic CI on the now-synchronized branch. All executable source and policy remain unchanged; actual green checks, protected merge, guarded production release, and BBQ live evidence are still required.
