@@ -492,6 +492,32 @@ test('operators can place labelled test orders that never enter totals or the CS
   } finally { sb2.restore(); }
 });
 
+test('operator-only Toss TEST payments do not create real purchase phone notifications', async () => {
+  const sent = [];
+  const env = await testModeEnv();
+  env.QTIN_OPERATOR_NOTIFY_ENABLED = 'true';
+  env.OPERATOR_NOTIFY = { notify: async notice => { sent.push(notice); return { ok: true, push: true }; } };
+  const sb = mockSupabase('topmaster.joseph@gmail.com');
+  let order;
+  try {
+    const req = new Request('https://ekodi.kr/qtin/api/orders', {
+      method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer tok' },
+      body: JSON.stringify(testOrderBody)
+    });
+    order = await (await handleRequest(req, env, OPEN_NOW)).json();
+    assert.match(order.orderId, /^QTINTEST-/);
+  } finally { sb.restore(); }
+  const toss = mockToss(async (_, init) => {
+    const body = JSON.parse(init.body);
+    return { body: { paymentKey: body.paymentKey, orderId: body.orderId, totalAmount: body.amount, status: 'DONE', method: '테스트카드' } };
+  });
+  try {
+    assert.equal((await confirmPayment(env, { paymentKey: 'pk_test', orderId: order.orderId, amount: order.amount }, OPEN_NOW)).ok, true);
+  } finally { toss.restore(); }
+  assert.equal(sent.length, 0);
+  assert.equal((await env.DB.prepare('SELECT COUNT(*) AS n FROM qtin_operator_notice_outbox').first()).n, 0);
+});
+
 // ---------- EKODIPAY-CORE-001: merchant (MID) switch ----------
 test('after switching MID, new orders use the new merchant and old orders keep the original MID', async () => {
   const env = await openEnvWithProducts();
