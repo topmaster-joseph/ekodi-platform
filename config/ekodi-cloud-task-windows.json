@@ -3,7 +3,7 @@
   "owner": "EKODI Orchestrator",
   "policyId": "EKODI-BOUND-NATIVE-TASK-WINDOWS-20261122",
   "timezone": "Asia/Seoul",
-  "source": "operator-authorized snapshot 2026-11-22; not a live ChatGPT API feed",
+  "source": "operator-authorized ChatGPT Automations snapshot 2026-11-23; historical and not a live ChatGPT API feed",
   "managedBy": ".github/workflows/ekodi-native-operations-watch.yml",
   "stage": "read_only_cloud_shadow_until_verified_parity",
   "noAutomaticChatgptDisable": true,
@@ -11,92 +11,11 @@
   "approvedReadOnly": true,
   "tasks": [
     {
-      "id": "education-release",
-      "title": "에코디교육 배포 실증",
-      "issue": 9862,
-      "state": "active_shadow",
-      "cadence": "hourly",
-      "startDate": "2026-11-22",
-      "endDate": "2026-12-22"
-    },
-    {
-      "id": "institution-ai-security",
-      "title": "에코디 기관형 AI 보안 릴리스 점검",
-      "issue": 9870,
-      "state": "active_shadow",
-      "cadence": "daily",
-      "startDate": "2026-11-22",
-      "endDate": "2026-12-22"
-    },
-    {
-      "id": "merchant-ai-schedule",
-      "title": "상인 AI교육 일정 반영 점검",
-      "issue": 8128,
-      "state": "expired",
-      "cadence": "daily",
-      "startDate": "2026-11-01",
-      "endDate": "2026-11-21"
-    },
-    {
-      "id": "mission-news-release",
-      "title": "에코디 사역소식 릴리스 감시",
-      "issue": 8106,
-      "state": "expired",
-      "cadence": "hourly",
-      "startDate": "2026-11-01",
-      "endDate": "2026-11-21"
-    },
-    {
-      "id": "investment-release",
-      "title": "에코디 투자 운영 배포 실증",
-      "issue": 8096,
-      "state": "expired",
-      "cadence": "hourly",
-      "startDate": "2026-11-01",
-      "endDate": "2026-11-21"
-    },
-    {
-      "id": "church-refurbishment",
-      "title": "에코디교회 개편 릴리스 추적",
-      "issue": 8531,
+      "id": "admin-auth",
+      "title": "EKODI 관리자 실증 확인",
+      "issue": 4193,
       "state": "paused",
       "cadence": "hourly",
-      "startDate": "2026-11-22",
-      "endDate": "2026-12-22"
-    },
-    {
-      "id": "search-visibility",
-      "title": "검색노출 릴리스 후속 검증",
-      "issue": 8132,
-      "state": "paused",
-      "cadence": "hourly",
-      "startDate": "2026-11-22",
-      "endDate": "2026-12-22"
-    },
-    {
-      "id": "coupang-and-domeggook",
-      "title": "쿠팡추천몰 릴리스·도매꾹 점검",
-      "issue": 6891,
-      "state": "paused",
-      "cadence": "hourly",
-      "startDate": "2026-11-22",
-      "endDate": "2026-12-22"
-    },
-    {
-      "id": "proposal-release",
-      "title": "에코디 제안서 운영 검증",
-      "issue": 8112,
-      "state": "paused",
-      "cadence": "hourly",
-      "startDate": "2026-11-22",
-      "endDate": "2026-12-22"
-    },
-    {
-      "id": "worship-preparation",
-      "title": "에코디교회 주일예배 자료 준비",
-      "issue": 6051,
-      "state": "paused",
-      "cadence": "weekly",
       "startDate": "2026-11-22",
       "endDate": "2026-12-22"
     },
@@ -104,24 +23,6 @@
       "id": "church-live-release",
       "title": "에코디교회 방송 배포 점검",
       "issue": 6051,
-      "state": "paused",
-      "cadence": "hourly",
-      "startDate": "2026-11-22",
-      "endDate": "2026-12-22"
-    },
-    {
-      "id": "human-publishing",
-      "title": "에코디 휴먼출판 월간 제작",
-      "issue": 6331,
-      "state": "paused",
-      "cadence": "weekly",
-      "startDate": "2026-11-22",
-      "endDate": "2026-12-22"
-    },
-    {
-      "id": "social-accounts",
-      "title": "에코디 소셜계정 화면 배포 검증",
-      "issue": 6524,
       "state": "paused",
       "cadence": "hourly",
       "startDate": "2026-11-22",
@@ -137,18 +38,38 @@
       "endDate": "2026-12-22"
     },
     {
-      "id": "mission-home",
-      "title": "에코디선교회 홈 실증 완료 추적",
-      "issue": 6875,
+      "id": "church-refurbishment",
+      "title": "에코디교회 개편 릴리스 추적",
+      "issue": 8531,
       "state": "paused",
       "cadence": "hourly",
       "startDate": "2026-11-22",
       "endDate": "2026-12-22"
     },
     {
-      "id": "platform-stability",
-      "title": "EKODI 안정화 추적",
-      "issue": 4673,
+      "id": "church-weekly-notice-deploy-watch",
+      "title": "교회소식 배포 실증 추적",
+      "issue": 10169,
+      "state": "active_shadow",
+      "cadence": "hourly",
+      "startDate": "2026-11-21",
+      "endDate": "2026-11-24"
+    },
+    {
+      "id": "church-weekly-notice-publisher",
+      "title": "에코디교회 주일별 교회소식 자동등록",
+      "issue": 10169,
+      "state": "active_shadow",
+      "cadence": "weekly",
+      "startDate": "2026-11-23",
+      "endDate": "2027-12-31",
+      "weekday": "MO",
+      "publicationGuard": "approved_source_and_protected_release_only"
+    },
+    {
+      "id": "coupang-and-domeggook",
+      "title": "쿠팡추천몰 릴리스·도매꾹 점검",
+      "issue": 6891,
       "state": "paused",
       "cadence": "hourly",
       "startDate": "2026-11-22",
@@ -161,12 +82,119 @@
       "state": "paused",
       "cadence": "once",
       "startDate": "2026-11-22",
+      "endDate": "2026-12-22",
+      "archivedFromCurrentAccountSnapshot": true
+    },
+    {
+      "id": "education-release",
+      "title": "에코디교육 배포 실증",
+      "issue": 9862,
+      "state": "active_shadow",
+      "cadence": "hourly",
+      "startDate": "2026-11-22",
       "endDate": "2026-12-22"
+    },
+    {
+      "id": "human-publishing",
+      "title": "에코디 휴먼출판 월간 제작",
+      "issue": 6331,
+      "state": "paused",
+      "cadence": "weekly",
+      "startDate": "2026-11-22",
+      "endDate": "2026-12-22"
+    },
+    {
+      "id": "institution-ai-security",
+      "title": "에코디 기관형 AI 보안 릴리스 점검",
+      "issue": 9870,
+      "state": "active_shadow",
+      "cadence": "daily",
+      "startDate": "2026-11-22",
+      "endDate": "2026-12-22"
+    },
+    {
+      "id": "investment-release",
+      "title": "에코디 투자 운영 배포 실증",
+      "issue": 8096,
+      "state": "expired",
+      "cadence": "hourly",
+      "startDate": "2026-11-01",
+      "endDate": "2026-11-21"
+    },
+    {
+      "id": "live-anonymous-viewer-e2e",
+      "title": "에코디 LIVE 외부접속 검증",
+      "issue": 10054,
+      "state": "expired",
+      "cadence": "hourly",
+      "startDate": "2026-11-21",
+      "endDate": "2026-11-23",
+      "completedCountOnly": true,
+      "originalSchedule": "COUNT=24",
+      "noNextRun": true
+    },
+    {
+      "id": "merchant-ai-schedule",
+      "title": "상인 AI교육 일정 반영 점검",
+      "issue": 8128,
+      "state": "expired",
+      "cadence": "daily",
+      "startDate": "2026-11-01",
+      "endDate": "2026-11-21"
+    },
+    {
+      "id": "mission-home",
+      "title": "에코디선교회 홈 실증 완료 추적",
+      "issue": 6875,
+      "state": "paused",
+      "cadence": "hourly",
+      "startDate": "2026-11-22",
+      "endDate": "2026-12-22"
+    },
+    {
+      "id": "mission-news-release",
+      "title": "에코디 사역소식 릴리스 감시",
+      "issue": 8106,
+      "state": "expired",
+      "cadence": "hourly",
+      "startDate": "2026-11-01",
+      "endDate": "2026-11-21"
     },
     {
       "id": "payment-admin",
       "title": "EKODI 결제·관리자 운영 실증",
       "issue": 5782,
+      "state": "paused",
+      "cadence": "hourly",
+      "startDate": "2026-11-22",
+      "endDate": "2026-12-22",
+      "archivedFromCurrentAccountSnapshot": true
+    },
+    {
+      "id": "platform-stability",
+      "title": "EKODI 안정화 추적",
+      "issue": 4673,
+      "state": "paused",
+      "cadence": "hourly",
+      "startDate": "2026-11-22",
+      "endDate": "2026-12-22",
+      "archivedFromCurrentAccountSnapshot": true
+    },
+    {
+      "id": "points-staging-e2e",
+      "title": "에코디 활동포인트 브라우저 실증",
+      "issue": 6739,
+      "state": "active_shadow",
+      "cadence": "hourly",
+      "startDate": "2026-11-22",
+      "endDate": "2026-12-22",
+      "workflow": "verify-points-staging-browser.yml",
+      "minReleaseAt": "2026-11-21T14:35:09Z"
+    },
+    {
+      "id": "proposal-release",
+      "title": "에코디 제안서 운영 검증",
+      "issue": 8112,
       "state": "paused",
       "cadence": "hourly",
       "startDate": "2026-11-22",
@@ -182,9 +210,27 @@
       "endDate": "2026-12-22"
     },
     {
-      "id": "admin-auth",
-      "title": "EKODI 관리자 실증 확인",
-      "issue": 4193,
+      "id": "search-visibility",
+      "title": "검색노출 릴리스 후속 검증",
+      "issue": 8132,
+      "state": "paused",
+      "cadence": "hourly",
+      "startDate": "2026-11-22",
+      "endDate": "2026-12-22"
+    },
+    {
+      "id": "seonam-board",
+      "title": "시민의견 새 게시판 운영 실증",
+      "issue": 5153,
+      "state": "paused",
+      "cadence": "hourly",
+      "startDate": "2026-11-22",
+      "endDate": "2026-12-22"
+    },
+    {
+      "id": "seonam-calendar",
+      "title": "서남권 실제 일정 공유 확인",
+      "issue": 5149,
       "state": "paused",
       "cadence": "hourly",
       "startDate": "2026-11-22",
@@ -209,24 +255,6 @@
       "endDate": "2026-12-22"
     },
     {
-      "id": "seonam-calendar",
-      "title": "서남권 실제 일정 공유 확인",
-      "issue": 5149,
-      "state": "paused",
-      "cadence": "hourly",
-      "startDate": "2026-11-22",
-      "endDate": "2026-12-22"
-    },
-    {
-      "id": "seonam-board",
-      "title": "시민의견 새 게시판 운영 실증",
-      "issue": 5153,
-      "state": "paused",
-      "cadence": "hourly",
-      "startDate": "2026-11-22",
-      "endDate": "2026-12-22"
-    },
-    {
       "id": "seonam-visual",
       "title": "서남권 실사 28화면 검증",
       "issue": 4969,
@@ -236,15 +264,30 @@
       "endDate": "2026-12-22"
     },
     {
-      "id": "points-staging-e2e",
-      "title": "에코디 활동포인트 브라우저 실증",
-      "issue": 6739,
-      "state": "active_shadow",
+      "id": "social-accounts",
+      "title": "에코디 소셜계정 화면 배포 검증",
+      "issue": 6524,
+      "state": "paused",
       "cadence": "hourly",
       "startDate": "2026-11-22",
-      "endDate": "2026-12-22",
-      "workflow": "verify-points-staging-browser.yml",
-      "minReleaseAt": "2026-11-21T14:35:09Z"
+      "endDate": "2026-12-22"
+    },
+    {
+      "id": "worship-preparation",
+      "title": "에코디교회 주일예배 자료 준비",
+      "issue": 6051,
+      "state": "paused",
+      "cadence": "weekly",
+      "startDate": "2026-11-22",
+      "endDate": "2026-12-22"
     }
-  ]
+  ],
+  "accountSnapshot": {
+    "observedAt": "2026-11-23",
+    "taskCount": 25,
+    "enabledFlagCount": 5,
+    "nextRunScheduledCount": 4,
+    "expiredEnabledFlagCount": 1,
+    "archivedPriorSnapshotCount": 3
+  }
 }
