@@ -138,7 +138,9 @@
       },
       {
         "url": "https://ekodi.kr/yogurtpurple",
-        "statuses": [410],
+        "statuses": [
+          410
+        ],
         "redirect": "manual",
         "expect": [
           "삭제된 주소입니다."
@@ -158,12 +160,12 @@
           "EKODI MISSION",
           "class=\"mission-site-header\"",
           "data-mission-nav",
-          "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js",
+          "/mission/assets/shell.css",
+          "/mission/assets/shell.js",
           "EVERY SATURDAY",
           "이번 주 토요모임",
           "data-mission-saturday",
-          "/ekodimission/assets/saturday.js"
+          "/mission/assets/saturday.js"
         ],
         "headerExpect": [
           "x-ekodi-route: ekodimission-public",
@@ -185,9 +187,9 @@
           "현장 참석 관리",
           "class=\"mission-site-header\"",
           "data-mission-nav",
-          "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js",
-          "/ekodimission/assets/presence.js"
+          "/mission/assets/shell.css",
+          "/mission/assets/shell.js",
+          "/mission/assets/presence.js"
         ],
         "headerExpect": [
           "x-ekodi-route: ekodimission-public",
@@ -209,17 +211,17 @@
           "활동 목록",
           "data-activity-year",
           "data-activity-month",
-          "/ekodimission/apply/261003-autumn-trip",
-          "/ekodimission/apply/260926-open-table",
+          "/mission/apply/261003-autumn-trip",
+          "/mission/apply/260926-open-table",
           "16:00–18:00",
           "class=\"mission-site-header\"",
           "data-mission-nav",
-          "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js",
+          "/mission/assets/shell.css",
+          "/mission/assets/shell.js",
           "2025 사랑의 연탄봉사",
           "한국외국인선교회 무안지부 설립",
           "2026 제주 여름캠프",
-          "/ekodimission/activities/261010-naju-yeongsan"
+          "/mission/activities/261010-naju-yeongsan"
         ],
         "headerExpect": [
           "x-ekodi-route: ekodimission-public",
@@ -246,8 +248,8 @@
           "data-mission-nav",
           "class=\"mission-site-header\"",
           "href=\"https://www.naju.go.kr/tour/festival/river\"",
-          "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js"
+          "/mission/assets/shell.css",
+          "/mission/assets/shell.js"
         ],
         "headerExpect": [
           "x-ekodi-route: ekodimission-public",
@@ -286,9 +288,9 @@
           "data-event-application",
           "class=\"mission-site-header\"",
           "data-mission-nav",
-          "/ekodimission/assets/site.js",
-          "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js"
+          "/mission/assets/site.js",
+          "/mission/assets/shell.css",
+          "/mission/assets/shell.js"
         ],
         "headerExpect": [
           "x-ekodi-route: ekodimission-public",
@@ -314,9 +316,9 @@
           "261003-autumn-community-trip",
           "class=\"mission-site-header\"",
           "data-mission-nav",
-          "/ekodimission/assets/site.js",
-          "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js"
+          "/mission/assets/site.js",
+          "/mission/assets/shell.css",
+          "/mission/assets/shell.js"
         ],
         "headerExpect": [
           "x-ekodi-route: ekodimission-public",
@@ -337,8 +339,8 @@
         "expect": [
           "가을 공동체 여행 공동편집",
           "data-collab-editor",
-          "/ekodimission/assets/collab.js",
-          "/ekodimission/assets/collab.css"
+          "/mission/assets/collab.js",
+          "/mission/assets/collab.css"
         ],
         "headerExpect": [
           "x-ekodi-route: ekodimission-collab",
@@ -454,8 +456,8 @@
           "PARTICIPATE",
           "class=\"mission-site-header\"",
           "data-mission-nav",
-          "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js"
+          "/mission/assets/shell.css",
+          "/mission/assets/shell.js"
         ],
         "headerExpect": [
           "x-ekodi-route: ekodimission-public",
@@ -476,8 +478,8 @@
           "PARTNERSHIP",
           "class=\"mission-site-header\"",
           "data-mission-nav",
-          "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js",
+          "/mission/assets/shell.css",
+          "/mission/assets/shell.js",
           "함께할 수 있는 네 가지 길"
         ],
         "headerExpect": [
@@ -502,8 +504,8 @@
           "한국외국인선교회 무안지부 설립",
           "제주 여름캠프",
           "data-mission-nav",
-          "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js"
+          "/mission/assets/shell.css",
+          "/mission/assets/shell.js"
         ],
         "headerExpect": [
           "x-ekodi-route: ekodimission-public",
@@ -524,8 +526,8 @@
           "STORIES & NEWS",
           "class=\"mission-site-header\"",
           "data-mission-nav",
-          "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js",
+          "/mission/assets/shell.css",
+          "/mission/assets/shell.js",
           "OUR JOURNEY",
           "연혁 전체 보기",
           "2026년 9–10월 선교편지"
@@ -549,8 +551,8 @@
           "GIVE & SHARE",
           "class=\"mission-site-header\"",
           "data-mission-nav",
-          "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js"
+          "/mission/assets/shell.css",
+          "/mission/assets/shell.js"
         ],
         "headerExpect": [
           "x-ekodi-route: ekodimission-public",
@@ -571,8 +573,8 @@
           "VISION & VALUES",
           "class=\"mission-site-header\"",
           "data-mission-nav",
-          "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js",
+          "/mission/assets/shell.css",
+          "/mission/assets/shell.js",
           "생명을 살리는 공동체"
         ],
         "headerExpect": [
@@ -594,8 +596,8 @@
           "PRAYER",
           "class=\"mission-site-header\"",
           "data-mission-nav",
-          "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js"
+          "/mission/assets/shell.css",
+          "/mission/assets/shell.js"
         ],
         "headerExpect": [
           "x-ekodi-route: ekodimission-public",
@@ -616,8 +618,8 @@
           "STEWARDSHIP & TRANSPARENCY",
           "class=\"mission-site-header\"",
           "data-mission-nav",
-          "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js"
+          "/mission/assets/shell.css",
+          "/mission/assets/shell.js"
         ],
         "headerExpect": [
           "x-ekodi-route: ekodimission-public",
@@ -639,8 +641,8 @@
           "class=\"mission-site-header\"",
           "data-mission-nav",
           "data-ekodi-devotion",
-          "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js",
+          "/mission/assets/shell.css",
+          "/mission/assets/shell.js",
           "/bible/devotion.js"
         ],
         "headerExpect": [
@@ -662,8 +664,8 @@
           "CONTACT",
           "class=\"mission-site-header\"",
           "data-mission-nav",
-          "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js"
+          "/mission/assets/shell.css",
+          "/mission/assets/shell.js"
         ],
         "headerExpect": [
           "x-ekodi-route: ekodimission-public",
