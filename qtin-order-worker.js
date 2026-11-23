@@ -482,7 +482,7 @@ async function createOrder(env, body, now = new Date(), request = null) {
   }
   const campaign = await currentCampaign(env, now);
   if (campaign.virtual || campaignState(campaign, now) !== 'open' || clean(body?.campaignId, 10) !== campaign.id) {
-    return { status: 409, data: { error: '지금은 신청 기간이 아닙니다. 매월 20일~25일에 다음달호를 신청할 수 있습니다.' } };
+    return { status: 409, data: { error: '지금은 신청 기간이 아닙니다. 매월 15일~25일에 다음달호를 신청할 수 있습니다.' } };
   }
   const products = await listProducts(env, campaign.id);
   const result = buildOrderDraft({ ...body, email: clean(body?.email, 160) || buyer.data.email }, products);
@@ -587,7 +587,7 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
   const issue = `${campaign.year}년 ${campaign.month}월호`;
   const statusLine = open
     ? `신청 중 · ${escapeHtml(formatKst(campaign.closesAt))} 마감`
-    : state === 'scheduled' ? `${escapeHtml(formatKst(campaign.opensAt))} 신청 시작` : `신청 마감 · 다음 신청은 매월 20일에 열립니다`;
+    : state === 'scheduled' ? `${escapeHtml(formatKst(campaign.opensAt))} 신청 시작` : `신청 마감 · 다음 신청은 매월 15일에 열립니다`;
   const cards = products.map(p => `<article class="book" data-id="${escapeHtml(p.id)}" data-price="${p.salePrice}" data-audience="${qtinAudienceGroup(p.series,p.name)}">
     <button type="button" class="cover" data-intro="${escapeHtml(p.qtmItemId || '')}" data-name="${escapeHtml(p.name)}" data-img="${escapeHtml(p.imageUrl || '')}" aria-label="${escapeHtml(p.name)} 책 소개 보기">${p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" alt="${escapeHtml(p.name)} 표지" loading="lazy" referrerpolicy="no-referrer">` : `<span class="ph">표지 준비 중</span>`}<span class="peek">책 소개</span></button>
     <div class="info"><h3>${escapeHtml(p.name)}</h3>
@@ -1272,7 +1272,7 @@ export function renderAdminPage(scriptNonce = '') {
 <div class="fields" style="margin-top:12px"><label class="f">QTM 상품 주소로 직접 추가<input id="addUrl" placeholder="https://www.qtm.or.kr/shop/..."></label>
 <div class="f" style="justify-content:flex-end"><button class="btn alt" id="add" type="button">추가</button></div></div></section>
 <section class="panel"><h2>신청 내역</h2><div class="fields"><label class="f">검색<input id="filter" placeholder="이름·전화·신청번호"></label></div><div id="orders"></div></section>
-<section class="panel"><h2>신청 기간 수동 조정</h2><p class="note">자동: 매월 20일 00:00 ~ 25일 23:59(KST). 필요할 때만 강제 열기/닫기를 사용하세요.</p>
+<section class="panel"><h2>신청 기간 수동 조정</h2><p class="note">자동: 매월 15일 00:00 ~ 25일 23:59(KST). 필요할 때만 강제 열기/닫기를 사용하세요.</p>
 <div class="pay"><button class="btn alt" data-state="force_open" type="button">강제 열기</button><button class="btn alt" data-state="force_closed" type="button">강제 마감</button><button class="btn alt" data-state="" type="button">자동으로 되돌리기</button></div></section>
 </div>
 </main>
