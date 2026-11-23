@@ -80,7 +80,7 @@ await Promise.all([
   cp(`${root}office-prototype/office.js`,`${output}office/office.js`),
 ]);
 // EKODI Business Card Studio: print-ready local preview, PDF generation and explicit order handoff.
-await cp(`${root}business-card-studio`, `${output}ekodibiz/cards`, { recursive: true });
+await cp(`${root}business-card-studio`, `${output}bizcards`, { recursive: true });
 // EKODI Proposal Studio: local-only static draft editor, no server persistence.
 await cp(`${root}proposal`, `${output}proposal`, { recursive: true });
 await cp(`${root}sites/business-cooperative/public`, `${output}business-coop`, { recursive: true });
