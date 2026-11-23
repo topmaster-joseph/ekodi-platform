@@ -758,6 +758,21 @@ export default {
     }
 
     if (host === PUBLIC_HOST) {
+      // EKODI BIZCARDS-001: /bizcards and /bizcards/ serve the SAME page directly (HTTP 200).
+      // No redirect, alias, site duplication, mutation endpoint or privilege escalation.
+      if (url.pathname === '/bizcards' || url.pathname.startsWith('/bizcards/')) {
+        const allowed = new Set(['/bizcards','/bizcards/','/bizcards/index.html','/bizcards/cards.js','/bizcards/cards.css']);
+        if (!['GET','HEAD'].includes(request.method)) {
+          return withHostSecurity(new Response(null,{status:405,headers:{allow:'GET, HEAD'}}),PUBLIC_CSP,'no-store','bizcards-method-denied');
+        }
+        if (!allowed.has(url.pathname)) return withHostSecurity(new Response('Not found',{status:404}),PUBLIC_CSP,'no-store','bizcards-not-found');
+        const documentPath = (url.pathname === '/bizcards' || url.pathname === '/bizcards/') ? '/bizcards/index.html' : url.pathname;
+        const response = await env.ASSETS.fetch(assetRequest(request, documentPath));
+        const secured = withHostSecurity(response,PUBLIC_CSP,'no-store','bizcards-studio');
+        secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+        if (response.ok) secured.headers.set('Content-Type',documentPath.endsWith('.js')?'text/javascript; charset=utf-8':documentPath.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8');
+        return secured;
+      }
       if (['GET','HEAD'].includes(request.method) && isPublicAccountingNoticePath(url.pathname)) {
         return withHostSecurity(publicAccountingNoticePage(url.pathname), PUBLIC_CSP, 'public, max-age=120', 'public-accounting-notice');
       }
