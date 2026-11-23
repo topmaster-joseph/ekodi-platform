@@ -47,7 +47,7 @@ test('Cloudflare routes Mission through Worker before static fallback without sa
     const regex=pattern=>new RegExp('^'+pattern.split('*').map(part=>part.replace(/[.*+?^\\$\\{\\}()|[\\]\\\\]/g,'\\\\$&')).join('.*')+'$').test(path);
     return entries.some(p=>!p.startsWith('!')&&regex(p))&&!entries.some(p=>p.startsWith('!')&&regex(p.slice(1)));
   };
-  for(const p of ['/mission','/mission/','/mission/devotion','/mission/assets/site.js','/ekodi-church','/ekodichurch/admin','/system-health-admin.js','/system-health-admin.css'])assert.equal(runs(p),true,p);
+  for(const p of ['/mission','/mission/','/mission/devotion','/mission/assets/site.js','/ekodi-church','/ekodichurch/admin','/system-health-admin.js','/system-health-admin.css','/auth-bootstrap.js','/auth-entry.js','/auth-router.js','/auth.js'])assert.equal(runs(p),true,p);
   assert.match(wrangler,/pattern = "ekodi\\.kr\\/mission\\*"/);
 });
 test('Mission production acceptance checks the canonical links even on legacy compatibility paths',async()=>{
