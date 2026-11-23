@@ -8,6 +8,7 @@ on:
       - 'tenant-live-church-shell.js'
       - 'test/church-live-worship-companion-20261122.test.mjs'
       - 'test/church-live-current-week-languages-20261123.test.mjs'
+      - 'test/church-live-published-worship-gate-20261123.test.mjs'
       - '.github/workflows/church-live-worship-companion-pr.yml'
   workflow_dispatch:
 
@@ -36,9 +37,11 @@ jobs:
           node --check tenant-live-church-shell.js
           node --check test/church-live-worship-companion-20261122.test.mjs
           node --check test/church-live-current-week-languages-20261123.test.mjs
+          node --check test/church-live-published-worship-gate-20261123.test.mjs
       - name: Run source, responsive, private rehearsal and tenant isolation contracts
         run: |
           node --test \
+            test/church-live-published-worship-gate-20261123.test.mjs \
             test/church-live-current-week-languages-20261123.test.mjs \
             test/church-live-worship-companion-20261122.test.mjs \
             test/church-live-canonical-rehearsal.test.mjs \
