@@ -65,7 +65,8 @@ test('Mission share route is private-by-link and the admin exposes explicit crea
   assert.match(worker,/x-ekodi-publication-status','private-share'/);
   assert.match(worker,/noindex, nofollow, noarchive/);
   assert.match(worker,/전화번호·이메일·역할·후속관리·내부 메모는 포함하지 않습니다/);
-  assert.match(admin,/\/ekodimission\/api\/admin\/activity-rpc/);
+  assert.match(admin,/\/mission\/api\/admin\/activity-rpc/);
+  assert.doesNotMatch(admin,/missionGateway\?'\/ekodimission\/api\/admin\/activity-rpc'/);
   assert.match(admin,/missionGateway/);
   assert.match(admin,/activity_admin_share_status/);
   assert.match(admin,/activity_admin_create_share/);
