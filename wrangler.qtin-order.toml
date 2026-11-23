@@ -9,7 +9,7 @@ preview_urls = false
 pattern = "ekodi.kr/qtin*"
 zone_name = "ekodi.kr"
 
-# 00:00 KST(15:00 UTC) and 12:00 KST(03:00 UTC): prepare next issue on the 19th–25th,
+# 00:00 KST(15:00 UTC) and 12:00 KST(03:00 UTC): prepare next issue on the 14th–25th,
 # sync QTM prices/covers, expire unpaid applications, anonymize old personal data.
 [triggers]
 crons = ["0 15 * * *", "0 3 * * *"]
@@ -24,9 +24,17 @@ QTM_SEED_ITEM_IDS = "1719304225,1719305039,1719304141"
 # TOSS_SECRET_KEY is a Worker secret only (never in this file, the repo or D1);
 # readiness stays closed until that secret is registered.
 PAYMENTS_ENABLED = "true"
+# Verified live paid orders only; test transactions remain silent.
+QTIN_OPERATOR_NOTIFY_ENABLED = "true"
 # 결제위젯 결제 UI variantKey: "qtin" UI → 큐티인 MID q_ekodib62hb (EKODIPAY는 단일 MID q_ekodib62hb만 사용)
 TOSS_WIDGET_VARIANT = "qtin"
 TOSS_CLIENT_KEY = "test_ck_oEjb0gm23P450e7wmE6o3pGwBJn5"
+
+# Private Control API RPC; not an internet-facing notification endpoint.
+[[services]]
+binding = "OPERATOR_NOTIFY"
+service = "ekodi-auth-api"
+entrypoint = "OperatorNotifier"
 
 [[d1_databases]]
 binding = "DB"
