@@ -157,7 +157,8 @@ export function validateMissionManifest(manifest,entries){
     const request=byPath.get(key);
     if(!request){errors.push(`production manifest missing ${key}`);continue}
     const expects=new Set(Array.isArray(request.expect)?request.expect:[]);
-    for(const marker of REQUIRED_SHELL_MARKERS)if(!expects.has(marker))errors.push(`${key} manifest must verify ${marker}`);
+    // Source files retain stable /ekodimission tenant paths; responses must expose /mission.
+    for(const marker of REQUIRED_SHELL_MARKERS){const rendered=marker.replace('/ekodimission/','/mission/');if(!expects.has(rendered))errors.push(`${key} manifest must verify ${rendered}`);}
     const headers=new Set(Array.isArray(request.headerExpect)?request.headerExpect:[]);
     for(const header of ['x-ekodi-route: ekodimission-public','x-ekodi-independent-site: true','x-ekodi-publication-status: published'])if(!headers.has(header))errors.push(`${key} manifest must verify ${header}`);
     if(request.rollbackVerify!==false)errors.push(`${key} must set rollbackVerify=false so public mission verification is explicit`);
