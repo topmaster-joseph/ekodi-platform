@@ -4,10 +4,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
 import {
-  defaultWindow, targetIssueFor, inPreparationWindow, campaignState, parseIssueTitle, titleMatchesIssue, isQtinFamily,
+  defaultWindow, effectiveCampaignWindow, targetIssueFor, inPreparationWindow, campaignState, parseIssueTitle, titleMatchesIssue, isQtinFamily,
   extractItemIds, parseProductDetail, qtinAudienceGroup, buildOrderDraft, assessConfirmation, csvEscape, normalizePhone, newOrderId, isValidTossOrderId, kstToUtc, CHURCH_PICKUP_ADDRESS,
 } from '../qtin-order-core.js';
-import worker, { handleRequest, syncCampaign, runScheduled, confirmPayment, handleWebhook, renderOrderPage, renderAdminPage } from '../qtin-order-worker.js';
+import worker, { handleRequest, syncCampaign, runScheduled, dispatchDueQtinNotices, confirmPayment, handleWebhook, renderOrderPage, renderAdminPage } from '../qtin-order-worker.js';
 
 // ---------- in-memory D1 shim ----------
 function d1() {
@@ -31,6 +31,7 @@ async function freshEnv(extra = {}) {
   DB.raw.exec(await readFile(new URL('../migrations/0202_qtin_buyer_accounts.sql', import.meta.url), 'utf8'));
   DB.raw.exec(await readFile(new URL('../migrations/0203_qtin_product_intros.sql', import.meta.url), 'utf8'));
   DB.raw.exec(await readFile(new URL('../migrations/0204_qtin_order_delivery.sql', import.meta.url), 'utf8'));
+  DB.raw.exec(await readFile(new URL('../migrations/0205_qtin_operator_notice_outbox.sql', import.meta.url), 'utf8'));
   return { DB, PUBLIC_BASE_URL: 'https://ekodi.kr/qtin', OPERATOR_EMAILS: 'topmaster.joseph@gmail.com', PAYMENTS_ENABLED: 'true', TOSS_CLIENT_KEY: 'live_ck_abc', TOSS_SECRET_KEY: 'live_sk_abc', QTM_SEED_ITEM_IDS: '1719304225', ...extra };
 }
 
@@ -68,21 +69,81 @@ const OPEN_NOW = kstToUtc(2026, 11, 22, 10, 0, 0);
 const BEFORE_NOW = kstToUtc(2026, 11, 10, 10, 0, 0);
 const AFTER_NOW = kstToUtc(2026, 11, 27, 10, 0, 0);
 
-test('intake window is prior-month 20th 00:00 to 25th 23:59:59 KST, including January rollover', () => {
-  assert.deepEqual(defaultWindow(2026, 12), { opensAt: '2026-11-19T15:00:00.000Z', closesAt: '2026-11-25T14:59:59.000Z' });
-  assert.deepEqual(defaultWindow(2027, 1), { opensAt: '2026-12-19T15:00:00.000Z', closesAt: '2026-12-25T14:59:59.000Z' });
+test('intake window is prior-month 15th 00:00 to 25th 23:59:59 KST, including January rollover', () => {
+  assert.deepEqual(defaultWindow(2026, 12), { opensAt: '2026-11-14T15:00:00.000Z', closesAt: '2026-11-25T14:59:59.000Z' });
+  assert.deepEqual(defaultWindow(2027, 1), { opensAt: '2026-12-14T15:00:00.000Z', closesAt: '2026-12-25T14:59:59.000Z' });
   assert.equal(targetIssueFor(OPEN_NOW).id, '2026-12');
   assert.equal(targetIssueFor(kstToUtc(2026, 12, 20, 0, 0, 1)).id, '2027-01');
-  assert.equal(inPreparationWindow(kstToUtc(2026, 11, 19, 0, 0, 0)), true);
+  assert.equal(inPreparationWindow(kstToUtc(2026, 11, 14, 0, 0, 0)), true);
   assert.equal(inPreparationWindow(kstToUtc(2026, 11, 26, 0, 0, 0)), false);
   const c = { ...defaultWindow(2026, 12), manual_state: '', status: 'scheduled' };
   const row = { opens_at: c.opensAt, closes_at: c.closesAt, manual_state: '', status: 'scheduled' };
-  assert.equal(campaignState(row, kstToUtc(2026, 11, 19, 23, 59, 59)), 'scheduled');
-  assert.equal(campaignState(row, kstToUtc(2026, 11, 20, 0, 0, 0)), 'open');
+  assert.equal(campaignState(row, kstToUtc(2026, 11, 14, 23, 59, 59)), 'scheduled');
+  assert.equal(campaignState(row, kstToUtc(2026, 11, 15, 0, 0, 0)), 'open');
   assert.equal(campaignState(row, kstToUtc(2026, 11, 25, 23, 59, 59)), 'open');
   assert.equal(campaignState(row, kstToUtc(2026, 11, 26, 0, 0, 0)), 'closed');
   assert.equal(campaignState({ ...row, manual_state: 'force_open' }, AFTER_NOW), 'open');
   assert.equal(campaignState({ ...row, manual_state: 'force_closed' }, OPEN_NOW), 'closed');
+});
+
+test('only the exact old standard opening is normalized, not customized or manually closed', () => {
+  const original = defaultWindow(2026, 12);
+  const legacy = { target_year: 2026, target_month: 12, opens_at: kstToUtc(2026, 11, 20).toISOString(), closes_at: original.closesAt, manual_state: 'force_closed' };
+  assert.equal(effectiveCampaignWindow(legacy).opens_at, original.opensAt);
+  assert.equal(effectiveCampaignWindow({ ...legacy, opens_at: kstToUtc(2026, 11, 18).toISOString() }).opens_at, kstToUtc(2026, 11, 18).toISOString());
+  assert.equal(campaignState(effectiveCampaignWindow(legacy), kstToUtc(2026, 11, 20)), 'closed');
+});
+
+test('existing stored 20th campaign is open on 15th and its persisted start is reconciled', async () => {
+  const env = await openEnvWithProducts();
+  await env.DB.prepare('UPDATE qtin_campaigns SET opens_at=? WHERE id=?').bind(kstToUtc(2026, 11, 20).toISOString(), '2026-12').run();
+  const firstDay = kstToUtc(2026, 11, 15, 0, 0, 0);
+  const cat = await (await handleRequest(new Request('https://ekodi.kr/qtin/api/catalog'), env, firstDay)).json();
+  assert.equal(cat.campaign.state, 'open');
+  assert.equal(cat.campaign.opensAt, defaultWindow(2026, 12).opensAt);
+  await runScheduled(env, firstDay, { fetchPage: fakeFetchPage });
+  const stored = await env.DB.prepare('SELECT opens_at FROM qtin_campaigns WHERE id=?').bind('2026-12').first();
+  assert.equal(stored.opens_at, defaultWindow(2026, 12).opensAt);
+});
+
+test('live verified Toss DONE sends one private phone notice; replay and webhook never duplicate', async () => {
+  const received = [];
+  const env = await openEnvWithProducts({ QTIN_OPERATOR_NOTIFY_ENABLED: 'true', OPERATOR_NOTIFY: { notify: async input => { received.push(input); return { ok: true, push: true }; } } });
+  const order = await pendingOrder(env);
+  const toss = mockToss(async (url, init) => {
+    const input = url.endsWith('/confirm') ? JSON.parse(init.body) : { paymentKey: 'pk_operator', orderId: order.orderId, amount: order.amount };
+    return { body: { paymentKey: input.paymentKey, orderId: input.orderId, totalAmount: input.amount, status: 'DONE', method: '카드' } };
+  });
+  try {
+    assert.equal((await confirmPayment(env, { paymentKey: 'pk_operator', orderId: order.orderId, amount: order.amount }, OPEN_NOW)).ok, true);
+    assert.equal(received.length, 1);
+    assert.equal(received[0].source, 'qtin');
+    assert.equal(received[0].link, 'https://ekodi.kr/qtin/admin');
+    assert.doesNotMatch(JSON.stringify(received), /010-9999-0000|김선교|pk_operator|buyer@gmail.com/);
+    assert.equal((await confirmPayment(env, { paymentKey: 'pk_operator', orderId: order.orderId, amount: order.amount }, OPEN_NOW)).idempotent, true);
+    await handleWebhook(env, { data: { paymentKey: 'pk_operator', orderId: order.orderId } });
+    assert.equal(received.length, 1);
+    assert.equal((await env.DB.prepare('SELECT status FROM qtin_operator_notice_outbox WHERE order_id=?').bind(order.orderId).first()).status, 'sent');
+  } finally { toss.restore(); }
+});
+
+test('phone push failure is retried without undoing paid status; email alone does not mark alert delivered', async () => {
+  let pushes = 0;
+  const env = await openEnvWithProducts({ QTIN_OPERATOR_NOTIFY_ENABLED: 'true', OPERATOR_NOTIFY: { notify: async () => { pushes++; return { ok: true, push: false, mail: true }; } } });
+  const order = await pendingOrder(env);
+  const toss = mockToss(async (url, init) => {
+    const input = JSON.parse(init.body);
+    return { body: { paymentKey: input.paymentKey, orderId: input.orderId, totalAmount: input.amount, status: 'DONE', method: '카드' } };
+  });
+  try { assert.equal((await confirmPayment(env, { paymentKey: 'pk_retry', orderId: order.orderId, amount: order.amount }, OPEN_NOW)).ok, true); }
+  finally { toss.restore(); }
+  assert.equal((await env.DB.prepare('SELECT status FROM qtin_orders WHERE id=?').bind(order.orderId).first()).status, 'paid');
+  assert.equal((await env.DB.prepare('SELECT status FROM qtin_operator_notice_outbox WHERE order_id=?').bind(order.orderId).first()).status, 'retry');
+  env.OPERATOR_NOTIFY.notify = async () => { pushes++; return { ok: true, push: true }; };
+  const result = await dispatchDueQtinNotices(env, new Date(Date.now() + 7 * 60 * 1000));
+  assert.equal(result.sent, 1);
+  assert.equal(pushes, 2);
+  assert.equal((await env.DB.prepare('SELECT status FROM qtin_operator_notice_outbox WHERE order_id=?').bind(order.orderId).first()).status, 'sent');
 });
 
 test('issue titles parse series and month; non-QTIN products are excluded', () => {
@@ -342,6 +403,8 @@ test('worker contract: routes, cron and secrets stay out of config', async () =>
   assert.match(prod, /pattern = "ekodi\.kr\/qtin\*"/);
   assert.match(prod, /crons = \["0 15 \* \* \*", "0 3 \* \* \*"\]/);
   assert.match(prod, /database_name = "ekodi-auth"/);
+  assert.match(prod, /QTIN_OPERATOR_NOTIFY_ENABLED = "true"/);
+  assert.match(prod, /binding = "OPERATOR_NOTIFY"\s*service = "ekodi-auth-api"\s*entrypoint = "OperatorNotifier"/);
   // Test-key phase: the committed client key must never be a live key without an explicit release.
   assert.match(prod, /TOSS_CLIENT_KEY = "(test_ck_[A-Za-z0-9]+)?"/);
   assert.ok(!/TOSS_SECRET_KEY\s*=/.test(prod));
