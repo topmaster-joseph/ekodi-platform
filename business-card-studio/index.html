@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f4f7f4"><meta name="robots" content="noindex,nofollow">
+<meta name="description" content="에코디 명함 스튜디오 · 양면 미리보기, 정보 검토, 인쇄용 PDF와 인쇄 요청 연결">
+<link rel="canonical" href="https://ekodi.kr/ekodibiz/cards/"><title>에코디 명함 스튜디오 | EKODI</title>
+<link rel="stylesheet" href="./cards.css"><script defer src="/o2o-qr-vendor.js"></script><script defer src="./cards.js"></script></head>
+<body>
+<header class="site-header"><a class="brand" href="/ekodibiz/">EKODI <span>BUSINESS CARD STUDIO</span></a><a class="backlink" href="/ekodibiz/">에코디비즈</a></header>
+<main class="wrap">
+<section class="intro"><div><p class="eyebrow">EKODI BIZ · DESIGN TO PRINT</p><h1>에코디 명함 스튜디오</h1><p>선택한 명함의 양면을 확인하고, 연락처와 QR코드를 검토한 뒤 인쇄용 파일을 내려받아 인쇄를 요청합니다.</p></div>
+<div class="step"><span>01 디자인</span><span>02 정보 확인</span><span>03 인쇄 파일</span><span>04 인쇄 요청</span></div></section>
+<section class="workspace" aria-label="명함 제작">
+<div class="sidepanel">
+<h2>명함 선택</h2>
+<div id="designs" class="designs" role="group" aria-label="디자인 종류">
+<button type="button" data-card="bbq" aria-pressed="true"><strong>비비큐 무안청계점</strong><small>앞면 매장 · 뒷면 에코디선교회</small></button>
+<button type="button" data-card="pizza" aria-pressed="false"><strong>피자마루 목포대점</strong><small>앞면 매장 · 뒷면 에코디선교회</small></button>
+<button type="button" data-card="cgma" aria-pressed="false"><strong>청계면상인회</strong><small>연락처 앞면 · 청춘이 계속되는 거리 뒷면</small></button>
+</div>
+<h2>인쇄 정보 검토</h2><p class="hint">수정한 내용은 이 브라우저의 미리보기에만 적용됩니다. 다른 사용자에게 저장되거나 인쇄업체에 자동 전송되지 않습니다.</p>
+<form id="details" autocomplete="off"></form>
+<div class="settings"><label for="quantity">인쇄 수량</label><select id="quantity"><option value="100">100매</option><option value="200" selected>200매</option><option value="500">500매</option><option value="1000">1,000매</option></select>
+<label for="finish">권장 후가공</label><select id="finish"><option value="양면 컬러 · 무광 코팅" selected>양면 컬러 · 무광 코팅</option><option value="양면 컬러 · 무코팅">양면 컬러 · 무코팅</option></select></div>
+</div>
+<div class="previewpanel">
+<div class="previewhead"><div><p class="eyebrow">LIVE PRINT PREVIEW</p><h2 id="cardHeading">비비큐 무안청계점</h2><p id="cardNote">양면 디자인 · 재단 90 × 50mm · 작업 94 × 54mm</p></div>
+<label class="toggle"><input id="guides" type="checkbox" checked> 재단·안전선 보기</label></div>
+<div class="card-grid"><div class="face"><div class="face-label"><strong>앞면</strong><span>FRONT</span></div><div id="frontPreview" class="artboard" role="img" aria-label="명함 앞면 인쇄 시안"></div></div>
+<div class="face"><div class="face-label"><strong>뒷면</strong><span>BACK</span></div><div id="backPreview" class="artboard" role="img" aria-label="명함 뒷면 인쇄 시안"></div></div></div>
+<div class="legend"><span><i class="legend-trim"></i> 재단선 90 × 50mm</span><span><i class="legend-safe"></i> 안전선 (재단선 안쪽 3mm)</span></div>
+<div class="qr-check"><div id="qrPreview" aria-hidden="true"></div><div><strong>홈페이지 QR코드 확인</strong><p id="qrText"></p><small>QR코드는 입력한 목적지 주소로 새로 생성됩니다. 인쇄 주문 전에 실제 휴대전화로 스캔해 열리는지 확인하세요.</small></div></div>
+<div class="review"><label><input type="checkbox" id="approve"> <span>앞·뒷면 정보, 연락처·계좌, QR 목적지와 인쇄 재단선을 검토했습니다.</span></label></div>
+<div class="actions"><button type="button" class="primary" id="download" disabled>양면 인쇄용 PDF 다운로드</button>
+<button type="button" id="request" disabled>인쇄 요청서 작성</button><a id="vendor" href="https://www.redprinting.co.kr/ko/product/item/BC/BCSPDFT" target="_blank" rel="noopener noreferrer" aria-disabled="true">인쇄업체 주문 페이지</a></div>
+<p class="alert" id="status" role="status" aria-live="polite">양면을 확인하고 검토 완료를 선택하면 인쇄 파일을 생성할 수 있습니다.</p>
+<p class="fineprint">이 서비스는 인쇄 파일 준비와 업체 이동을 지원합니다. <strong>주문 접수·결제·제작은 외부 인쇄업체에서 직접 완료</strong>해야 하며, 이 페이지에서 주문 완료로 표시하지 않습니다. PDF는 인쇄소 요구에 따라 추가 편집·색상검수가 필요할 수 있습니다.</p>
+</div></section>
+<section class="help"><h2>인쇄 전 확인 사항</h2><p>선택한 마지막 시안의 구성·문구를 기준으로 다시 제작한 재현용 인쇄 도안입니다. 이미지 생성 목업을 그대로 잘라 쓰지 않고, 문구와 QR을 정확히 제작합니다. 원본 그림과 장식이 완전히 동일한 픽셀 복제품은 아닙니다.</p>
+<p>작업 파일은 94 × 54mm(사방 2mm 재단 여유), 완성 규격은 90 × 50mm입니다. 중요 문구는 재단선에서 최소 3mm 안쪽에 배치하고, 제출 전 인쇄소의 PDF 색상·재단 가이드를 확인하세요.</p>
+<a href="https://www.redprinting.co.kr/ko/guide3/view/business-card" target="_blank" rel="noopener noreferrer">명함 인쇄 가이드 확인</a></section>
+</main><footer>EKODI BIZ · 명함 스튜디오 <a href="/ekodibiz/">에코디비즈</a> <a href="/privacy">개인정보처리방침</a></footer>
+</body></html>

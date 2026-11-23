@@ -65,20 +65,120 @@
     const docs=Array.isArray(data.documents)?data.documents:[];
     const bundles=[];for(const d of docs){const name=d.bundle||'기타 문서';let b=bundles.find(x=>x.name===name);if(!b){b={name,url:d.bundleUrl||'',items:[]};bundles.push(b)}b.items.push(d)}
     // 한눈에 보이는 탭 + 카드 배치(모바일·웹 공통). 표 대신 카드라 가로로 넘치지 않는다.
-    const card=d=>`<article class="church-doc-card"><div class="church-doc-card-head"><span class="church-doc-tag">${esc(d.category||'문서')}</span><span class="church-doc-year">${esc(d.year||'')}</span></div><h4>${esc(d.title)}</h4>${d.note?`<p class="church-doc-note">${esc(d.note)}</p>`:''}<div class="church-doc-actions">${safeUrl(d.gdocUrl)?`<a class="button primary" href="${esc(safeUrl(d.gdocUrl))}" target="_blank" rel="noopener noreferrer">열기</a>`:''}${safeUrl(d.hwpxUrl)?`<a class="button" href="${esc(safeUrl(d.hwpxUrl))}" target="_blank" rel="noopener noreferrer">한글 내려받기</a>`:''}${data.canWrite?`<button class="button quiet" type="button" data-doc-archive="${esc(d.id)}">내리기</button>`:''}</div></article>`;
+    const card=d=>`<article class="church-doc-card"><div class="church-doc-card-head"><span class="church-doc-tag">${esc(d.category||'문서')}</span><span class="church-doc-year">${esc(d.year||'')}</span></div><h4>${esc(d.title)}</h4>${d.note?`<p class="church-doc-note">${esc(d.note)}</p>`:''}<div class="church-doc-actions">${d.editable?`<button class="button primary" type="button" data-doc-edit="${esc(d.id)}">${data.canWrite?'열기·편집':'열기'}</button>`:(safeUrl(d.gdocUrl)?`<a class="button primary" href="${esc(safeUrl(d.gdocUrl))}" target="_blank" rel="noopener noreferrer">열기</a>`:'')}${safeUrl(d.hwpxUrl)?`<a class="button" href="${esc(safeUrl(d.hwpxUrl))}" target="_blank" rel="noopener noreferrer">${d.editable?'한글(이전본)':'한글 내려받기'}</a>`:''}${data.canWrite?`<button class="button quiet" type="button" data-doc-archive="${esc(d.id)}">내리기</button>`:''}</div></article>`;
     const shortName=n=>/자립화/.test(n)?'자립화 지원신청':/대표자/.test(n)?'대표자 서류':(n.length>10?n.slice(0,10)+'…':n);
     const tabs=bundles.map((b,i)=>({key:`bundle-${i}`,label:shortName(b.name),count:b.items.length,html:`<div class="church-doc-panel-head"><strong>${esc(b.name)}</strong>${safeUrl(b.url)?link(b.url,'드라이브 폴더 열기'):''}</div><div class="church-doc-grid">${b.items.map(card).join('')}</div>`}));
     tabs.push({key:'issued',label:'발급서류',count:null,html:'<section id="churchIssuedRoot" class="church-issued-in-tab"><p class="loading">발급서류를 불러오고 있습니다.</p></section>'});
-    if(data.canWrite)tabs.push({key:'add',label:'+ 등록',count:null,html:`<form id="churchDocForm" class="church-doc-form"><label>묶음 이름<input name="bundle" maxlength="200" placeholder="예: 2027 목포노회 동반성장 자립화교회 지원신청"></label><label>묶음 폴더 링크<input name="bundleUrl" type="url" placeholder="https://drive.google.com/..."></label><label>문서 제목<input name="title" required maxlength="200"></label><label>구분<select name="category">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></label><label>연도<input name="year" maxlength="20"></label><label>웹페이지 링크<input name="gdocUrl" type="url"></label><label>한글 파일 링크<input name="hwpxUrl" type="url"></label><label>비고<input name="note" maxlength="500"></label><button class="button primary" type="submit">등록</button></form>`});
+    if(data.canWrite)tabs.push({key:'add',label:'+ 등록',count:null,html:`<h4 class="church-doc-subhead">한글·워드 파일 올려서 바로 편집 <small>(컴퓨터에 한글·워드가 없어도 됩니다)</small></h4><form id="churchDocImport" class="church-doc-form"><label>파일(.hwpx·.docx)<input name="file" type="file" accept=".hwpx,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label><label>문서 제목<input name="title" maxlength="200" placeholder="비우면 파일 이름"></label><label>묶음 이름<input name="bundle" maxlength="200" placeholder="예: 2027 목포노회 동반성장 자립화교회 지원신청"></label><label>구분<select name="category">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></label><button class="button primary" type="submit">올리고 열기</button><button class="button" type="button" data-doc-blank>빈 문서 만들기</button><p class="empty" data-import-status></p></form><h4 class="church-doc-subhead">링크로 등록</h4><form id="churchDocForm" class="church-doc-form"><label>묶음 이름<input name="bundle" maxlength="200" placeholder="예: 2027 목포노회 동반성장 자립화교회 지원신청"></label><label>묶음 폴더 링크<input name="bundleUrl" type="url" placeholder="https://drive.google.com/..."></label><label>문서 제목<input name="title" required maxlength="200"></label><label>구분<select name="category">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></label><label>연도<input name="year" maxlength="20"></label><label>웹페이지 링크<input name="gdocUrl" type="url"></label><label>한글 파일 링크<input name="hwpxUrl" type="url"></label><label>비고<input name="note" maxlength="500"></label><button class="button primary" type="submit">등록</button></form>`});
     let active='';try{active=sessionStorage.getItem('ekodi:church-doc-tab')||''}catch{}
     if(!tabs.some(t=>t.key===active))active=tabs[0]?.key||'issued';
     root.innerHTML=`<h2>문서보관</h2><p class="empty">원본은 joseph@ekodi.kr 구글드라이브에 있으며, 공유받은 계정으로 로그인해야 열립니다.</p>
       <div class="church-doc-tabs" role="tablist">${tabs.map(t=>`<button type="button" role="tab" class="church-doc-tab${t.key===active?' active':''}" data-doc-tab="${t.key}" aria-selected="${t.key===active}" title="${esc(t.label)}"><span>${esc(t.label)}</span>${t.count!=null?`<b>${t.count}</b>`:''}</button>`).join('')}</div>
       ${tabs.map(t=>`<div class="church-doc-panel" role="tabpanel" data-doc-panel="${t.key}"${t.key===active?'':' hidden'}>${t.html}</div>`).join('')}${bundles.length?'':'<p class="empty">등록된 문서가 없습니다.</p>'}`;
     root.querySelectorAll('[data-doc-tab]').forEach(btn=>btn.addEventListener('click',()=>{const key=btn.dataset.docTab;try{sessionStorage.setItem('ekodi:church-doc-tab',key)}catch{}root.querySelectorAll('[data-doc-tab]').forEach(x=>{const on=x===btn;x.classList.toggle('active',on);x.setAttribute('aria-selected',String(on))});root.querySelectorAll('[data-doc-panel]').forEach(p=>{p.hidden=p.dataset.docPanel!==key})}));
+    const imp=root.querySelector('#churchDocImport');
+    const doImport=async(blank)=>{const st=imp.querySelector('[data-import-status]');const fd=new FormData(imp);if(blank){fd.delete('file');fd.set('blank','1')}else if(!imp.file.files.length){st.textContent='파일을 골라 주세요.';return}
+      st.textContent=blank?'새 문서를 만드는 중…':'파일을 여는 중… (한글·워드를 웹 문서로 바꾸고 있습니다)';const headers=new Headers();if(token())headers.set('authorization',`Bearer ${token()}`);
+      try{const r=await fetch(`${DOC_API}/import`,{method:'POST',headers,body:fd});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);st.textContent='';await loadDocuments();await openDocEditor(d.id)}catch(err){st.textContent=`실패: ${err.message}`}};
+    imp?.addEventListener('submit',e=>{e.preventDefault();void doImport(false)});
+    imp?.querySelector('[data-doc-blank]')?.addEventListener('click',()=>void doImport(true));
+    root.querySelectorAll('[data-doc-edit]').forEach(btn=>btn.addEventListener('click',()=>openDocEditor(btn.dataset.docEdit)));
     void loadIssued();
     root.querySelectorAll('[data-doc-archive]').forEach(button=>button.addEventListener('click',async()=>{if(!confirm('이 문서를 목록에서 내릴까요? 드라이브 원본은 그대로 남습니다.'))return;try{const r=await fetch(`${DOC_API}/${encodeURIComponent(button.dataset.docArchive)}/archive`,{method:'POST',headers:docHeaders()});if(!r.ok)throw new Error(`HTTP ${r.status}`);await loadDocuments()}catch(err){alert(`처리 실패: ${err.message}`)}}));
     root.querySelector('#churchDocForm')?.addEventListener('submit',async event=>{event.preventDefault();const body=Object.fromEntries(new FormData(event.target).entries());try{const r=await fetch(DOC_API,{method:'POST',headers:docHeaders(),body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);await loadDocuments()}catch(err){alert(`등록 실패: ${err.message}`)}});
+  }
+
+  // ── 문서 바로 편집: 열어서 고치고 바로 저장(입력이 멈추면 자동 저장, 이전본은 서버에 보관) ──
+  function importDocHtml(sheet,html){
+    const parsed=new DOMParser().parseFromString(`<body>${html}</body>`,'text/html');
+    const styled=[];parsed.body.querySelectorAll('[style]').forEach(el=>{styled.push([el,el.getAttribute('style')]);el.removeAttribute('style')});
+    styled.forEach(([el,css])=>el.setAttribute('data-ekodi-css',css));
+    sheet.replaceChildren(...Array.from(parsed.body.childNodes).map(n=>document.importNode(n,true)));
+    sheet.querySelectorAll('[data-ekodi-css]').forEach(el=>{el.style.cssText=el.getAttribute('data-ekodi-css');el.removeAttribute('data-ekodi-css')});
+  }
+  // 빨간 글씨는 인라인 스타일 대신 .need 클래스로 표시한다(관리자 화면 보안정책: style 속성 금지).
+  function markRed(sheet){const sel=window.getSelection();if(!sel||!sel.rangeCount)return;const range=sel.getRangeAt(0);if(range.collapsed||!sheet.contains(range.commonAncestorContainer))return;const span=document.createElement('span');span.className='need';span.append(range.extractContents());range.insertNode(span);sel.removeAllRanges();const r=document.createRange();r.selectNodeContents(span);sel.addRange(r)}
+  function unmarkRed(sheet){const sel=window.getSelection();if(!sel||!sel.rangeCount)return;const range=sel.getRangeAt(0);const hits=[...sheet.querySelectorAll('.need')].filter(el=>range.intersectsNode(el));hits.forEach(el=>{if(el.tagName==='SPAN')el.replaceWith(...el.childNodes);else el.classList.remove('need')})}
+  // 표 크기 조절: 칸 경계를 끌면 열 너비, 표 오른쪽 끝을 끌면 표 전체 너비가 바뀐다(퍼센트로 저장되어 인쇄에도 그대로).
+  function enableTableResize(sheet,onChange){
+    const EDGE=5;let drag=null;
+    const colsOf=table=>{let cg=table.querySelector(':scope>colgroup');const first=table.rows[0];if(!first)return [];
+      const count=[...first.cells].reduce((n,c)=>n+(Number(c.colSpan)||1),0);
+      if(!cg||cg.children.length!==count){const widths=[];const probe=[...table.rows].find(r=>r.cells.length===count)||first;
+        if(probe.cells.length===count)[...probe.cells].forEach(c=>widths.push(c.getBoundingClientRect().width));else for(let i=0;i<count;i++)widths.push(table.getBoundingClientRect().width/count);
+        const total=widths.reduce((a,b)=>a+b,0)||1;cg?.remove();cg=document.createElement('colgroup');widths.forEach(w=>{const col=document.createElement('col');col.style.width=`${(w/total*100).toFixed(2)}%`;cg.append(col)});table.prepend(cg);table.classList.remove('auto')}
+      return [...cg.children]};
+    const colIndexEnd=cell=>{const row=cell.parentElement;let idx=0;for(const c of row.cells){idx+=Number(c.colSpan)||1;if(c===cell)return idx-1}return idx-1};
+    const hit=e=>{const cell=e.target.closest?.('td,th');if(!cell||!sheet.contains(cell))return null;const r=cell.getBoundingClientRect();if(Math.abs(e.clientX-r.right)>EDGE)return null;const table=cell.closest('table');const tr=table.getBoundingClientRect();return {cell,table,outer:Math.abs(r.right-tr.right)<=EDGE+1}};
+    sheet.addEventListener('mousemove',e=>{if(drag)return;sheet.classList.toggle('church-doc-resize-cursor',Boolean(hit(e)))});
+    sheet.addEventListener('mousedown',e=>{const h=hit(e);if(!h||e.button!==0)return;e.preventDefault();
+      const tw=h.table.getBoundingClientRect().width,sw=sheet.clientWidth-parseFloat(getComputedStyle(sheet).paddingLeft)-parseFloat(getComputedStyle(sheet).paddingRight);
+      if(h.outer){drag={mode:'table',table:h.table,startX:e.clientX,startW:tw,base:sw}}
+      else{const cols=colsOf(h.table);const i=colIndexEnd(h.cell);if(i<0||i>=cols.length-1)return;drag={mode:'col',cols,i,startX:e.clientX,a:parseFloat(cols[i].style.width)||0,b:parseFloat(cols[i+1].style.width)||0,tw}}
+      document.body.classList.add('church-doc-resizing')});
+    window.addEventListener('mousemove',e=>{if(!drag)return;const dx=e.clientX-drag.startX;
+      if(drag.mode==='table'){const pct=Math.max(30,Math.min(100,(drag.startW+dx)/drag.base*100));drag.table.style.width=`${pct.toFixed(1)}%`}
+      else{const d=dx/drag.tw*100;const a=Math.max(3,Math.min(drag.a+drag.b-3,drag.a+d));drag.cols[drag.i].style.width=`${a.toFixed(2)}%`;drag.cols[drag.i+1].style.width=`${(drag.a+drag.b-a).toFixed(2)}%`}});
+    window.addEventListener('mouseup',()=>{if(!drag)return;drag=null;document.body.classList.remove('church-doc-resizing');onChange()});
+  }
+  // 표 안 ↑·↓: 칸의 첫·마지막 줄에서 누르면 옆 칸이 아니라 바로 위·아래 칸(같은 세로 위치)으로 이동한다.
+  function enableTableArrows(sheet){
+    sheet.addEventListener('keydown',e=>{
+      if((e.key!=='ArrowDown'&&e.key!=='ArrowUp')||e.shiftKey||e.ctrlKey||e.metaKey||e.altKey)return;
+      const sel=window.getSelection();if(!sel||!sel.rangeCount)return;
+      const node=sel.focusNode;const cell=(node?.nodeType===1?node:node?.parentElement)?.closest?.('td,th');if(!cell||!sheet.contains(cell))return;
+      const range=sel.getRangeAt(0).cloneRange();range.collapse(true);let rect=range.getClientRects()[0]||range.getBoundingClientRect();
+      if(!rect||(!rect.width&&!rect.height&&!rect.top))rect=(node.nodeType===1?node:node.parentElement).getBoundingClientRect();
+      const box=cell.getBoundingClientRect();const line=parseFloat(getComputedStyle(cell).lineHeight)||16;
+      const down=e.key==='ArrowDown';
+      if(down?(rect.bottom+line<box.bottom-2):(rect.top-line>box.top+2))return; // 칸 안에 아래·위 줄이 더 있으면 기본 이동
+      const row=cell.parentElement.getBoundingClientRect();const x=Math.min(Math.max(rect.left||box.left+4,box.left+2),box.right-2);
+      const y=down?row.bottom+3:row.top-3;const target=document.elementFromPoint(x,y)?.closest?.('td,th');
+      if(!target||target===cell||target.closest('table')!==cell.closest('table'))return;
+      e.preventDefault();
+      const r=document.createRange();const tb=target.getBoundingClientRect();let placed=false;
+      if(document.caretRangeFromPoint){const c=document.caretRangeFromPoint(x,down?tb.top+Math.min(line/2+2,tb.height/2):tb.bottom-Math.min(line/2+2,tb.height/2));if(c&&target.contains(c.startContainer)){r.setStart(c.startContainer,c.startOffset);placed=true}}
+      if(!placed){r.selectNodeContents(target);r.collapse(down)}
+      r.collapse(true);sel.removeAllRanges();sel.addRange(r);
+    });
+  }
+  async function openDocEditor(id){
+    let doc;
+    try{const r=await fetch(`${DOC_API}/${encodeURIComponent(id)}/content`,{headers:docHeaders(),cache:'no-store'});doc=await r.json().catch(()=>({}));if(!r.ok)throw new Error(doc.error||`HTTP ${r.status}`)}
+    catch(err){alert(`문서를 열지 못했습니다: ${err.message}`);return}
+    document.querySelector('#churchDocEditor')?.remove();
+    const box=document.createElement('div');box.id='churchDocEditor';box.className='church-doc-editor';box.setAttribute('role','dialog');box.setAttribute('aria-label',doc.title);
+    const w=doc.canWrite;
+    box.innerHTML=`<div class="church-doc-editor-bar"><strong title="${esc(doc.title)}">${esc(doc.title)}</strong><span class="church-doc-editor-status" data-status>${w?'열림 · 고치면 자동 저장됩니다':'읽기 전용'}</span>
+      <div class="church-doc-editor-tools">${w?`<button type="button" class="button" data-cmd="bold" title="굵게"><b>가</b></button><button type="button" class="button" data-cmd="underline" title="밑줄"><u>가</u></button><button type="button" class="button" data-cmd="red" title="빨간 글씨">빨강</button><button type="button" class="button" data-cmd="black" title="검은 글씨">검정</button><button type="button" class="button" data-cmd="undo" title="되돌리기">↶</button><button type="button" class="button primary" data-save>저장</button>`:''}<button type="button" class="button" data-print>인쇄</button><button type="button" class="button" data-close>닫기</button></div></div>
+      <div class="church-doc-editor-scroll"><article class="church-doc-sheet" ${w?'contenteditable="true" spellcheck="false"':''}></article></div>`;
+    document.body.append(box);document.body.classList.add('church-doc-editing');
+    const sheet=box.querySelector('.church-doc-sheet'),status=box.querySelector('[data-status]');
+    importDocHtml(sheet,doc.html);
+    let base=doc.updatedAt,dirty=false,saving=false,timer=null;
+    const stamp=t=>{try{return new Date(t).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}catch{return ''}};
+    const setStatus=(t,bad)=>{status.textContent=t;status.classList.toggle('bad',Boolean(bad))};
+    async function save(){
+      if(!w||saving||!dirty)return true;saving=true;clearTimeout(timer);setStatus('저장 중…');
+      try{const r=await fetch(`${DOC_API}/${encodeURIComponent(id)}/content`,{method:'PUT',headers:docHeaders(),body:JSON.stringify({html:sheet.innerHTML,baseUpdatedAt:base})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);base=d.updatedAt||base;dirty=false;setStatus(`저장됨 ${stamp(base)}`);return true}
+      catch(err){setStatus(`저장 안 됨: ${err.message}`,true);return false}
+      finally{saving=false}
+    }
+    if(w){
+      sheet.addEventListener('input',()=>{dirty=true;setStatus('고치는 중… (잠시 멈추면 자동 저장)');clearTimeout(timer);timer=setTimeout(save,2500)});
+      enableTableResize(sheet,()=>{sheet.dispatchEvent(new Event('input'))});
+      enableTableArrows(sheet);
+      try{document.execCommand('styleWithCSS',false,false)}catch{}
+      box.querySelectorAll('[data-cmd]').forEach(b=>b.addEventListener('mousedown',e=>e.preventDefault()));
+      box.querySelectorAll('[data-cmd]').forEach(b=>b.addEventListener('click',()=>{const c=b.dataset.cmd;if(c==='red')markRed(sheet);else if(c==='black')unmarkRed(sheet);else document.execCommand(c);sheet.dispatchEvent(new Event('input'))}));
+      box.querySelector('[data-save]').addEventListener('click',()=>{dirty=true;void save()});
+      box.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();dirty=true;void save()}});
+      window.addEventListener('beforeunload',warn);
+    }
+    function warn(e){if(dirty){e.preventDefault();e.returnValue=''}}
+    box.querySelector('[data-print]').addEventListener('click',async()=>{if(dirty)await save();document.body.classList.add('church-doc-printing');window.print();setTimeout(()=>document.body.classList.remove('church-doc-printing'),500)});
+    box.querySelector('[data-close]').addEventListener('click',async()=>{if(dirty&&!(await save())&&!confirm('저장되지 않은 내용이 있습니다. 그래도 닫을까요?'))return;window.removeEventListener('beforeunload',warn);box.remove();document.body.classList.remove('church-doc-editing');void loadDocuments()});
+    if(w)sheet.focus();
   }
   // 발급서류: 업로드해 두고 다음 제출 때 '최근서류'를 그대로 다시 쓴다.
   const ISSUED_API=`${API}/api/church/admin/reports/documents/issued`;

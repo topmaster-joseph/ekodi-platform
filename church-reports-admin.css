@@ -210,3 +210,50 @@ html[data-ekodi-church-unified-admin="true"] #worshipForm .button{min-height:40p
   html[data-ekodi-church-unified-admin="true"] #worshipForm .trade-grid>label:has(textarea){grid-column:1}
   html[data-ekodi-church-unified-admin="true"] #mainPanel:has(> #worshipForm)>#worshipForm{padding:12px}
 }
+
+/* 문서 바로 편집 */
+.church-doc-editor{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;background:#e9edf2}
+body.church-doc-editing{overflow:hidden}
+.church-doc-editor-bar{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 12px;background:#fff;border-bottom:1px solid #d0d5dd}
+.church-doc-editor-bar>strong{font-size:.95rem;max-width:40ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.church-doc-editor-status{font-size:.78rem;color:#027a48}
+.church-doc-editor-status.bad{color:#b42318;font-weight:700}
+.church-doc-editor-tools{display:flex;flex-wrap:wrap;gap:4px;margin-left:auto}
+.church-doc-editor-tools .button{min-height:30px!important;height:30px;padding:0 10px!important;font-size:.82rem!important;line-height:1!important}
+.church-doc-editor-scroll{flex:1;overflow:auto;padding:14px 8px}
+.church-doc-sheet{width:210mm;max-width:100%;min-height:297mm;margin:0 auto;padding:18mm 20mm;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.15);font-family:'Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo',sans-serif;color:#111;font-size:9.5pt;line-height:1.5;box-sizing:border-box;outline:none;text-align:left}
+.church-doc-sheet[contenteditable="true"]:focus{box-shadow:0 0 0 2px #2e90fa,0 1px 6px rgba(0,0,0,.15)}
+.church-doc-sheet p{margin:0 0 4px}
+.church-doc-sheet .c{text-align:center}.church-doc-sheet .r{text-align:right}
+.church-doc-sheet table{width:100%;border-collapse:collapse;margin:4px 0 8px;table-layout:fixed}
+.church-doc-sheet td{border:1px solid #333;padding:4px 5px;vertical-align:middle;word-break:keep-all;overflow-wrap:anywhere}
+.church-doc-sheet td.h{background:#e8eef4;font-weight:700;text-align:center}
+.church-doc-sheet td p{margin:0}
+.church-doc-sheet .need{color:#c00000;font-weight:700}
+.church-doc-sheet .pb{break-after:page;height:0;border-top:1px dashed #98a2b3;margin:10px 0}
+@media (max-width:820px){.church-doc-sheet{width:auto;min-height:0;padding:14px}.church-doc-editor-tools{margin-left:0}}
+@media print{
+  @page{size:A4;margin:18mm 20mm}
+  body.church-doc-printing>*:not(#churchDocEditor){display:none!important}
+  body.church-doc-printing .church-doc-editor{position:static;background:#fff}
+  body.church-doc-printing .church-doc-editor-bar{display:none!important}
+  body.church-doc-printing .church-doc-editor-scroll{padding:0;overflow:visible}
+  body.church-doc-printing .church-doc-sheet{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}
+  body.church-doc-printing .church-doc-sheet .pb{border:0;margin:0}
+}
+
+/* 서명: 대표자 이름 옆에 필기체 서명(나눔손글씨 펜, OFL — '정찬균' 글자만 담은 작은 글꼴) */
+@font-face{font-family:'EkodiSign';src:url('/church-sign.woff2') format('woff2');font-display:block}
+.church-doc-sheet .sign{display:inline-block;margin:0 4px 0 6px;font-family:'EkodiSign',cursive;font-size:22pt;font-weight:400;line-height:1;color:#1d2a6b;letter-spacing:1px;transform:rotate(-5deg);vertical-align:-4px}
+.church-doc-sheet table.auto{table-layout:auto}
+.church-doc-subhead{margin:6px 0 6px;font-size:.9rem}
+.church-doc-subhead small{font-weight:400;color:#667085}
+
+/* 표 안 글자 자동 줄바꿈(관리자 공통 표 스타일의 nowrap 등을 덮어씀) + 드래그 크기 조절 */
+.church-doc-sheet table{width:100%;max-width:100%;border-collapse:collapse!important;display:table!important;overflow:visible!important}
+.church-doc-sheet table:not(.auto){table-layout:fixed!important}
+.church-doc-sheet table.auto{table-layout:auto!important}
+.church-doc-sheet td,.church-doc-sheet th,.church-doc-sheet td *,.church-doc-sheet th *{white-space:normal!important;word-break:keep-all;overflow-wrap:anywhere!important;min-width:0;max-width:100%}
+.church-doc-sheet td,.church-doc-sheet th{overflow:hidden;position:relative}
+.church-doc-sheet.church-doc-resize-cursor,.church-doc-sheet.church-doc-resize-cursor *{cursor:col-resize!important}
+body.church-doc-resizing,body.church-doc-resizing *{cursor:col-resize!important;user-select:none!important}
