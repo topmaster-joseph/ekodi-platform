@@ -71,6 +71,7 @@ function sec(no,title,body){return '<section class="msec"><h3><span class="msec-
 
 // Absolute https media (e.g. official video stills) is used as-is; package assets are resolved against assetBase.
 function mediaSrc(src,assetBase){return /^https:/.test(src)?src:assetBase+src}
+function contactHtml(c,cls){if(!c)return '';return '<p class="'+cls+'" aria-label="강사 연락처">'+(c.phone?'<a href="tel:'+esc(c.phone.replace(/-/g,''))+'">☎ '+esc(c.phone)+'</a>':'')+(c.email?'<a href="mailto:'+esc(c.email)+'">✉ '+esc(c.email)+'</a>':'')+'</p>';}
 export function instructorCard(ins,assetBase='',{compact=false}={}){
   if(!ins)return '';
   const sites=ins.sites.map(x=>'<a class="site-chip" href="'+esc(x.url)+'" target="_blank" rel="noopener noreferrer"><b>'+esc(x.label)+'</b>'+(compact?'':'<span>'+esc(x.desc)+'</span>')+'</a>').join('');
@@ -79,7 +80,7 @@ export function instructorCard(ins,assetBase='',{compact=false}={}){
   const detail='<p class="meta">'+esc(ins.promise)+'</p>'+list(ins.roles,false,'ins-roles')+'<p class="meta">저서 · '+ins.books.map(b=>'『'+esc(b)+'』').join(' ')+'</p>';
   return '<section class="ins-card'+(compact?' is-compact':'')+'" aria-label="오늘의 강사 소개"><img class="ins-photo" src="'+esc(assetBase+ins.photo)+'" alt="'+esc(ins.photoAlt)+'" width="160" height="160" loading="lazy">'+
     '<div class="ins-body"><p class="eyebrow">오늘의 강사</p><h2 class="ins-name">'+esc(ins.name)+' <span>'+esc(ins.nameEn)+'</span></h2><p class="ins-headline">'+esc(ins.headline)+'</p>'+
-    '<p class="ins-hook">'+esc(ins.hook)+'</p>'+(compact
+    '<p class="ins-hook">'+esc(ins.hook)+'</p>'+contactHtml(ins.contact,'ins-contact')+(compact
       // Learner lab: the same short card in every session; the full profile folds out on demand.
       ?'<details class="ins-more"><summary>강사 소개 더 보기</summary>'+detail+'<div class="site-chips" aria-label="운영 웹사이트">'+sites+'</div>'+gallery+'</details>'
       :detail+'<div class="site-chips" aria-label="운영 웹사이트">'+sites+'</div>'+gallery)+'</div></section>';
@@ -94,7 +95,7 @@ export function slideHtml(slide,{joinSvg='',joinUrl='',timerText='',sessionLabel
       '<p class="slide-lead">'+esc(ins.headline)+'</p>'+list(ins.roles.slice(0,3),false,'slide-bullets slide-ins-roles')+
       '<p class="slide-ins-sites">'+ins.sites.slice(0,4).map(x=>'<span>'+esc(x.label)+'</span>').join('')+'</p>'+
       (ins.gallery?.length?'<p class="slide-ins-gallery">'+ins.gallery.slice(0,3).map(g=>'<img src="'+esc(mediaSrc(g.src,assetBase))+'" alt="'+esc(g.alt)+'" referrerpolicy="no-referrer" decoding="async">').join('')+'</p>':'')+
-      '<p class="slide-ins-hook">'+esc(ins.hook)+'</p></div></div>';
+      '<p class="slide-ins-hook">'+esc(ins.hook)+'</p>'+contactHtml(ins.contact,'slide-ins-contact')+'</div></div>';
   }
   if(slide.special==='hook'){
     return '<div class="slide slide-hook"><p class="slide-kicker">'+esc(slide.k)+'</p><h2 class="slide-hook-q">'+esc(slide.t)+'</h2><p class="slide-lead">'+esc(slide.p)+'</p></div>';

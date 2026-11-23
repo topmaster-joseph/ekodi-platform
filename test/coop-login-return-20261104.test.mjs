@@ -73,16 +73,16 @@ const req = (coop, path, token = '', method = 'GET', body) => new Request(`https
 
 test('join requires login and an explicit consent check', async t => {
   const f = fixture(); t.after(() => f.sqlite.close()); t.mock.method(globalThis, 'fetch', authFetch({ a: 'new@example.test' }));
-  assert.equal((await routeCooperative(req(open, '/join', '', 'POST', { representative: '홍길동', consent: true }), f.env)).status, 401);
+  assert.equal((await routeCooperative(req(open, '/join', '', 'POST', { representative: '홍길동', consent: true, depositAgreement: true }), f.env)).status, 401);
   assert.equal((await routeCooperative(req(open, '/join', 'a', 'POST', { representative: '홍길동', consent: false }), f.env)).status, 400);
-  assert.equal((await routeCooperative(req(open, '/join', 'a', 'POST', { representative: '홍길동', consent: true, role: 'owner' }), f.env)).status, 400);
+  assert.equal((await routeCooperative(req(open, '/join', 'a', 'POST', { representative: '홍길동', consent: true, depositAgreement: true, role: 'owner' }), f.env)).status, 400);
   assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS n FROM customer_access_grants').get().n, 0);
 });
 
 test('consented join creates a member-only grant in that cooperative and appends the roster', async t => {
   const f = fixture(); t.after(() => f.sqlite.close()); t.mock.method(globalThis, 'fetch', authFetch({ a: 'New@Example.test' }));
   assert.equal((await routeCooperative(req(open, '/me', 'a'), f.env)).status, 403);
-  const response = await routeCooperative(req(open, '/join', 'a', 'POST', { representative: '홍길동', phone: '01012345678', business: '길동상회', businessNumber: '1234567890', consent: true }), f.env);
+  const response = await routeCooperative(req(open, '/join', 'a', 'POST', { representative: '홍길동', phone: '01012345678', business: '길동상회', businessNumber: '1234567890', consent: true, depositAgreement: true }), f.env);
   assert.equal(response.status, 200);
   const me = await (await routeCooperative(req(open, '/me', 'a'), f.env)).json();
   assert.equal(me.authority.role, 'member'); assert.equal(me.authority.canAdmin, false);
@@ -91,7 +91,7 @@ test('consented join creates a member-only grant in that cooperative and appends
   assert.equal((await routeCooperative(req(jubilee, '/me', 'a'), f.env)).status, 403, 'other cooperative untouched');
   assert.equal((await loadCooperativeProject(f.db, open)).state.founders.length, 6);
   // idempotent
-  assert.equal((await routeCooperative(req(open, '/join', 'a', 'POST', { representative: '홍길동', phone: '010-1234-5678', consent: true }), f.env)).status, 200);
+  assert.equal((await routeCooperative(req(open, '/join', 'a', 'POST', { representative: '홍길동', phone: '010-1234-5678', consent: true, depositAgreement: true }), f.env)).status, 200);
   assert.equal((await loadCooperativeProject(f.db, open)).state.founders.length, 6);
 });
 
@@ -99,7 +99,7 @@ test('join links an existing unlinked roster name instead of duplicating it', as
   const f = fixture(); t.after(() => f.sqlite.close()); t.mock.method(globalThis, 'fetch', authFetch({ b: 'park@example.test' }));
   const before = (await loadCooperativeProject(f.db, jubilee)).state.founders;
   const name = before[1].representative;
-  assert.equal((await routeCooperative(req(jubilee, '/join', 'b', 'POST', { representative: name, phone: '02-123-4567', consent: true }), f.env)).status, 200);
+  assert.equal((await routeCooperative(req(jubilee, '/join', 'b', 'POST', { representative: name, phone: '02-123-4567', consent: true, depositAgreement: true }), f.env)).status, 200);
   const after = (await loadCooperativeProject(f.db, jubilee)).state.founders;
   assert.equal(after.length, before.length);
   assert.equal(after[1].accountEmail, 'park@example.test');
@@ -108,7 +108,7 @@ test('join links an existing unlinked roster name instead of duplicating it', as
 test('a disabled grant is never revived by self-join', async t => {
   const f = fixture(); t.after(() => f.sqlite.close()); t.mock.method(globalThis, 'fetch', authFetch({ c: 'blocked@example.test' }));
   f.grant(open, 'blocked@example.test', 'member', { enabled: 0 });
-  assert.equal((await routeCooperative(req(open, '/join', 'c', 'POST', { representative: '차단', phone: '01011112222', consent: true }), f.env)).status, 403);
+  assert.equal((await routeCooperative(req(open, '/join', 'c', 'POST', { representative: '차단', phone: '01011112222', consent: true, depositAgreement: true }), f.env)).status, 403);
   assert.equal((await routeCooperative(req(open, '/me', 'c'), f.env)).status, 403);
 });
 
@@ -118,16 +118,16 @@ test('join requires a valid phone, validates business number, and shows only the
   assert.equal(who.email, 'phone@example.test');
   assert.equal((await routeCooperative(req(jubilee, '/join'), f.env)).status, 401);
   const post = body => routeCooperative(req(jubilee, '/join', 'a', 'POST', body), f.env);
-  assert.equal((await (await post({ representative: '갑', consent: true })).json()).code, 'COOP_PHONE_REQUIRED');
-  assert.equal((await (await post({ representative: '갑', phone: '12345', consent: true })).json()).code, 'COOP_PHONE_INVALID');
-  assert.equal((await (await post({ representative: '갑', phone: '01012345678', businessNumber: '123', consent: true })).json()).code, 'COOP_BUSINESS_NUMBER_INVALID');
-  assert.equal((await post({ representative: '갑', phone: '010 1234 5678', businessNumber: '123-45-67890', consent: true })).status, 200);
+  assert.equal((await (await post({ representative: '갑', consent: true, depositAgreement: true })).json()).code, 'COOP_PHONE_REQUIRED');
+  assert.equal((await (await post({ representative: '갑', phone: '12345', consent: true, depositAgreement: true })).json()).code, 'COOP_PHONE_INVALID');
+  assert.equal((await (await post({ representative: '갑', phone: '01012345678', businessNumber: '123', consent: true, depositAgreement: true })).json()).code, 'COOP_BUSINESS_NUMBER_INVALID');
+  assert.equal((await post({ representative: '갑', phone: '010 1234 5678', businessNumber: '123-45-67890', consent: true, depositAgreement: true })).status, 200);
   const mine = await (await routeCooperative(req(jubilee, '/me', 'a'), f.env)).json();
   assert.equal(mine.me.founder.phone, '010-1234-5678');
   assert.equal(mine.me.founder.businessNumber, '123-45-67890');
   // another member never sees phone or business number in the shared roster
-  assert.equal((await post.call(null, { representative: '갑', phone: '01012345678', consent: true })).status, 200);
-  assert.equal((await routeCooperative(req(jubilee, '/join', 'b', 'POST', { representative: '을', phone: '01099998888', consent: true }), f.env)).status, 200);
+  assert.equal((await post.call(null, { representative: '갑', phone: '01012345678', consent: true, depositAgreement: true })).status, 200);
+  assert.equal((await routeCooperative(req(jubilee, '/join', 'b', 'POST', { representative: '을', phone: '01099998888', consent: true, depositAgreement: true }), f.env)).status, 200);
   const peer = await (await routeCooperative(req(jubilee, '/me', 'b'), f.env)).json();
   const row = peer.founders.find(x => x.representative === '갑');
   assert.ok(row); assert.equal('phone' in row, false); assert.equal('businessNumber' in row, false);
@@ -144,7 +144,7 @@ test('chair/admin can delete a roster member; the member grant is revoked; chair
   const f = fixture(); t.after(() => f.sqlite.close());
   t.mock.method(globalThis, 'fetch', authFetch({ chair: 'chair@example.test', m: 'member@example.test' }));
   f.grant(jubilee, 'chair@example.test', 'admin', { capabilities: ['tenant.site.manage'] });
-  assert.equal((await routeCooperative(req(jubilee, '/join', 'm', 'POST', { representative: '홍길동', phone: '01012345678', consent: true }), f.env)).status, 200);
+  assert.equal((await routeCooperative(req(jubilee, '/join', 'm', 'POST', { representative: '홍길동', phone: '01012345678', consent: true, depositAgreement: true }), f.env)).status, 200);
   let p = await (await routeCooperative(req(jubilee, '/project', 'chair'), f.env)).json();
   const target = p.state.founders.find(x => x.accountEmail === 'member@example.test');
   const chairRow = p.state.founders.find(x => x.position === 'chair-designate');

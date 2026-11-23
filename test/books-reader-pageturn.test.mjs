@@ -65,7 +65,13 @@ test('book leaf ratio, page gap and visible page advances use the same measureme
 
 test('library exposes owned EPUB through reader only, not an EPUB-save button', () => {
   const lib = readFileSync(new URL('../books/buy/library.js', import.meta.url), 'utf8');
-  assert.doesNotMatch(lib, /EPUB 받기|\.epub`/);
+  // 구매자 영역(운영자 패널 밖)에는 EPUB 저장이 없다. 운영자 패널만 판매 파일을 내려받는다(서버도 운영자에게만 내줌).
+  const op = lib.indexOf('async function operatorPanel()');
+  assert.ok(op > 0);
+  const buyerPart = lib.slice(0, op), operatorPart = lib.slice(op);
+  assert.doesNotMatch(buyerPart, /EPUB 받기|EPUB 내려받기|\.epub`/);
+  assert.doesNotMatch(lib, /EPUB 받기/);
+  assert.match(operatorPart, /admin\/files\/\$\{encodeURIComponent\(book\.id\)\}\/content/, 'operator download uses the operator-only file route');
   assert.match(lib, /펼쳐 읽기/);
   assert.match(lib, /downloadAudio/);
 });

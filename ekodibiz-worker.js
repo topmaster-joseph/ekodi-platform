@@ -404,14 +404,16 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/ekodibiz(?=\/)/, '');
-    if (path.startsWith('/api/agency/')) return agencyApi(request, url, env);
+    if (path.startsWith('/api/agency/')) return agencyApi(request, url, env, ctx);
     // Historic links resolve to stable, role-specific subpaths. Never put the
     // receipt secret or personal account identifier in a URL.
     const agencyLegacy = {
       '/ai-agency':'/ai-agency/apply',
       '/ai-agency/':'/ai-agency/apply',
       '/ai-agency-admin':'/ai-agency/manage',
-      '/ai-agency-admin/':'/ai-agency/manage'
+      '/ai-agency-admin/':'/ai-agency/manage',
+      '/ai-agency/admin':'/ai-agency/manage',
+      '/ai-agency/admin/':'/ai-agency/manage'
     };
     if (Object.hasOwn(agencyLegacy, path)) {
       if (request.method !== 'GET' && request.method !== 'HEAD') return json({error:'method_not_allowed'},405);

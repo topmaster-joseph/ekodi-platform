@@ -81,7 +81,7 @@ function clearLoginSkeleton(){
 }
 const loginSlowTimer=setTimeout(()=>{
   const status=document.getElementById('authStatus');
-  if(status?.classList.contains('loading'))status.textContent='연결이 평소보다 늦어지고 있습니다. 잠시만 더 기다려 주세요…';
+  if(status?.classList.contains('loading')){const line=document.createElement('span');line.append('연결이 평소보다 늦어지고 있습니다.',document.createElement('br'),'잠시만 더 기다려 주세요…');status.replaceChildren(line)}
 },8000);
 // Warm the optional email/password module in parallel; the later import() reuses this same module instance.
 const emailPasswordPreload=(site!=='admin'&&params.get('ekodi_email_action')!=='reset')?import('./email-password.js?v=20261107-login-lock-1').catch(error=>{console.warn('email auth module unavailable',error);return null}):null;

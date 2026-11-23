@@ -12,7 +12,7 @@ import { buildChannelEnvelope, dispatchChannelEnvelope } from './messenger-chann
 import { stepUpStatus, verifyStepUp, revokeStepUp, stepUpSession } from './invest-step-up.js';
 import { BROKER_ADAPTERS, INVEST_PERMISSION, evaluateBrokerReadiness } from './invest-market-core.js';
 import { verifiedOwnerAal2 } from './invest-owner-mfa.js';
-import { buildBrokerReadOnlyView } from './invest-broker-readonly-adapter.js';
+import { buildBrokerReadOnlyView, kisReadOnlyConfig } from './invest-broker-readonly-adapter.js';
 import { buildStrategyLab } from './invest-strategy-lab.js';
 import { screenShortTermValue } from './invest-short-term-value-engine.js';
 import { fetchInvestOpenDart } from './invest-opendart-readonly.js';
@@ -24,6 +24,21 @@ const tradeDay=kstDay;
 const parse=(text,fallback)=>{try{const v=JSON.parse(text||'');return v??fallback}catch{return fallback}};
 async function body(request){try{return await request.json()}catch{return null}}
 const FILLED=['FILLED','PARTIALLY_FILLED','PARTIALLY_FILLED_CANCELLED'];
+
+/**
+ * Idempotent paper-order responses must preserve the recorded risk decision.
+ * Replaying a rejected attempt must never be reported as a successful order.
+ */
+function replayPaperOrder(request,env,row){
+ const allowed=Number(row?.risk_allowed)===1&&row.status!=='RISK_BLOCKED';
+ const order={idempotency_key:row.idempotency_key,status:row.status,filled_qty:row.filled_qty,avg_price:row.avg_price};
+ return json(request,env,{
+  ok:allowed,allowed,duplicate:true,order,
+  ...(allowed?{}:{reasons:parse(row.risk_reasons_json,[])}),
+  executionPerformed:false
+ },allowed?200:422);
+}
+
 
 async function ownerContext(request,env,write){
  const ctx=await resolveWorkspacePrincipal(request,env,{write});
@@ -178,6 +193,39 @@ async function ownerBrokerSelection(request,env,ctx){
   });
  }
  return json(request,env,{error:'METHOD_NOT_ALLOWED'},405);
+}
+
+// Only return redacted technical readiness to an authenticated owner. No KIS
+// token creation, balance request, account number or credential is ever returned.
+async function ownerBrokerPreflight(request,env,ctx){
+ const brokerId=clean(new URL(request.url).searchParams.get('broker')||'kis',30);
+ if(!Object.hasOwn(BROKER_ADAPTERS,brokerId))return json(request,env,{error:'BROKER_NOT_REGISTERED'},400);
+ const kis=brokerId==='kis',cfg=kis?kisReadOnlyConfig(env):{enabled:false,reason:'BROKER_READONLY_ADAPTER_NOT_RELEASED'};
+ const aal2=verifiedOwnerAal2(request,ctx.identity.id);
+ const serverMode=kis?String(env.INVEST_BROKER_READONLY_KIS||'').trim():'';
+ const operatorEnabled=kis&&['paper','live'].includes(serverMode);
+ const vaultPresent=kis&&Boolean(String(env.KIS_APP_KEY||'').trim()&&String(env.KIS_APP_SECRET||'').trim()&&String(env.KIS_ACCOUNT_NO||'').trim());
+ const accountFormatValid=kis&&/^[0-9]{8}-?[0-9]{2}$/.test(String(env.KIS_ACCOUNT_NO||'').replace(/\s+/g,''));
+ const checks=[
+  {id:'adapter',label:'증권사 조회 전용 지원',passed:kis},
+  {id:'operatorSwitch',label:'서버 조회 전용 설정',passed:operatorEnabled},
+  {id:'vault',label:'서버 전용 API 인증정보',passed:vaultPresent},
+  {id:'accountFormat',label:'서버 계좌 참조 형식',passed:accountFormatValid},
+  {id:'aal2',label:'OTP 2차 인증(AAL2)',passed:aal2}
+ ];
+ const technicalReady=cfg.enabled===true&&aal2===true;
+ await auditPrincipal(env,ctx.principal,'invest:owner-broker-preflight:'+brokerId);
+ return json(request,env,{
+  schema:'ekodi.invest.owner-broker-preflight.v1',brokerId,brokerName:BROKER_ADAPTERS[brokerId].name,
+  environment:operatorEnabled?serverMode:null,checks,technicalReady,
+  configurationBlocker:cfg.enabled?null:cfg.reason,
+  accountOwnershipVerified:false,officialReadScopeVerified:false,
+  readOnlyConnectionVerified:false,connected:false,
+  sourceAuthenticated:false,providerRequestPerformed:false,executionPerformed:false,
+  credentialValuesIncluded:false,accountNumberIncluded:false,liveOrdersEnabled:false,
+  nextStep:technicalReady?'verify_owner_consent_and_use_separate_readonly_inquiry':'complete_missing_readonly_prerequisites',
+  notice:'이 점검은 증권사 API에 접속하지 않습니다. 기술적 준비와 실제 계좌 연결·소유권 검증은 별개입니다. 실거래 주문은 계속 차단됩니다.'
+ });
 }
 
 async function ownerBrokerSnapshot(request,env,ctx){
@@ -406,8 +454,8 @@ async function paperOrder(request,env,ctx){
  const intent={idempotencyKey:clean(data.idempotencyKey,120),symbol:clean(data.symbol,20).toUpperCase(),market:clean(data.market,8).toUpperCase(),assetType:clean(data.assetType,20).toUpperCase(),
   side:clean(data.side,4).toUpperCase(),qty:Number(data.qty),limitPrice:Number(data.limitPrice),orderType:clean(data.orderType,10).toUpperCase()||'LIMIT',
   leverage:data.leverage,margin:data.margin,derivative:data.derivative,creditOrder:data.creditOrder};
- const existing=intent.idempotencyKey?await env.DB.prepare(`SELECT idempotency_key,status,filled_qty,avg_price FROM investment_autopilot_orders WHERE subject_type=? AND subject_key=? AND idempotency_key=?`).bind(ctx.subject.type,ctx.subject.key,intent.idempotencyKey).first():null;
- if(existing)return json(request,env,{ok:true,duplicate:true,order:existing});
+ const existing=intent.idempotencyKey?await env.DB.prepare(`SELECT idempotency_key,status,filled_qty,avg_price,risk_allowed,risk_reasons_json FROM investment_autopilot_orders WHERE subject_type=? AND subject_key=? AND idempotency_key=?`).bind(ctx.subject.type,ctx.subject.key,intent.idempotencyKey).first():null;
+ if(existing)return replayPaperOrder(request,env,existing);
  const account=await loadAccount(env,ctx);
  const view=ledgerView(account.ledger,now);
  const stats=await dayStats(env,ctx,day);
@@ -430,8 +478,8 @@ async function paperOrder(request,env,ctx){
  // Claim the idempotency key first: a concurrent duplicate gets changes=0 and must not touch the ledger.
  const claimed=await env.DB.prepare(insert).bind(...base,order.status,order.filledQty||0,order.avgPrice||0,order.fee||0,1,'[]',...meta).run();
  if(Number(claimed?.meta?.changes)!==1){
-  const dup=await env.DB.prepare(`SELECT idempotency_key,status,filled_qty,avg_price FROM investment_autopilot_orders WHERE subject_type=? AND subject_key=? AND idempotency_key=?`).bind(ctx.subject.type,ctx.subject.key,intent.idempotencyKey).first();
-  return json(request,env,{ok:true,duplicate:true,order:dup},200);
+  const dup=await env.DB.prepare(`SELECT idempotency_key,status,filled_qty,avg_price,risk_allowed,risk_reasons_json FROM investment_autopilot_orders WHERE subject_type=? AND subject_key=? AND idempotency_key=?`).bind(ctx.subject.type,ctx.subject.key,intent.idempotencyKey).first();
+  return replayPaperOrder(request,env,dup);
  }
  // Compare-and-swap on the exact ledger this order was evaluated against, so two concurrent orders
  // cannot both pass the budget check and overwrite each other.
@@ -599,6 +647,7 @@ export async function handleInvestAutopilotApi(request,env){
  if(path==='/v1/invest/autopilot/broker/selection')return ownerBrokerSelection(request,env,ctx);
  if(path==='/v1/invest/autopilot/stage2/preset')return ownerStage2PaperPreset(request,env,ctx);
  if(path==='/v1/invest/autopilot/live/readiness'&&request.method==='GET')return ownerLiveReadiness(request,env,ctx);
+ if(path==='/v1/invest/autopilot/broker/preflight'&&request.method==='GET')return ownerBrokerPreflight(request,env,ctx);
  if(path==='/v1/invest/autopilot/broker/snapshot'&&request.method==='GET')return ownerBrokerSnapshot(request,env,ctx);
  if(path==='/v1/invest/autopilot/research/strategy-lab'&&request.method==='GET')return ownerStrategyLab(request,env,ctx);
  if(path==='/v1/invest/autopilot/research/short-term-value')return ownerShortTermValueResearch(request,env,ctx);

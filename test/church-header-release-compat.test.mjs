@@ -109,3 +109,18 @@ test('CLI validates public subpages and emits machine-readable proof',()=>{
   const proof=execFileSync(process.execPath,[cli,'--subpage',page,'--kind','devotion'],{encoding:'utf8'});
   assert.deepEqual(JSON.parse(proof),{contract:'six-item-subpage',page:'devotion',primaryItems:6});
 });
+
+
+test('current independent Church Pages requires QTIN in public primary navigation but preserves historical import',()=>{
+  const oldHome=modernHome(),oldSubpage=pageHtml('devotion');
+  const qtinHome=oldHome.replace('href="/ekodichurch/my/">마이페이지','href="/qtin/church">큐티인 신청');
+  const qtinSubpage=oldSubpage.replace('href="/ekodichurch/my/">마이페이지','href="/qtin/church">큐티인 신청');
+  const options={requireQtinPrimary:true};
+  assert.equal(verifyChurchHeaderNavigation(oldHome,nested()).contract,'six-item-selected-content');
+  assert.equal(verifyChurchHeaderNavigation(qtinHome,nested(),options).contract,'six-item-qtin-selected-content');
+  assert.throws(()=>verifyChurchHeaderNavigation(oldHome,nested(),options),/unapproved primary navigation/);
+  assert.equal(verifyChurchPublicSubpageNavigation(oldSubpage,'devotion').contract,'six-item-subpage');
+  assert.equal(verifyChurchPublicSubpageNavigation(qtinSubpage,'devotion',options).contract,'six-item-qtin-subpage');
+  assert.throws(()=>verifyChurchPublicSubpageNavigation(oldSubpage,'devotion',options),/stale or inconsistent/);
+  assert.throws(()=>verifyChurchHeaderNavigation(qtinHome.replace('/qtin/church','/ekodichurch/my/'),nested(),options),/unapproved primary navigation/);
+});

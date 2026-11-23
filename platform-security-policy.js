@@ -129,7 +129,7 @@ export async function enforcePlatformRequestSecurity(request,env={}){
   return null;
 }
 
-export const SITE_ADMIN_FRAME_ROOT=/^\/(?:ekodichurch|ekodibiz(?:\/trade)?|ekodimall|books|cheonggye|cgma|cmpmyi|jadam|pizzamaru|yogurt|work|mail|live)\/admin(?:\/[a-z0-9._~%-]+)*\/?$/i;
+export const SITE_ADMIN_FRAME_ROOT=/^\/(?:ekodichurch|ekodibiz(?:\/trade)?|ekodimall|books|cheonggye|cgma|cmpmyi|jadam|bbqcg|pizzamaru|yogurt|work|mail|live|funding)\/admin(?:\/[a-z0-9._~%-]+)*\/?$/i;
 export function isFirstPartySiteAdminFrame(url,request,headers){
   return url.hostname.toLowerCase()==='ekodi.kr'
     && ['GET','HEAD'].includes(String(request.method||'GET').toUpperCase())
@@ -146,13 +146,23 @@ export function sameOriginFrameCsp(csp=''){
     : `${value.replace(/;\s*$/,'')}; frame-ancestors 'self'`;
 }
 
+const UNUSED_DEVICE_FEATURES=', browsing-topics=(), bluetooth=(), serial=(), hid=(), midi=(), magnetometer=()';
+
+// EKODI-HSTS-PRELOAD-PREP-001 (owner decision 2026-11-21: 준비까지만).
+// Browser HSTS preload inclusion is effectively irreversible for months and binds every
+// subdomain host of the apex to HTTPS. Turning HSTS_PRELOAD_ENABLED on is the only change left; it
+// must not be flipped until scripts/check-hsts-preload-readiness.mjs reports no errors
+// and the owner approves the hstspreload.org submission.
+export const HSTS_PRELOAD_ENABLED=false;
+export const STRICT_TRANSPORT_SECURITY=`max-age=31536000; includeSubDomains${HSTS_PRELOAD_ENABLED?'; preload':''}`;
+
 export function applyPlatformSecurityHeaders(response,request){
   const secured=new Response(response.body,response);
   const url=new URL(request.url);
   const info=classifyPath(url.pathname);
   const headers=secured.headers;
 
-  headers.set('Strict-Transport-Security','max-age=31536000; includeSubDomains');
+  headers.set('Strict-Transport-Security',STRICT_TRANSPORT_SECURITY);
   headers.set('X-Content-Type-Options','nosniff');
   headers.set('X-Permitted-Cross-Domain-Policies','none');
   headers.set('Origin-Agent-Cluster','?1');
@@ -185,12 +195,19 @@ export function applyPlatformSecurityHeaders(response,request){
   else if(firstPartyChurchLiveViewer)headers.set('X-Frame-Options','SAMEORIGIN');
   else if(firstPartyAdminEmbed)headers.delete('X-Frame-Options');
   else if(!headers.has('X-Frame-Options'))headers.set('X-Frame-Options','DENY');
+  // EKODI-SECURITY-HEADERS-002: device APIs no EKODI page uses are switched off for every
+  // page and every embedded frame (Topics ad tracking, Bluetooth, USB-serial, HID, MIDI,
+  // magnetometer). Accelerometer/gyroscope stay untouched for YouTube 360 embeds.
   if(!headers.has('Permissions-Policy')){
-    headers.set('Permissions-Policy',info.live
+    headers.set('Permissions-Policy',(info.live
       ? 'camera=(self), microphone=(self), display-capture=(self), geolocation=(), usb=()'
-      : 'camera=(), microphone=(), display-capture=(), geolocation=(), usb=()');
+      : 'camera=(), microphone=(), display-capture=(), geolocation=(), usb=()')+UNUSED_DEVICE_FEATURES);
   }
-  if((info.admin||info.auth)&&!headers.has('Cross-Origin-Opener-Policy'))headers.set('Cross-Origin-Opener-Policy','same-origin-allow-popups');
+  // Every HTML document is isolated from cross-site openers (tabnabbing, XS-leaks).
+  // same-origin-allow-popups keeps OAuth and payment popups working.
+  if((info.admin||info.auth||isDocumentResponse(secured))&&!headers.has('Cross-Origin-Opener-Policy'))headers.set('Cross-Origin-Opener-Policy','same-origin-allow-popups');
+  // JSON is never legitimately loaded cross-site without CORS (<script>/<img>): forbid it.
+  if(/^application\/(?:[a-z.+-]*\+)?json\b/i.test(String(headers.get('Content-Type')||''))&&!headers.has('Cross-Origin-Resource-Policy'))headers.set('Cross-Origin-Resource-Policy','same-origin');
   if(info.sensitive){
     headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
     const personalized=Boolean(String(request.headers.get('authorization')||'').trim()||String(request.headers.get('cookie')||'').trim());

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {handlePublicSupplierSearch, normalizeSupplierSearch, supplierSearchReady} from '../api/public-supplier-search.js';
+import {handlePublicSupplierSearch, normalizeSupplierSearch, supplierSearchReady, supplierPublicStatus} from '../api/public-supplier-search.js';
 
 const url = q => 'https://ekodi.kr/api/public/supplier/search?q=' + encodeURIComponent(q);
 const req = q => new Request(url(q));
@@ -55,4 +55,25 @@ test('supplier public search rejects unbounded or non-GET input before any vendo
   assert.equal((await handlePublicSupplierSearch(req('x'),ready)).status,400);
   assert.equal((await handlePublicSupplierSearch(req('a'.repeat(72)),ready)).status,400);
   assert.equal((await handlePublicSupplierSearch(new Request(url('정상'),{method:'POST'}),ready)).status,405);
+});
+
+test('public supplier status is read-only, secret-free and separate from real vendor search', async () => {
+  const statusRequest = new Request('https://ekodi.kr/api/public/supplier/status');
+  const disabled = await handlePublicSupplierSearch(statusRequest, {});
+  assert.equal(disabled.status, 200);
+  assert.deepEqual(disabled.body, {
+    enabled:false,state:'rights-unverified',checkoutReady:false,autoOrderReady:false
+  });
+  assert.deepEqual(supplierPublicStatus({}),disabled.body);
+  const readyStatus=await handlePublicSupplierSearch(statusRequest,ready,()=>{
+    throw Error('Status check must not call supplier API');
+  });
+  assert.equal(readyStatus.status,200);
+  assert.deepEqual(readyStatus.body,{
+    enabled:true,state:'reference-only-ready',checkoutReady:false,autoOrderReady:false
+  });
+  assert.doesNotMatch(JSON.stringify(readyStatus),/unit-test-only|DOMEMAE_API_KEY|sns@/);
+  const invalid=await handlePublicSupplierSearch(
+    new Request('https://ekodi.kr/api/public/supplier/status',{method:'POST'}),ready);
+  assert.equal(invalid.status,405);
 });

@@ -1,0 +1,33 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {learningPage,learningStyles,learningScript} from '../learning-page.js';
+import {planSiteMissionAudit} from '../scripts/verify-ekodi-site-missions-native.mjs';
+const read=p=>JSON.parse(readFileSync(new URL('../'+p,import.meta.url),'utf8'));
+const registry=read('config/ecosystem-services.json'),missions=read('config/ekodi-site-missions.json');
+test('EKODI Learning Fabric official mission is in the actual owner renderer without changing guest/free learning',async()=>{
+ const html=await learningPage().text(),css=await learningStyles().text(),js=await learningScript().text();
+ const mission=missions.sites.find(x=>x.id==='learn').mission;
+ assert.equal((html.match(/data-ekodi-mission="learn"/g)||[]).length,1);
+ assert.ok(html.includes('<p>'+mission+'</p>'));
+ assert.ok(html.includes('<title>에코디학습 | EKODI Learning Fabric</title>'));
+ assert.match(html,/에코디학습 · EKODI LEARNING FABRIC/);
+ assert.match(html,/배움이 실제 능력이 되게/);
+ assert.match(html,/비회원도 바로 학습 가능/);
+ assert.match(html,/Google로 진도 연결/);
+ assert.match(html,/AI 코치/);
+ assert.match(css,/\.hero \.ekodi-mission-statement/);
+ assert.match(js,/\/api\/learning\/catalog/);
+ assert.match(js,/\/api\/learning\/progress/);
+ assert.match(js,/\/api\/user-ai\/assist/);
+});
+test('native EKODI read-only mission verification audits the public /learn route without authorization',()=>{
+ const site=registry.services.find(x=>x.id==='learn');
+ assert.equal(site.status,'live');
+ const plan=planSiteMissionAudit(registry,missions,{profiles:['desktop']});
+ assert.ok(plan.eligibleIds.includes('learn'));
+ assert.ok(plan.jobs.some(j=>j.request.paths.includes('/learn/')));
+ assert.ok(plan.jobs.every(j=>j.actions<=30));
+ assert.equal(plan.externalBrowserCalls,0);
+ assert.ok(!plan.eligibleIds.includes('management'));
+});

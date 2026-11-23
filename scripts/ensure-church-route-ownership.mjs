@@ -9,6 +9,11 @@ export const CHURCH_ROUTE_CONTRACT=Object.freeze({
   desiredGateway:['ekodi.kr/ekodichurch','ekodi.kr/ekodichurch/*'],
   memberRedirectRoutes:['ekodi.kr/ekodichurch/my'],
   boardSharedRoutes:['ekodi.kr/ekodichurch/board*'],
+  // Only Shared Site owned accounting routes are registered here. The CGMA path
+  // is independently owned by the cheonggye-market cgma-root-gateway Worker.
+  // Exact shared accounting routes must exist before candidate override probes.
+  // Wrangler's post-promotion triggers deploy is too late for the 0% canary.
+  accountingNoticeRoutes:['ekodi.kr/ekodibiz/accounting','ekodi.kr/ekodichurch/accounting','ekodi.kr/ekodimission/accounting','ekodi.kr/seonammedi/accounting'],
   retiredMemberRoutes:['ekodi.kr/ekodichurch/my/*'],
   retiredGateway:'ekodi.kr/ekodichurch*',
   publicUrl:'https://ekodi.kr/ekodichurch/',
@@ -155,6 +160,17 @@ export async function ensureChurchRouteOwnership({token=process.env.CLOUDFLARE_A
     await createRoute(zone,token,pattern,CHURCH_ROUTE_CONTRACT.sharedSite);
     routes=(await cf(`/zones/${zone}/workers/routes`,token)).result||[];
   }
+  // First refuse any exact route explicitly owned by another Worker: never silently steal it.
+  for(const pattern of CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes){
+    const current=routes.find(row=>row.pattern===pattern);
+    if(current&&current.script!==CHURCH_ROUTE_CONTRACT.sharedSite)
+      throw new Error(`Accounting notice route ${pattern} belongs to ${current.script||'none'}; operator review required`);
+  }
+  for(const pattern of CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes){
+    if(routes.some(row=>row.pattern===pattern))continue;
+    await createRoute(zone,token,pattern,CHURCH_ROUTE_CONTRACT.sharedSite);
+    routes=(await cf(`/zones/${zone}/workers/routes`,token)).result||[];
+  }
   for(const pattern of CHURCH_ROUTE_CONTRACT.retiredMemberRoutes){
     const current=routes.find(row=>row.pattern===pattern);
     if(!current)continue;
@@ -175,6 +191,10 @@ export async function ensureChurchRouteOwnership({token=process.env.CLOUDFLARE_A
     const row=routes.find(item=>item.pattern===pattern);
     if(row?.script!==CHURCH_ROUTE_CONTRACT.sharedSite)throw new Error(`Church board Shared Site route missing after repair: ${pattern}`);
   }
+  for(const pattern of CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes){
+    const row=routes.find(item=>item.pattern===pattern);
+    if(row?.script!==CHURCH_ROUTE_CONTRACT.sharedSite)throw new Error(`Accounting notice Shared Site route missing: ${pattern}`);
+  }
   for(const pattern of CHURCH_ROUTE_CONTRACT.retiredMemberRoutes){
     if(routes.some(row=>row.pattern===pattern))throw new Error(`Church member descendant route must stay with the generic Pages gateway: ${pattern}`);
   }
@@ -187,7 +207,12 @@ export async function ensureChurchRouteOwnership({token=process.env.CLOUDFLARE_A
   console.log('Church member canonical redirect response verification deferred to guarded candidate deployment.');
   for(const page of CHURCH_ROUTE_CONTRACT.memberDeepPages)await verifyMemberPage(page.url,page.marker);
   await verifyLive(CHURCH_ROUTE_CONTRACT.adminUrl,CHURCH_ROUTE_CONTRACT.adminRoute);
-  console.log('Church public/admin/board boundaries and Pages-owned member descendants verified before candidate promotion.');
+  // Exact Cloudflare route ownership is proven above. The existing live Worker
+  // may still run the old entrypoint until the new candidate is promoted.
+  // Do NOT require new accounting UI content on that previous production build.
+  // All five HTML markers and x-ekodi-route are mandatory in the guarded
+  // 0% candidate manifest before production promotion; no canary is relaxed.
+  console.log('Church routes and four Shared Site accounting ownership bindings verified; accounting HTML receipt deferred to guarded 0% candidate.');
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   ensureChurchRouteOwnership().catch(error=>{console.error(error.message);process.exitCode=1});

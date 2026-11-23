@@ -20,6 +20,31 @@ test('Church route contract avoids the ambiguous no-slash wildcard and verifies 
   assert.equal(CHURCH_ROUTE_CONTRACT.adminRoute,'church-pastor-admin');
 });
 
+test('pre-candidate Shared Site route ownership is checked while four accounting UI receipts remain mandatory on 0% candidate',async()=>{
+ const config=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
+ const expected=['ekodibiz','ekodichurch','ekodimission','seonammedi'].map(x=>'ekodi.kr/'+x+'/accounting');
+ assert.deepEqual(CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes,expected);
+ assert.ok(!CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes.includes('ekodi.kr/cgma/accounting'),'CGMA independent gateway must not be registered by Shared Site');
+ for(const route of expected)assert.ok(config.includes('pattern = "'+route+'"'));
+ const source=await readFile(new URL('../scripts/ensure-church-route-ownership.mjs',import.meta.url),'utf8');
+ const register=source.indexOf('for(const pattern of CHURCH_ROUTE_CONTRACT.accountingNoticeRoutes){\n    const current=routes.find');
+ const verifyOwnership=source.indexOf('Accounting notice Shared Site route missing:');
+ assert.ok(register>0&&verifyOwnership>register,'missing exact registration or API re-query');
+ assert.match(source,/operator review required/);
+ assert.match(source,/accounting HTML receipt deferred to guarded 0% candidate/);
+ assert.doesNotMatch(source,/await verifyAccountingNotice\(/,'no premature demand for not-yet-deployed UI');
+ const manifest=JSON.parse(await readFile(new URL('../deploy/manifests/shared-site.worker.json',import.meta.url),'utf8'));
+ for(const route of expected){
+  const item=manifest.worker.requests.find(x=>x.url==='https://'+route);
+  assert.deepEqual(item?.statuses,[200],route);
+  for(const marker of ['회계공지','연도 선택','연간 총괄','월별 소계','public-accounting-notice.js'])assert.ok(item?.expect?.includes(marker),route);
+  assert.ok(item?.headerExpect?.includes('x-ekodi-route: public-accounting-notice'),route);
+ }
+ const workflow=await readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
+ assert.ok(workflow.indexOf('Enforce canonical Church route ownership')<workflow.indexOf('Candidate at 0%, verify routes, promote and auto-rollback on failure'));
+ assert.match(workflow,/guarded-worker-release\.mjs --manifest deploy\/manifests\/shared-site\.worker\.json/);
+});
+
 test('Shared Site production workflow repairs Church route ownership before guarded promotion',async()=>{
   const workflow=await readFile(new URL('../.github/workflows/deploy-site-core.yml',import.meta.url),'utf8');
   const repair=workflow.indexOf('Enforce canonical Church route ownership');

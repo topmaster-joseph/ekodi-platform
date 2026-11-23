@@ -60,7 +60,7 @@ test('every production route either guarantees footer visit stats or is explicit
     if (COVERAGE.test(source)) continue;
     // A thin deploy entry may re-export the HTTP worker it imports by default.
     const defaultImport = source.match(/^import\s+(\w+)\s+from\s+'(\.[^']+)';/m);
-    const reexported = defaultImport && new RegExp(`(?:export default|=)\\s*${defaultImport[1]}\\b`).test(source);
+    const reexported = defaultImport && new RegExp(`(?:export default|=)\\s*(?:withEdgeTrafficShield\\()?${defaultImport[1]}\\b`).test(source);
     if (reexported) {
       const dir = (base + main).includes('/') ? (base + main).slice(0, (base + main).lastIndexOf('/') + 1) : '';
       if (COVERAGE.test(await readFile(dir + defaultImport[2].replace(/^\.\//, ''), 'utf8'))) continue;
@@ -87,7 +87,7 @@ test('direct ekodi.kr path workers that bypass the Shared Site are wrapped', asy
     'local-commerce-worker.js', 'ministry-news-worker.js', 'qtin-order-worker.js', 'support-worker.js',
     'seonammedi-domain-gateway.js', 'services/independent-board/worker.js']) {
     const source = await readFile(file, 'utf8');
-    assert.match(source, /export default withFooterTraffic\(ekodiWorkerEntry\);/, file);
+    assert.match(source, /export default (?:withEdgeTrafficShield\()?withFooterTraffic\(ekodiWorkerEntry\)/, file);
   }
 });
 

@@ -18,11 +18,13 @@ import { investUserPage, investUiScript } from './invest-user-page.js';
 import { investSubjectUiScript } from './invest-subject-ui.js';
 import { routeInvestSite } from './invest-site-system.js';
 import { isSinglesRoute, routeSinglesSurface } from './singles-surface.js';
+import { isPublicAccountingNoticePath } from './public-accounting-notice-page.js';
 import { investIntroPage, investAnalysisPage, investAnalysisScript } from './invest-access-ui.js';
 import { MAIL_HOST, mailUserPage, handleMailApi } from './mail-user-page.js';
-import { handleMailContactApi, mailContactPage } from './mail-contact.js';
+import { handleMailContactApi, mailContactPage, runJournalDigest } from './mail-contact.js';
 import { mailAdminPage } from './mail-admin-page.js';
 import { isWorkspaceAdminPath, workspaceAdminPage, workspaceAdminCss, workspaceAdminScript } from './workspace-admin-page.js';
+import { legacyAgencyAdminRedirect } from './ekodibiz-agency-route.js';
 import { businessCenterCss, businessCenterScript } from './ekodibiz-business-center.js';
 import { isOrganizationAdminPath, organizationAdminPage, organizationAdminCss, organizationAdminScript } from './organization-admin-page.js';
 import { legacyAdminAliasTarget } from './admin-address-policy.js';
@@ -35,11 +37,13 @@ import { workspaceTradeAdminScript } from './workspace-trade-admin-page.js';
 import { isTradePartnerPath, tradePartnerPage, tradePartnerCss, tradePartnerScript } from './workspace-trade-portal.js';
 import { tradeProductPublicRoute, tradeProductPublicPage } from './trade-product-public-page.js';
 import { isEkodiBizRefundPolicyPath, ekodiBizRefundPolicyResponse } from './ekodibiz-refund-policy-page.js';
+import { ekodiBizHomepageRoute } from './ekodibiz-homepage-service-page.js';
 import { isPublicWorkspacePath } from './workspace-route-policy.js';
 import { workspaceRouteFromPublicPath } from './workspace-route-policy.js';
 import { isInsurancePublicPath, routeInsurancePublic } from './insurance-public-route.js';
 import { marketingProjectionForPath, proxyCanonicalMarketing } from './marketing-canonical-projection.js';
 import { routeCanonicalSurface } from './canonical-surface-router.js';
+import { isMissionCanonicalPath, missionPublicReferences } from './mission-public-path.js';
 import { handlePreviewRequest } from './preview-page.js';
 import { storeGatewayPage } from './store-gateway-page.js';
 import { isEkodiIndexNowKeyPath, ekodiIndexNowKeyResponse } from './platform-indexnow.js';
@@ -74,9 +78,16 @@ import { regionTabsScriptResponse } from './region-tabs-ui.js';
 import { CHEONGGYE_PUBLICATION_HOLD, cheonggyePublicHoldResponse } from './region-publication-hold.js';
 import { cheonggyePassVendorIntakeScript } from './cheonggyepass-vendor-intake-ui.js';
 import { applyPlatformSecurityHeaders, enforcePlatformRequestSecurity } from './platform-security-policy.js';
+import { applyContentProtection, contentProtectionAssetResponse } from './content-protection-policy.js';
+import { handleMediaShieldRequest, isMediaShieldPath, mediaShieldPlayerResponse } from './ekodi-media-shield.js';
+import { mediaShieldPageResponse } from './ekodi-media-shield-pages.js';
+import { applyCspReportOnly, handleCspReport, isCspReportPath } from './csp-report-policy.js';
+import { principalFromSupabaseRequest } from './ekodi-principal.js';
 import { ensureFooterTraffic } from './footer-traffic-guarantee.js';
 import { withPublicEdgeCache } from './public-edge-cache.js';
 import { applyTrafficResponsePolicy, assessTrafficTier, recordTrafficOutcome, trafficRequestGuard } from './traffic-governor.js';
+// EKODI-EDGE-TRAFFIC-SHIELD-001: fetch() isolates a flooding client before the site-wide tier assessment.
+import { enforceClientTrafficBudget } from './edge-traffic-shield.js';
 import { handleSeonamMediCivicApi, consumeSeonamMediVoiceMessage } from './seonammedi-civic-control.js';
 import { handleSeonamMediAdminApi } from './seonammedi-admin-control.js';
 import { handleSeonamMediMonitorApi } from './seonammedi-monitor.js';
@@ -105,7 +116,7 @@ const EKODIMISSION_APEX_PREFIX='/ekodimission';
 const DEPLOYMENT_PROBE_PATH='/deployment-probe';
 const RELEASE_ATTESTATION_PATH='/__ekodi/version';
 const STORE_GATEWAY_PATHS=new Set(['/cmpmyi','/cmpmyi/']);
-const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js','storefront.json','storefront.css','jadam-storefront.css']);
+const WORKSPACE_ASSETS=new Set(['style.css','config.js','app.js','storefront.json','storefront.css','jadam-storefront.css','organization.css']);
 const SEONAMMEDI_PREFIX='/seonammedi';
 const SEONAMMEDI_HOSTS=new Set(['seonammedi.kr','www.seonammedi.kr','xn--3e0b8b58jw4co4mnpll3k.kr','www.xn--3e0b8b58jw4co4mnpll3k.kr']);
 const DELETED_SEONAM_PREFIXES=['/seonam-medi','/seonam-med'];
@@ -302,12 +313,25 @@ function injectCgmaRegionalLinks(response){
   const html='<section data-ekodi-cheonggye-links="v1" style="width:min(1120px,calc(100% - 28px));margin:18px auto 30px;padding:16px;border:1px solid #d8dfd9;border-radius:18px;background:#fffdf8;color:#16312a;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Noto Sans KR",sans-serif"><div style="font-size:12px;font-weight:900;letter-spacing:.08em;color:#52645e">청계 연결</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px"><strong style="margin-right:4px">지역과 혜택을 함께 연결합니다.</strong><a href="/cheonggye" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#174837;color:#fff;text-decoration:none;font-size:13px;font-weight:800">청계잇다</a><a href="/cgpass" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#eef3f0;color:#174837;text-decoration:none;font-size:13px;font-weight:800">청계패스</a><a href="/cgma/ai-education/" style="display:inline-flex;min-height:38px;align-items:center;padding:0 12px;border-radius:999px;background:#fff;color:#111;border:1px solid #111;text-decoration:none;font-size:13px;font-weight:800">상인 AI 교육 수요조사</a></div></section>';
   return new HTMLRewriter().on('body',{element:e=>e.append(html,{html:true})}).transform(response);
 }
+// Keep both public BBQ pages on one native Shell/auth initialization path.
+// Bind the exception to the verified SPACE route and exact public pathname:
+// other stores, services and /bbqcg/admin retain their current authority flow.
+export function isBbqcgChromePublicRoute(pathname,upstreamRoute){
+  const path=String(pathname||'').replace(/\/+$/,'')||'/';
+  return (path==='/bbqcg'&&upstreamRoute==='space-storefront')||
+    (path==='/bbqcg/service-guide'&&upstreamRoute==='bbqcg-service-guide')||
+    (path==='/bbqcg/order'&&upstreamRoute==='bbqcg-qr-order');
+}
 async function routePublicWorkspace(request,env){
   if(!env?.SPACE?.fetch)return workspaceServiceUnavailable();
   const workspacePath=new URL(request.url).pathname;
   const progressiveHome=isWorkspaceProgressiveHome(workspacePath);
   const finalize=response=>isCgmaRoot(workspacePath)?injectCgmaRegionalLinks(response):response;
   const upstream=await env.SPACE.fetch(request);const routed=new Response(upstream.body,upstream);routed.headers.set('x-ekodi-workspace-gateway','space-service-binding');
+  if(isBbqcgChromePublicRoute(workspacePath,routed.headers.get('x-ekodi-route'))){
+    routed.headers.set('x-ekodi-public-surface','customer-storefront');
+    return finalize(injectEkodiShell(routed,'space','public',{existingHeader:true,contextKind:'public'}));
+  }
   if(routed.headers.get('x-ekodi-route')==='space-storefront'){routed.headers.set('x-ekodi-public-surface','customer-storefront');const branded=injectEkodiTenantReadability(routed);return finalize(progressiveHome?injectEkodiProgressiveHome(branded):branded);}
   if(routed.headers.get('x-ekodi-independent-site')==='true'){
     routed.headers.set('x-ekodi-public-surface','independent-workspace-site');
@@ -329,9 +353,12 @@ async function routePublicWorkspace(request,env){
 function isEkodiMissionSpacePath(pathname){
   const raw=String(pathname||'').toLowerCase();
   const path=raw.length>1?raw.replace(/\/+$/,''):raw;
-  if(path!==EKODIMISSION_APEX_PREFIX&&!path.startsWith(EKODIMISSION_APEX_PREFIX+'/'))return false;
-  if(path===EKODIMISSION_APEX_PREFIX+'/live'||path.startsWith(EKODIMISSION_APEX_PREFIX+'/live/'))return false;
-  if(path===EKODIMISSION_APEX_PREFIX+'/admin'||path.startsWith(EKODIMISSION_APEX_PREFIX+'/admin/'))return false;
+  const prefix=isMissionCanonicalPath(path)?'/mission':EKODIMISSION_APEX_PREFIX;
+  if(path!==prefix&&!path.startsWith(prefix+'/'))return false;
+  // The dedicated Mission LIVE viewer is directly owned by SPACE on the new path.
+  if(path===prefix+'/live/admin'||path.startsWith(prefix+'/live/admin/'))return false;
+  if(prefix!== '/mission'&&(path===prefix+'/live'||path.startsWith(prefix+'/live/')))return false;
+  if(path===prefix+'/admin'||path.startsWith(prefix+'/admin/'))return false;
   return true;
 }
 async function routeEkodiMissionSpace(request,env){
@@ -430,7 +457,7 @@ async function ensureLegacyOperatingSpaceMarker(response,includeBody=true){
 const LEGACY_ADMIN_HOSTS=new Set(['admin.ekodi.kr','admin.biz.ekodi.kr','admin.church.ekodi.kr','admin.lab.ekodi.kr','admin.trade.ekodi.kr']);
 const LEGACY_ADMIN_PATHS=Object.freeze({books:'books',community:'community',work:'work',business:'organization',publishing:'books',energy:'life-ai',journal:'common-services',experience:'campus'});
 function legacySurfaceRedirect(request){const url=new URL(request.url),host=url.hostname.toLowerCase();if(!['GET','HEAD'].includes(request.method))return null;if(!LEGACY_ADMIN_HOSTS.has(host))return null;const target=new URL(request.url);target.hostname='ekodi.kr';const key=url.pathname.split('/').filter(Boolean)[0]||'';if(url.pathname==='/'||url.pathname==='/admin'||url.pathname==='/admin/')target.pathname='/admin/';else if(/\.(?:js|css|cmd|json|map|svg|png|webp|ico)$/i.test(url.pathname)||url.pathname.startsWith('/api/')||url.pathname==='/auth/start')target.pathname=`/admin${url.pathname}`;else{target.pathname='/admin/';if(!target.searchParams.has('route')&&LEGACY_ADMIN_PATHS[key])target.searchParams.set('route',LEGACY_ADMIN_PATHS[key])}target.searchParams.set('source',host);return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-surface':host}})}
-function legacyStoreGatewayRedirect(request){const url=new URL(request.url);if(url.hostname.toLowerCase()!==PUBLIC_HOST||!['GET','HEAD'].includes(request.method)||!/^\/stores(?:\/|$)/i.test(url.pathname))return null;const target=new URL(request.url);target.pathname=url.pathname.replace(/^\/stores(?=\/|$)/i,'/cmpmyi');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-surface':'stores'}})}
+function legacyStoreGatewayRedirect(request,env){const url=new URL(request.url);if(resolvedHost(request,env)!==PUBLIC_HOST||!['GET','HEAD'].includes(request.method)||!/^\/stores(?:\/|$)/i.test(url.pathname))return null;const target=new URL(request.url);target.pathname=/^\/stores\/?$/i.test(url.pathname)?'/cmpmyi':url.pathname.replace(/^\/stores(?=\/|$)/i,'/cmpmyi');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-legacy-surface':'stores'}})}
 
 async function livePublicStatus(env,tenant){
   if(!env?.DB?.prepare)return'public';
@@ -512,12 +539,23 @@ async function routePlatform(request,env,ctx){
         return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff','x-ekodi-route':'legacy-service-canonical'}});
       }
     }
+    // Exact tenant accounting notices are owned by Shared Site, not the generic
+    // SPACE workspace fallback. Match before Church/Mission/CGMA/SeonamMedi routing.
+    if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isPublicAccountingNoticePath(url.pathname))
+      return legacyPlatformRouter.fetch(request,env,ctx);
     if(host===PUBLIC_HOST){const cooperative=await routeCooperative(request,env);if(cooperative)return cooperative;}
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
-    const legacyStores=legacyStoreGatewayRedirect(request);if(legacyStores)return legacyStores;
+    const legacyStores=legacyStoreGatewayRedirect(request,env);if(legacyStores)return legacyStores;
     const seonamBoard=legacySeonamBoardRedirect(request);if(seonamBoard)return seonamBoard;
     if(host===PUBLIC_HOST&&isSinglesRoute(url.pathname))return routeSinglesSurface(request,env);
-    const siteBoard=await handleSiteBoardRequest(request,env);if(siteBoard)return siteBoard;
+    const siteBoard=await handleSiteBoardRequest(request,env);
+    if(siteBoard){
+      if(!/^\/mission\/board(?:\/|$)/.test(url.pathname)||!['GET','HEAD'].includes(request.method)||!siteBoard.ok)return siteBoard;
+      const type=String(siteBoard.headers.get('content-type')||'').toLowerCase();
+      if(!/(?:text\/html|application\/json)/.test(type))return siteBoard;
+      const headers=new Headers(siteBoard.headers);headers.delete('content-length');headers.delete('content-encoding');
+      return new Response(request.method==='HEAD'?null:missionPublicReferences(await siteBoard.text()),{status:siteBoard.status,headers});
+    }
     if(host===PUBLIC_HOST&&isCgmaAiEducationPath(url.pathname))return routeCgmaAiEducation(request,env);
     if(host===PUBLIC_HOST&&isCgmaMotorFestivalPath(url.pathname))return routeCgmaMotorFestival(request,env);
     if(host===PUBLIC_HOST&&isCgmaEdocSignPath(url.pathname))return routeCgmaEdocSign(request,env);
@@ -597,6 +635,9 @@ async function routePlatform(request,env,ctx){
     if(CGMA_HOSTS.has(host))return routeCgmaPublic(request,env);
 
     if(host===PUBLIC_HOST){
+      // Dedicated AI-agency /admin alias is not a generic workspace administrator.
+      const agencyAdminLegacy=legacyAgencyAdminRedirect(request);
+      if(agencyAdminLegacy)return agencyAdminLegacy;
       if(isSeasonalOperationsPath(url.pathname))return seasonalOperationsResponse(request,env);
       if(isSeasonalPortalPath(url.pathname))return seasonalPortalResponse(request);
       if(['GET','HEAD'].includes(request.method)&&isStorePosAgentDownloadPath(url.pathname))return storePosAgentDownload(request);
@@ -654,6 +695,7 @@ async function routePlatform(request,env,ctx){
         if(url.pathname==='/workspace-trade-portal.js')return tradePartnerScript();
         if(isTradePartnerPath(url.pathname))return injectEkodiTenantReadability(tradePartnerPage());
         if(['GET','HEAD'].includes(request.method)&&isEkodiBizRefundPolicyPath(url.pathname))return ekodiBizRefundPolicyResponse({head:request.method==='HEAD'});
+        {const homepageRoute=ekodiBizHomepageRoute(request,url);if(homepageRoute)return homepageRoute;}
         {const tradeProduct=tradeProductPublicRoute(url.pathname);if(tradeProduct)return injectEkodiTenantReadability(tradeProductPublicPage(tradeProduct));}
         if(/^\/cheonggye\/admin\/publishing\/?$/i.test(url.pathname))return injectEkodiShell(workspaceAdminPage(url.pathname),'space','admin');
         if(url.pathname==='/ekodi-church'||url.pathname.startsWith('/ekodi-church/')){const target=new URL(request.url);target.pathname=url.pathname.replace(/^\/ekodi-church(?=\/|$)/i,'/ekodichurch');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-content-type-options':'nosniff'}});}
@@ -711,7 +753,7 @@ async function routePlatform(request,env,ctx){
       if(['GET','HEAD'].includes(request.method)&&url.pathname===EKODI_DYNAMIC_SITEMAP_PATH)return ekodiDynamicSitemapResponse(env,{head:request.method==='HEAD'});
       if(['GET','HEAD'].includes(request.method)&&url.pathname===EKODI_DYNAMIC_LLMS_PATH)return ekodiDynamicLlmsResponse(env,{head:request.method==='HEAD'});
       if(['GET','HEAD'].includes(request.method)){const projectedContent=await publicDiscoveryContentResponse(request,env);if(projectedContent)return projectedContent;}
-      if(['GET','HEAD'].includes(request.method)&&STORE_GATEWAY_PATHS.has(url.pathname)){const response=injectEkodiShell(storeGatewayPage(),'ekodi','public');return request.method==='GET'?decorateDiscoveryResponse(response,url.pathname):response;}
+      if(['GET','HEAD'].includes(request.method)&&STORE_GATEWAY_PATHS.has(url.pathname))return storeGatewayPage(request);
       {const marketingProjection=marketingProjectionForPath(url.pathname);if(marketingProjection){const projected=await proxyCanonicalMarketing(request);if(projected)return isProjectionHome(url.pathname,marketingProjection)?injectEkodiProgressiveHome(projected):projected;}}
       if(['GET','HEAD'].includes(request.method)&&EKODIBIZ_PUBLIC_ROUTE.test(url.pathname))return routeEkodiBizPublic(request,env);
       if(url.pathname.startsWith(EKODIBIZ_API_PREFIX))return routeEkodiBizApi(request,env);
@@ -755,11 +797,28 @@ export default {
   async fetch(request,env,ctx){
     const guard=await enforcePlatformRequestSecurity(request,env);
     if(guard)return applyPlatformSecurityHeaders(guard,request);
+    const throttle=await enforceClientTrafficBudget(request,env);
+    if(throttle)return applyPlatformSecurityHeaders(throttle,request);
     const trafficStartedAt=Date.now();
     const traffic=await assessTrafficTier(request,env);
     const trafficGuard=trafficRequestGuard(request,traffic);
     if(trafficGuard)return applyPlatformSecurityHeaders(trafficGuard,request);
     if(['GET','HEAD'].includes(request.method)){const verificationFile=searchVerificationFileResponse(new URL(request.url).pathname,{head:request.method==='HEAD'});if(verificationFile)return applyPlatformSecurityHeaders(verificationFile,request);}
+    // EKODI-CONTENT-PROTECTION-001 / EKODI-MEDIA-SHIELD-001: guard assets, source-map refusal and the
+    // self-hosted DRM API are answered before any tenant routing so no route can bypass them.
+    const protectionAsset=contentProtectionAssetResponse(request)||mediaShieldPlayerResponse(request);
+    if(protectionAsset)return applyPlatformSecurityHeaders(protectionAsset,request);
+    // EKODI-CSP-REPORT-001: browser CSP violation reports (report-only stage). Answered before tenant routing.
+    if(isCspReportPath(new URL(request.url).pathname))return applyPlatformSecurityHeaders(await handleCspReport(request),request);
+    // EKODI-MEDIA-SHIELD-002: protected-video studio (/admin/media-shield) and viewer (/my/media/<id>).
+    const mediaShieldPage=mediaShieldPageResponse(request);
+    if(mediaShieldPage)return applyContentProtection(mediaShieldPage,request,env).then(response=>applyPlatformSecurityHeaders(response,request));
+    if(isMediaShieldPath(new URL(request.url).pathname)){
+      const shielded=await handleMediaShieldRequest(request,env,{resolvePrincipal:principalFromSupabaseRequest});
+      return applyPlatformSecurityHeaders(shielded,request);
+    }
+    // JOURNAL-EDITOR-ALERTS-20261113: 저녁 6시(KST) 이후 첫 요청 때 하루 한 번 저널 편집부 요약 메일(자체 5분 간격·일 1회 잠금).
+    if(ctx?.waitUntil)ctx.waitUntil(runJournalDigest(env));
     let trafficRecorded=false;
     const record=status=>{if(trafficRecorded)return;trafficRecorded=true;recordTrafficOutcome({durationMs:Date.now()-trafficStartedAt,status})};
     const finalize=response=>{
@@ -767,7 +826,9 @@ export default {
       response=applyTrafficResponsePolicy(response,request,traffic);
       // FOOTER-TRAFFIC-GUARANTEE: every public HTML page leaving the Shared Site shows footer visit stats.
       try{response=ensureFooterTraffic(response,request)}catch(error){console.error('footer traffic guarantee skipped',error)}
-      return applyPlatformSecurityHeaders(response,request);
+      // EKODI-CONTENT-PROTECTION-001: admin·member·reader documents get the copy/capture deterrent + forensic trace.
+      // EKODI-CSP-REPORT-001: sampled report-only CSP on documents that ship no enforcing policy.
+      return applyContentProtection(response,request,env).then(response=>applyPlatformSecurityHeaders(applyCspReportOnly(response,request,env),request));
     };
     const incomingUrl=new URL(request.url);
     const retiredBbq=resolvedHost(request,env)===PUBLIC_HOST?retiredBbqRouteResponse(request):null;

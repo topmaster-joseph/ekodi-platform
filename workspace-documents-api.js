@@ -20,7 +20,7 @@
 import { resolveTenantAccessAuthority } from './tenant-access-authority.js';
 
 export const WORKSPACE_DOCUMENTS_PREFIX = '/api/workspace-documents';
-export const WORKSPACE_DOCUMENT_TYPES = Object.freeze(['통장사본', '고유번호증', '사업자등록증', '신분증', '이력서', '정관·규약', '회의록', '인감·직인', '증명서', '계약·협약', '기타']);
+export const WORKSPACE_DOCUMENT_TYPES = Object.freeze(['통장사본', '고유번호증', '사업자등록증', '신분증', '이력서', '정관·규약', '회의록', '인감·직인', '증명서', '계약·협약', '시설·도면', '기타']);
 export const WORKSPACE_DOCUMENT_MAX_BYTES = 10 * 1024 * 1024;
 const MIME = new Map([['application/pdf', 'pdf'], ['image/jpeg', 'jpg'], ['image/png', 'png'], ['image/webp', 'webp']]);
 const ALLOWED_ORIGIN = 'https://ekodi.kr';

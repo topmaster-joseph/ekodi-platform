@@ -8,6 +8,13 @@ import {runTask} from './ekodi-background-browser-worker.mjs';
 const ORIGIN='https://ekodi.kr';
 const OUT='artifacts/devotion-native-sandbox';
 const DAY='2026-10-26';
+// 다음날 링크는 "다음 날짜가 미래일 때만 숨긴다"(bible/devotion.js: nextDate<=today).
+// 고정 날짜에 '숨김' 을 못박으면 그 날짜가 오늘이던 하루만 참이고, 다음 날부터
+// 거짓이 된다. 실제로 그렇게 썩었다 — 레인의 마지막 실행이 2026-10-26 이고,
+// 2026-11-12 측정에서 desktop-church-future-link 가 {"nextHidden":false} 로 깨졌다.
+// 운영이 아니라 기대값이 달력과 함께 썩은 것이다. 그래서 불변식을 고정한다.
+const NEXT_DAY=new Date(Date.UTC(...DAY.split('-').map((v,i)=>i===1?Number(v)-1:Number(v))) + 86400000)
+  .toISOString().slice(0,10);
 const NOTICE='묵상 적용(시·노래·질문·기도)은 에코디언 정찬균목사가 공통본문을 바탕으로 AI 도움을 받아 만든 창작 묵상 자료입니다. 성경 본문은 개역한글(대한성서공회, 1961) 원문을 그대로 표시합니다.';
 const SURFACES=[
  {name:'church',path:'/ekodichurch/devotion/?date='+DAY},
@@ -50,12 +57,17 @@ try{
          check(device.name+'-'+surface.name+'-http',response?.status()===200,{status:response?.status()});
          const root=page.locator('[data-ekodi-devotion]');
          await root.locator('.dv-scripture-section .dv-verses').waitFor({state:'visible',timeout:20000});
-         const state=await root.evaluate(el=>{
+         const state=await root.evaluate((el,nextDay)=>{
            const order=[...el.children].map(n=>Array.from(n.classList||[]).join(' '));
            const find=klass=>order.findIndex(text=>text.split(' ').includes(klass));
            const scripture=el.querySelector('.dv-scripture-section');
-           const notice=el.querySelector('.dv-notice');
-           const share=el.querySelector('.dv-share-row');
+           // 순서 색인(find)은 직계자녀만 본다. 겹침 판정도 같은 요소를 봐야 한다.
+           // 2026-10-27 이후 탭 패널 안에도 .dv-share-row 가 생겼고(84837a632 등),
+           // 그것이 문서순서상 더 앞이라 querySelector 가 숨겨진 패널의 줄을 집었다.
+           // 숨겨진 요소의 사각형은 0×0 이므로 겹침 판정이 늘 거짓이 된다.
+           // 측정된 실패: shareRect {top:0,bottom:0,height:0}, 나머지 세 조건은 참.
+           const notice=el.querySelector(':scope > .dv-notice');
+           const share=el.querySelector(':scope > .dv-share-row');
            const tabs=[...el.querySelectorAll('.dv-tab')].map(n=>({label:n.textContent,hidden:n.hidden}));
            return {
              scriptureText:scripture?.innerText||'',notice:notice?.innerText||'',tabs,
@@ -66,7 +78,20 @@ try{
              const n=notice?.getBoundingClientRect(),sh=share?.getBoundingClientRect();
              return Boolean(n&&sh&&sh.top>=n.bottom-1);
            })(),
-             nextHidden:el.querySelector('.dv-datebar a:last-child')?.hidden,
+             // 순서 검사는 네 조건의 논리곱이었고 증거를 남기지 않았다. 2026-11-12
+             // 실행에서 desktop-church-order 가 `{}` 만 남기고 깨졌고, 그래서 어느
+             // 조건이 왜 깨졌는지 알 수 없었다. 운영 페이지를 다시 열지 않고도
+             // 판정할 수 있도록 실제 자녀 순서와 두 사각형을 함께 기록한다.
+             childOrder:order.slice(0,24).map(text=>String(text).slice(0,80)),
+             noticeRect:(()=>{const r=notice?.getBoundingClientRect();return r?{top:Math.round(r.top),bottom:Math.round(r.bottom),height:Math.round(r.height)}:null;})(),
+             shareRect:(()=>{const r=share?.getBoundingClientRect();return r?{top:Math.round(r.top),bottom:Math.round(r.bottom),height:Math.round(r.height)}:null;})(),
+             futureLink:(()=>{
+               const link=el.querySelector('.dv-datebar a:last-child');
+               const today=new Date().toISOString().slice(0,10);
+               return {hidden:link?.hidden,today,nextDate:nextDay,shouldHide:nextDay>today,
+                 href:link?.getAttribute('href')||null,
+                 ariaDisabled:link?.getAttribute('aria-disabled')||null};
+             })(),
              adminHidden:el.querySelector('.dv-admin')?.hidden,
              overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth+2,
              scriptureDisplayed:scripture?getComputedStyle(scripture).display!=='none':false,
@@ -74,11 +99,22 @@ try{
              imageTab:el.querySelector('[data-tab="image"]')!==null,
              body:document.body.innerText.slice(0,1000)
            };
-         });
+         },NEXT_DAY);
          check(device.name+'-'+surface.name+'-scripture',state.scriptureDisplayed&&state.scriptureText.includes('오바댜 1:17-21')&&state.scriptureText.length>120,{excerpt:state.scriptureText.slice(0,100)});
          check(device.name+'-'+surface.name+'-attribution',state.notice.includes(NOTICE));
-         check(device.name+'-'+surface.name+'-order',state.scriptureBeforeTabs&&state.scriptureBeforeNotice&&state.shareAfterNotice&&state.noticeShareNonoverlap);
-         check(device.name+'-'+surface.name+'-future-link',state.nextHidden===true,{nextHidden:state.nextHidden});
+         check(device.name+'-'+surface.name+'-order',state.scriptureBeforeTabs&&state.scriptureBeforeNotice&&state.shareAfterNotice&&state.noticeShareNonoverlap,
+           {scriptureBeforeTabs:state.scriptureBeforeTabs,scriptureBeforeNotice:state.scriptureBeforeNotice,
+            shareAfterNotice:state.shareAfterNotice,noticeShareNonoverlap:state.noticeShareNonoverlap,
+            childOrder:state.childOrder,noticeRect:state.noticeRect,shareRect:state.shareRect});
+         // 미래면 반드시 숨기고(fail-closed), 과거면 반드시 열어 과거 묵상을 볼 수 있어야
+         // 한다. 열렸다면 주소가 바로 그 다음 날짜여야 한다 — 미래로 건너뛰면 안 된다.
+         const link=state.futureLink;
+         check(device.name+'-'+surface.name+'-future-link',
+           link.hidden===link.shouldHide&&
+           (link.shouldHide
+             ? link.href===null&&link.ariaDisabled==='true'
+             : typeof link.href==='string'&&link.href.includes(link.nextDate)),
+           link);
          check(device.name+'-'+surface.name+'-guest-admin-closed',state.adminHidden===true);
          check(device.name+'-'+surface.name+'-tabs',[
            '묵상 시','묵상 노래·악보','묵상 그림','질문 / 실천','가정·어린이','한줄기도'

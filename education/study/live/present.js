@@ -154,6 +154,29 @@ function setSlide(i){
   const moduleIndex=session().modules.findIndex(m=>m.id===target.moduleId);
   store.dispatch({type:'slide/set',index,moduleIndex:moduleIndex<0?S().moduleIndex:moduleIndex});
 }
+// Demo library (강사 시연 라이브러리): instructor-only module behind the strict guide gate. Without an
+// instructor session the import is refused and the picker stays hidden; nothing else changes.
+async function setupDemoLibrary(){
+  const sel=$('#aiDemo');if(!sel)return;
+  let lib;try{lib=await import('./guide/demos.js');}catch{return;}
+  const g=Number(params.get('g'))||0,picks=lib.SESSION_PICKS?.[g];
+  const label=f=>f==='common'?'공통':(course.tracks.find(t=>t.id===f)?.label||f);
+  const opt=d=>d?'<option value="'+esc(d.id)+'">'+esc(lib.MISSIONS[d.mission]+' · '+d.title)+'</option>':'';
+  const rec=picks?[...new Set(Object.values(picks).flat())]:[];
+  const fields=[...new Set(lib.DEMOS.map(d=>d.field))];
+  sel.innerHTML='<option value="">시연 골라 불러오기…</option>'+(rec.length?'<optgroup label="'+g+'차 추천">'+rec.map(id=>opt(lib.demoById(id))).join('')+'</optgroup>':'')+
+    fields.map(f=>'<optgroup label="'+esc(label(f))+'">'+lib.DEMOS.filter(d=>d.field===f).map(opt).join('')+'</optgroup>').join('');
+  sel.hidden=false;$('#aiGuide').hidden=false;$('#aiGuide').href='../guide/'+(g?'?s='+g:'');
+  sel.addEventListener('change',()=>{
+    const d=lib.demoById(sel.value);if(!d)return;
+    $('#aiInput').value=lib.demoPrompt(d);
+    if(course.tracks.some(t=>t.id===d.field))$('#aiTrack').value=d.field;
+    $('#aiHandoff').hidden=false;$('#aiHandoff').textContent='실제 기능: FactChat '+(lib.MISSIONS[d.mission]||'채팅')+(lib.CREDIT?.[d.mission]?' · 크레딧(각자 기관 계정): '+lib.CREDIT[d.mission].estimate:'')+' · 넘김 멘트: '+d.handoff;
+    toast('시연 「'+d.title+'」을 불러왔습니다.');
+  });
+  const want=params.get('demo');
+  if(want&&lib.demoById(want)){sel.value=want;sel.dispatchEvent(new Event('change'));}
+}
 function togglePractice(){
   const m=moduleOf(currentSlide());if(m.kind!=='practice')return;
   const mission=course.missions[m.missionId];const st=S();
@@ -211,6 +234,7 @@ function bind(){
   $('#pFactchat').addEventListener('click',openFactchat);
   $('#aiTrack').innerHTML=course.tracks.map(t=>'<option value="'+esc(t.id)+'">'+esc(t.label)+'</option>').join('');
   $('#aiLoad').addEventListener('click',aiLoadPrompt);
+  setupDemoLibrary();
   $('#aiRun').addEventListener('click',aiRun);
   $('#aiShow').addEventListener('click',()=>setStageMode('ai'));
   aiAuthRender();

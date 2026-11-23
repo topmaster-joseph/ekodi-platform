@@ -2,6 +2,7 @@ import { EKODI_SERVICE_MANIFEST } from './ekodi-service-manifest.js';
 import { realtimeTenantList } from './realtime-tenant-registry.js';
 import { tenantGrantCapabilityDecision } from './tenant-access-authority.js';
 import { COOPERATIVES } from './cooperative-registry.js';
+import { isPublicAccountingNoticePath } from './public-accounting-notice-page.js';
 
 export const SITE_PUBLICATION_POLICY_ID='EKODI-SITE-PUBLICATION-001';
 export const SITE_PUBLICATION_STATUSES=Object.freeze(['public','private','maintenance']);
@@ -325,6 +326,12 @@ export async function sitePublicationGuard(request,env){
   const site=await resolvePublicationSiteForRequest(request,env);if(!site)return null;
   let setting;try{setting=await getSitePublicationSetting(env,site.id)}catch(error){console.error('site publication read failed',error);return null}
   if(!setting||setting.publicStatus==='public')return null;
+  // An explicit public accounting-summary URL remains available during a site's
+  // maintenance holding screen. A truly private site still fails closed (404).
+  // Only canonical apex GET/HEAD paths in the five-site allowlist qualify; this
+  // does not expose underlying ledger APIs, site pages or a private workspace.
+  const url=new URL(request.url);
+  if(setting.publicStatus==='maintenance'&&url.hostname==='ekodi.kr'&&isPublicAccountingNoticePath(url.pathname))return null;
   if(setting.publicStatus==='maintenance'&&setting.maintenanceDisplayType==='url'&&setting.redirectMode==='auto'){
     const target=validRedirect(setting.maintenanceRedirectUrl);if(target)return new Response(null,{status:302,headers:{location:target,'cache-control':'no-store','x-robots-tag':'noindex, nofollow, noarchive','x-ekodi-site-publication':'maintenance'}});
   }

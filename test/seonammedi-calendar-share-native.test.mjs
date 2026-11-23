@@ -52,7 +52,7 @@ test('post-deploy requires current sharing copy; predeploy accepts old or new bu
 test('GitHub workflow runs source or post-deploy native Chromium on both domains with artifact evidence',()=>{
   assert.match(workflow,/workflow_run:/);
   assert.match(workflow,/Deploy EKODI Shared Site Core/);
-  assert.match(workflow,/playwright@1\.55\.0/);
+  assert.match(workflow,/playwright@1\.55\.1/);
   assert.match(workflow,/npx playwright install --with-deps chromium/);
   assert.match(workflow,/--origin=https:\/\/seonammedi\.kr/);
   assert.match(workflow,/--origin=https:\/\/ekodi\.kr/);

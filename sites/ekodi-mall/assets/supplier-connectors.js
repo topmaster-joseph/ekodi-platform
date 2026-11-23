@@ -6,6 +6,31 @@
   const sb=window.supabase.createClient(SUPABASE_URL,PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
   const $=(s)=>document.querySelector(s); const status=$('#connectorStatus'),login=$('#connectorLogin'),logout=$('#connectorLogout'),reload=$('#connectorReload');
   const providerReady=$('#providerReady'),lookupGate=$('#lookupGate'),credentialSummary=$('#credentialSummary'),nextRequired=$('#nextRequired'),lookupResult=$('#lookupResult'),dryRunResult=$('#dryRunResult');
+  const publicCatalogGate=$('#publicCatalogGate'),publicCatalogGateDetail=$('#publicCatalogGateDetail');
+  async function refreshPublicCatalog() {
+    if(!publicCatalogGate)return;
+    try {
+      // Read-only readiness; this endpoint never contacts the supplier or
+      // exposes API credentials, and cannot authorize public resale or orders.
+      const response=await fetch(API+'/api/public/supplier/status',{
+        method:'GET',credentials:'omit',cache:'no-store',
+        headers:{accept:'application/json'},signal:AbortSignal.timeout(6000)
+      });
+      if(!response.ok)throw Error('PUBLIC_CATALOG_STATUS_UNAVAILABLE');
+      const state=await response.json();
+      const ready=state?.enabled===true&&state?.state==='reference-only-ready'
+        &&state?.checkoutReady===false&&state?.autoOrderReady===false;
+      publicCatalogGate.textContent=ready?'참고 조회 준비':'공개권한 미확인';
+      publicCatalogGate.classList.toggle('connector-off',!ready);
+      if(publicCatalogGateDetail)publicCatalogGateDetail.textContent=ready
+        ?'참고 상품정보만 표시 가능 · 주문·발주 불가'
+        :'공개 이용권·호출한도 확인 전 · OFF';
+    }catch {
+      publicCatalogGate.textContent='상태 미확인 · 차단';
+      publicCatalogGate.classList.add('connector-off');
+      if(publicCatalogGateDetail)publicCatalogGateDetail.textContent='공개 상태 조회 실패 · 기본 OFF';
+    }
+  }
   let session=null;
   function setStatus(msg,error=false){status.textContent=msg;status.dataset.state=error?'error':'ok';}
   async function token(){return (await sb.auth.getSession()).data.session?.access_token||'';}
@@ -76,8 +101,9 @@
   activateTab(new URLSearchParams(location.search).get('tab'));
   window.addEventListener('popstate',()=>activateTab(new URLSearchParams(location.search).get('tab')));
   login?.addEventListener('click',()=>{location.href='https://ekodi.kr/auth/?site=mall-seller&return_to='+encodeURIComponent(location.href.split('#')[0]);});
-  logout?.addEventListener('click',async()=>{await sb.auth.signOut();session=null;sync();setStatus('로그아웃했습니다.');});reload?.addEventListener('click',()=>load().catch((e)=>setStatus(e.message,true)));
+  logout?.addEventListener('click',async()=>{await sb.auth.signOut();session=null;sync();setStatus('로그아웃했습니다.');});reload?.addEventListener('click',()=>{load().catch((e)=>setStatus(e.message,true));refreshPublicCatalog();});
   function sync(){const signed=Boolean(session);login.hidden=signed;logout.hidden=!signed;document.querySelectorAll('.connector-panel input,.connector-panel button').forEach((el)=>{el.disabled=!signed;});reload.disabled=!signed;}
+  refreshPublicCatalog();
   exchangeCentralToken().catch((e)=>setStatus(`인증 연결 실패: ${e.message}`,true)).finally(async()=>{session=(await sb.auth.getSession()).data.session;sync();if(session)load().catch((e)=>setStatus(e.message,true));});
   sb.auth.onAuthStateChange((_e,next)=>{session=next;sync();if(session)load().catch(()=>{});});
 })();

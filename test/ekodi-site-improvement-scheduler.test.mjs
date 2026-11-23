@@ -15,7 +15,8 @@ test('site improvement targets only canonical apex workspace sites',()=>{
   assert.ok(targets.every(site=>site.canonicalUrl.startsWith('https://ekodi.kr/')));
   assert.equal(targets.some(site=>site.id==='ekodi-trade'),true);
   assert.equal(targets.some(site=>site.id==='ekodi-cafe'),true);
-  assert.equal(targets[0].id,'jadam');
+  assert.equal(targets[0].id,'bbqcg');
+  assert.equal(targets.some(site=>site.id==='jadam'),false,'historical Jadam must not receive active automated work');
 });
 
 test('site improvement prompt requires deep subservice UX review and protected boundaries',()=>{
@@ -96,7 +97,7 @@ test('cloud fallback is EKODI-owned, workspace-sandboxed, and fail-closed',async
   assert.match(worker,/dispatchCloudSiteImprovement/);
   assert.match(worker,/provider:'cloud:github-hosted-codex'/);
   assert.doesNotMatch(worker,/no_online_code_node_provider'\);/);
-  assert.match(workflow,/uses: openai\/codex-action@v1/);
+  assert.match(workflow,/uses: openai\/codex-action@[0-9a-f]{40} # v1/);
   assert.match(workflow,/permission-profile: ':workspace'/);
   assert.match(workflow,/protected boundary changed/);
   assert.match(workflow,/files\.length>25/);

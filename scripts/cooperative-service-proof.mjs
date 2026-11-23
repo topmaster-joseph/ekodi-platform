@@ -289,6 +289,7 @@ export async function verifyCooperativeServiceWorkflows({ contextFor, fixture: f
     await applicant.locator('#applicationForm [name="phone"]').fill('010-1234-5678');
     await applicant.locator('#applicationForm [name="business"]').fill('가상 신청 사업체');
     await applicant.locator('#applicationForm [name="consent"]').check();
+    await applicant.locator('#applicationForm [name="depositAgreement"]').check();
     await applicant.locator('#applicationForm button[type="submit"]').click();
     await applicant.waitForFunction(() => document.querySelector('#applicationResult').textContent.includes('조합원으로 등록되었습니다.'));
     const application = f.sqlite.prepare('SELECT person_id,status,business FROM cooperative_applications WHERE workspace_id=? AND email=?').get(coop.workspaceId, 'applicant@example.test');

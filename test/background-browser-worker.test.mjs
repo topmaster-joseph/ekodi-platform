@@ -105,7 +105,7 @@ test('shared-site guarded release invokes native browser verification after prod
   assert.equal((sharedRelease.match(/surface_registry:\s*config\/board-surface-verification\.json/g)||[]).length,2);
   assert.equal(boardRegistry.policyId,'EKODI-BOARD-NATIVE-VERIFY-001');
   assert.equal(policy.taskProtocol.maxActions,30);
-  assert.ok(workerWorkflow.includes('const screenshotBudget=Math.max(0,30-(2*paths.length-1))'),'real board screenshots must respect the 30-action limit');
+  assert.ok(workerWorkflow.includes('const screenshotBudget=Math.max(0,30-(2*paths.length-1)-(expectedVisible?2:0))'),'real board screenshots must respect the 30-action limit');
   assert.ok(workerWorkflow.includes('screenshots<screenshotBudget'),'snapshot coverage must remain complete under budget');
   for(const count of [1,4,10,12]){
     const baseActions=2*count-1;
@@ -239,8 +239,8 @@ test('EKODI Chromium install cache is pinned and independent of paid browser ser
   assert.match(workerWorkflow,/Restore cached Chromium binaries/);
   assert.match(workerWorkflow,/uses: actions\/cache@v4/);
   assert.match(workerWorkflow,/path: ~\/\.cache\/ms-playwright/);
-  assert.match(workerWorkflow,/ekodi-native-chromium-\$\{\{ runner\.os \}\}-\$\{\{ runner\.arch \}\}-playwright-1\.55\.0-v1/);
-  assert.match(workerWorkflow,/npm install --no-save --package-lock=false playwright@1\.55\.0/);
+  assert.match(workerWorkflow,/ekodi-native-chromium-\$\{\{ runner\.os \}\}-\$\{\{ runner\.arch \}\}-playwright-1\.55\.1-v1/);
+  assert.match(workerWorkflow,/npm install --no-save --package-lock=false playwright@1\.55\.1/);
   assert.match(workerWorkflow,/npx playwright install --with-deps chromium/);
   assert.match(workerWorkflow,/Record native Chromium cache evidence/);
   assert.match(workerWorkflow,/CHROMIUM_CACHE_HIT: \$\{\{ steps\.chromium-cache\.outputs\.cache-hit \}\}/);

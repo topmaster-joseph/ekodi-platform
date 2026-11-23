@@ -60,6 +60,7 @@ if (enabled) {
   let active = previous;
   let rollbackAttempts = 0;
   let statusAttempts = 0;
+  let candidateAttachAttempts = 0;
   const realSpawnSync = childProcess.spawnSync;
   const realSetTimeout = globalThis.setTimeout;
 
@@ -91,7 +92,15 @@ if (enabled) {
       } else if (rendered.includes('versions upload')) {
         stdout = 'Worker Version ID: ' + candidate + '\\n';
       } else if (rendered.includes('versions deploy')) {
-        if (argv.includes(candidate + '@100%')) {
+        if (argv.includes(previous + '@100%') && argv.includes(candidate + '@0%')) {
+          candidateAttachAttempts += 1;
+          if (candidateAttachAttempts === 1) {
+            status = 1;
+            stderr = 'A request to the Cloudflare API (/accounts/FAKE/workers/scripts/ekodi-rollback-proof/versions/' + candidate + ') failed. The requested Worker version could not be found. [code: 100146]';
+          } else {
+            active = previous;
+          }
+        } else if (argv.includes(candidate + '@100%')) {
           active = candidate;
         } else if (argv.includes(previous + '@100%') && !argv.includes(candidate + '@0%')) {
           rollbackAttempts += 1;
@@ -157,18 +166,21 @@ if (enabled) {
     const output = `${result.stdout || ''}\n${result.stderr || ''}`;
     assert.equal(result.status, 1, `fault-injected release must fail closed after verified rollback:\n${output}`);
     assert.match(output, /Read-only Wrangler deployment status attempt 1\/3 failed; retrying safely\./);
+    assert.match(output, /Newly uploaded candidate version is not yet visible \(100146\), safe attach retry 1\/4\./);
     assert.match(output, /Rolling back ekodi-rollback-proof to 11111111-1111-4111-8111-111111111111 at 100%\./);
     assert.match(output, /Transient Wrangler transport failure during rollback attempt 1\/3; retrying safely\./);
     assert.match(output, /Automatic rollback verified against the stable rollback contract\./);
 
     const commands = fs.readFileSync(commandLogPath, 'utf8').trim().split(/\r?\n/).filter(Boolean);
     const statusCommands = commands.filter(line => line.includes('deployments status'));
-    assert.equal(statusCommands.length, 2, `transient deployment status read must cause exactly one bounded retry: ${commands.join('\\n')}`);
+    assert.equal(statusCommands.length, 3, `initial transient status retry and a read-only stable-version recheck before candidate attach retry: ${commands.join('\\n')}`);
     const attachIndex = commands.findIndex(line => line.includes(`${PREVIOUS_VERSION}@100%`) && line.includes(`${CANDIDATE_VERSION}@0%`));
     const promoteIndex = commands.findIndex(line => line.includes(`${CANDIDATE_VERSION}@100%`) && !line.includes(`${PREVIOUS_VERSION}@100%`));
     const rollbackIndex = commands.findIndex((line, index) => index > promoteIndex && line.includes(`${PREVIOUS_VERSION}@100%`) && !line.includes(`${CANDIDATE_VERSION}@0%`));
 
     assert.ok(attachIndex >= 0, `candidate must first be attached at 0% traffic: ${commands.join('\n')}`);
+    assert.equal(commands.filter(line => line.includes(`${PREVIOUS_VERSION}@100%`) && line.includes(`${CANDIDATE_VERSION}@0%`)).length, 2,
+      'only the exact not-yet-propagated candidate should be retried while stable remains at 100%');
     assert.ok(promoteIndex > attachIndex, `candidate must be promoted only after candidate verification: ${commands.join('\n')}`);
     assert.ok(rollbackIndex > promoteIndex, `previous stable version must be restored after the injected production failure: ${commands.join('\n')}`);
     const rollbackCommands = commands.filter((line, index) => index > promoteIndex && line.includes(`${PREVIOUS_VERSION}@100%`) && !line.includes(`${CANDIDATE_VERSION}@0%`));

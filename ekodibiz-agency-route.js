@@ -4,6 +4,25 @@ const AGENCY_ENTRY = /^\/ekodibiz\/(?:ai-agency(?:\/|\.js|\/(?:apply|university|
 const AGENCY_SHARED_SCRIPT = '/ekodibiz/ai-agency-links.js';
 const AGENCY_API = /^\/ekodibiz\/api\/agency\/[a-z0-9/-]+$/;
 
+// Exact legacy handoff must precede the generic /:workspace/:service/admin shell.
+// Drop the entire query/fragment; it may contain contract or receipt identifiers.
+export function legacyAgencyAdminRedirect(request) {
+  const url = new URL(request.url);
+  if (url.origin !== 'https://ekodi.kr' ||
+      !['/ekodibiz/ai-agency/admin', '/ekodibiz/ai-agency/admin/'].includes(url.pathname)) return null;
+  const headers = {
+    'cache-control':'no-store',
+    'x-content-type-options':'nosniff',
+    'x-robots-tag':'noindex, nofollow, noarchive',
+    'x-ekodi-canonical-service':'ekodibiz-agency'
+  };
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    return new Response(null,{status:405,headers:{...headers,allow:'GET, HEAD'}});
+  }
+  return new Response(null,{status:308,headers:{...headers,
+    location:'https://ekodi.kr/ekodibiz/ai-agency/manage'}});
+}
+
 export function isEkodibizAgencyPath(pathname) {
   return pathname===AGENCY_SHARED_SCRIPT || AGENCY_ENTRY.test(String(pathname || '')) || AGENCY_API.test(String(pathname || ''));
 }

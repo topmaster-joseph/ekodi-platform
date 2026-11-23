@@ -1,4 +1,5 @@
 import { withFooterTraffic } from './footer-traffic-guarantee.js';
+import { withEdgeTrafficShield } from './edge-traffic-shield.js';
 const REVENUE_OS_URL = 'https://ekodi.kr/ekodibiz';
 const PAYMENT_CORE_ORIGIN = 'https://ekodi.kr/ekodipay';
 const CANONICAL_GATEWAY = 'https://ekodi.kr/ekodibiz/pay';
@@ -78,4 +79,5 @@ const ekodiWorkerEntry={
 
 export { CANONICAL_GATEWAY, PAYMENT_CORE_ORIGIN };
 // FOOTER-TRAFFIC-GUARANTEE: public HTML from this route always carries footer visit stats.
-export default withFooterTraffic(ekodiWorkerEntry);
+// EKODI-EDGE-TRAFFIC-SHIELD-001: this apex route bypasses the Shared Site guard, so it carries its own.
+export default withEdgeTrafficShield(withFooterTraffic(ekodiWorkerEntry),{service:'ekodibiz-pay-gateway'});

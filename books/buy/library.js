@@ -159,6 +159,23 @@
       const actions = document.createElement('span'); actions.className = 'op-actions';
       const audioLink = document.createElement('a'); audioLink.className = 'op-btn ghost'; audioLink.href = `${C.BASE}/audio-review/?book=${encodeURIComponent(book.id)}`; audioLink.textContent = '오디오북'; actions.append(audioLink);
       if (file) { const review = document.createElement('a'); review.className = 'op-btn ghost'; review.href = `${C.BASE}/review/?book=${encodeURIComponent(book.id)}`; review.textContent = ready.ready ? '검토' : '검토·확정'; actions.append(review); }
+      // EPUB 내려받기(운영자): 서점에서 실제로 파는 파일 그대로. 서버가 운영자 계정만 내준다.
+      if (file) {
+        const dl = document.createElement('button'); dl.type = 'button'; dl.className = 'op-btn ghost'; dl.textContent = 'EPUB 내려받기';
+        dl.addEventListener('click', async () => {
+          dl.disabled = true; dl.textContent = '받는 중…';
+          try {
+            const s = await C.session();
+            const r = await fetch(`${C.BASE}/api/commerce/admin/files/${encodeURIComponent(book.id)}/content`, { headers: { authorization: 'Bearer ' + (s?.accessToken || '') }, cache: 'no-store' });
+            if (!r.ok) throw new Error();
+            const url = URL.createObjectURL(await r.blob());
+            const a = document.createElement('a'); a.href = url; a.download = `${book.title}.epub`; document.body.append(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 30000); dl.textContent = '받았습니다';
+          } catch { dl.textContent = '다시 받기'; }
+          finally { dl.disabled = false; }
+        });
+        actions.append(dl);
+      }
       const label = document.createElement('label'); label.className = 'op-btn'; label.textContent = file ? '새 판본' : 'EPUB 올리기';
       const input = document.createElement('input'); input.type = 'file'; input.accept = '.epub,application/epub+zip';
       input.addEventListener('change', async () => {

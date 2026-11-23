@@ -94,7 +94,8 @@ test('Church-approved layout requires five-viewport multilingual Chromium produc
   "{name:'mobile-320',width:320,height:740},{name:'mobile-390',width:390,height:844},{name:'tablet-768',width:768,height:1000},{name:'desktop-1366',width:1366,height:900},{name:'desktop-1440',width:1440,height:900}",
   "const release=process.env.CHURCH_SOURCE_SHA",
   "initial.weeklyHidden,true",
-  "initial.member,true",
+  "initial.member,false",
+  "initial.qtin,true",
   'worship.editorHidden,true',
   'live.cards,2',
   'Upload approved layout Chromium evidence'
@@ -110,4 +111,115 @@ test('Church-approved layout requires five-viewport multilingual Chromium produc
  assert.match(w,/actions\/upload-artifact@v4/);
  assert.match(w,/CHURCH_SOURCE_SHA/);
  assert.match(w,/validate-ekodi-ai-change-orchestration\.mjs/);
+});
+
+
+test('the independently released Church Pages must show QTIN directly and preserve My Page behind account context',async()=>{
+ const w=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+ const verifier=await read('scripts/verify-church-header-navigation.mjs');
+ assert.match(verifier,/requireQtinPrimary/);
+ assert.match(verifier,/--expect-qtin/);
+ assert.match(w,/--html church\/index\.html --subnav church\/church-section-nav\.js --expect-qtin/);
+ assert.match(w,/--subpage "church\/\$page\/index\.html" --kind "\$page" --expect-qtin/);
+ assert.match(w,/grep -Fq 'href="\/qtin\/church">큐티인 신청<\/a>' church\/index\.html/);
+ assert.match(w,/grep -Fq "href: '\/qtin\/church', label: '큐티인 신청'" church\/script\.js/);
+ assert.match(w,/name\.href = '\/ekodichurch\/my\/'/);
+ assert.match(w,/assert\.equal\(initial\.member,false/);
+ assert.match(w,/assert\.equal\(initial\.qtin,true/);
+ for(const scope of [
+   '--subpage /tmp/church-devotion.html --kind devotion --expect-qtin',
+   '--subpage /tmp/church-verify-notices.html --kind notices --expect-qtin',
+   '--subpage /tmp/church-verify-schedule.html --kind schedule --expect-qtin'
+ ])assert.ok(w.includes(scope),'missing production QTIN release proof: '+scope);
+ assert.match(w,/CHURCH_CANONICAL_SOURCE_CUTOVER_APPROVED/);
+ assert.match(w,/validate-ekodi-ai-change-orchestration\.mjs" --release/);
+});
+
+
+test('nine-language Church Pages production proof reports the exact residual text without relaxing the gate',async()=>{
+  const w=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+  assert.match(w,/Church nine-language residual diagnostic/);
+  assert.match(w,/const korean=\[\.\.\.visible\.matchAll/);
+  assert.match(w,/throw error;/);
+  // Hidden and script-source Korean must not fail a translated rendered screen.
+  assert.match(w,/NodeFilter\.SHOW_TEXT/);
+  assert.match(w,/range\.getClientRects\(\)\.length===0/);
+  assert.match(w,/\[data-ekodi-language-control\],\[data-ekodi-user-content\]/);
+  assert.match(w,/window\.__EKODI_CHURCH_RENDERED_TEXT__/);
+  assert.match(w,/return !\/\[가-힣\]\/.test\(window\.__EKODI_CHURCH_RENDERED_TEXT__\(\)\)/);
+  assert.match(w,/body:window\.__EKODI_CHURCH_RENDERED_TEXT__\(\)/);
+  assert.doesNotMatch(w,/body:clone\.innerText|visible=clone\.innerText/);
+});
+
+test('guarded Church Pages promotion requires translated account controls for all nine locales and member-name privacy',async()=>{
+  const w=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+  for(const marker of [
+    `"'로그인':{en:'Sign in'" church/church-i18n.js`,
+    `"'로그아웃':{en:'Sign out'" church/church-i18n.js`,
+    `"add('로그인'," church/church-i18n-extended.js`,
+    `"add('로그아웃'," church/church-i18n-extended.js`,
+    `"name.dataset.ekodiUserContent = ''" church/church-account-header.js`
+  ])assert.ok(w.includes(marker),'missing reviewed Church source release guard: '+marker);
+  assert.match(w,/window\.__EKODI_CHURCH_RENDERED_TEXT__/);
+  assert.doesNotMatch(w,/body:clone\.innerText/);
+});
+
+
+test('Church source PR 195 schedule proof requires vertically stacked today-selected schedule and safe details',async()=>{
+  const workflow=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+  const proof=await read('scripts/verify-church-schedule-day-detail-native.mjs');
+  assert.match(workflow,/Verify Church schedule day-detail vertical flow on real Pages with isolated native Chromium/);
+  assert.match(workflow,/test -s church\/church-shared-schedules\.js/);
+  assert.match(workflow,/grep -Fq 'data-church-event-detail' church\/schedule\/index\.html/);
+  assert.match(workflow,/verify-church-schedule-day-detail-native\.mjs/);
+  assert.match(workflow,/Upload Church synthetic schedule calendar evidence/);
+  assert.match(proof,/const today=localDay\(\),other=dayNear\(today\)/);
+  assert.match(proof,/width of \[390,1366\]/);
+  assert.match(proof,/first\.stacked,true/);
+  assert.match(proof,/first\.selected,today/);
+  assert.match(proof,/page\.click\('\[data-church-schedules-list\] \.church-schedule-event-select'\)/);
+  assert.match(proof,/주보 원문에 근거해 공개한 일정 상세내용/);
+  assert.match(proof,/source:'ekodimission'/);
+  assert.match(proof,/await page\.click\('\[data-church-calendar-today\]'\)/);
+  assert.match(proof,/assert\.deepEqual\(forbiddenWrites,\[\]/);
+  assert.match(proof,/void req\.abort\('blockedbyclient'\)/);
+  assert.match(proof,/await browser\.close\(\)/);
+  assert.doesNotMatch(proof,/method:'(?:POST|PATCH|DELETE)'/);
+});
+
+
+test('read-only inline Church homepage source proof is an allowlisted guarded release trigger',async()=>{
+  const converge=await read('scripts/converge-orchestrated-pr-merge.mjs');
+  const script=await read('scripts/verify-church-homepage-production.mjs');
+  assert.match(converge,/file==='scripts\/verify-church-homepage-production\.mjs'/);
+  assert.match(converge,/if\(churchPagesTouched\)/);
+  assert.match(script,/const CHURCH_ORIGIN='https:\/\/ekodi\.kr'/);
+  assert.match(script,/expectedSourceSha/);
+  assert.match(script,/return Object\.freeze/);
+  assert.match(script,/method:'GET'/);
+  assert.match(script,/realUserAuthenticated:false,dataMutations:false,loggedInCrudVerified:false/);
+  assert.doesNotMatch(script,/\bmethod:'(?:POST|PUT|PATCH|DELETE)'/);
+  assert.doesNotMatch(script,/\bAuthorization:/);
+  assert.doesNotMatch(script,/location\.replace|window\.open/);
+});
+
+
+test('Church Pages release verifies compact notice title/date rows and full detail without board writes',async()=>{
+  const workflow=await read('.github/workflows/deploy-ekodi-church-homepage.yml');
+  const proof=await read('scripts/verify-church-notice-compact-native.mjs');
+  assert.match(workflow,/Verify compact Church public notices index and full post detail with native Chromium/);
+  assert.match(workflow,/grep -Fq "function noticeRow\(post\)" church\/church-public-updates\.js/);
+  assert.match(workflow,/grep -Fq "church-public-notice-line" church\/church-public-updates\.css/);
+  assert.match(workflow,/verify-church-notice-compact-native\.mjs/);
+  assert.match(workflow,/church-notice-compact-native/);
+  assert.match(proof,/CHURCH_NOTICE_COMPACT_PROOF/);
+  assert.match(proof,/for\(const width of \[390,1366\]\)/);
+  assert.match(proof,/index\.previewCount,0/);
+  assert.match(proof,/index\.containsBody,false/);
+  assert.match(proof,/dateRightEdgeGap<=5/);
+  assert.match(proof,/detail\.body,posts\[0\]\.body/);
+  assert.match(proof,/req\.abort\('blockedbyclient'\)/);
+  assert.match(proof,/assert\.deepEqual\(forbiddenWrites,\[\]/);
+  assert.match(proof,/await browser\.close\(\)/);
+  assert.doesNotMatch(proof,/\.click\('#goLiveButton'|method:'POST'|method:'PATCH'/);
 });

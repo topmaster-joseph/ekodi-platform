@@ -32,9 +32,33 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  verify:
+  # Browser/fixture work has an owner-approved finite KST reservation window.
+  # After expiry no Access token, D1/Supabase fixture or Chromium is created.
+  reservation_window:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      active: ${{ steps.window.outputs.active }}
+    steps:
+      - name: Validate finite EKODI Points E2E period
+        id: window
+        shell: bash
+        run: |
+          set -euo pipefail
+          kst_day="$(TZ=Asia/Seoul date +%Y-%m-%d)"
+          if [[ "$kst_day" < '2026-11-22' || "$kst_day" > '2026-12-22' ]]; then
+            echo 'active=false' >> "$GITHUB_OUTPUT"
+            echo "::notice::Points browser E2E reservation expired/not begun ($kst_day KST); no credentials used."
+          else
+            echo 'active=true' >> "$GITHUB_OUTPUT"
+            echo "::notice::Points browser E2E is within its approved KST reservation window."
+          fi
+  verify:
+    if: github.ref == 'refs/heads/main' && needs.reservation_window.outputs.active == 'true'
+    needs: reservation_window
+    # Playwright 1.55.x Chromium does not install on ubuntu-26.04 (ubuntu-latest); keep browser jobs on LTS.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: development
     env:
@@ -102,10 +126,19 @@ jobs:
           fi
 
       - name: Install Chromium
+        shell: bash
         run: |
           set -euo pipefail
-          npm install --no-save --package-lock=false playwright@1.55.0
-          npx playwright install --with-deps chromium
+          npm install --no-save --package-lock=false playwright@1.55.1
+          # Prefer the runner's preinstalled Chrome (same pattern as the native
+          # mission-home E2E); the Playwright browser download has been failing.
+          browser_path="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [ -n "$browser_path" ]; then
+            echo "EKODI_NATIVE_CHROME=$browser_path" >> "$GITHUB_ENV"
+            echo "Using runner browser $browser_path ($("$browser_path" --version 2>/dev/null || true))"
+          else
+            npx playwright install --with-deps chromium
+          fi
 
       - name: Create ephemeral development fixtures, member and admin session
         shell: bash

@@ -23,7 +23,9 @@ test('user UI header/footer/language are shared user-surface-only modules',async
     read('config/user-ui-shell.json')
   ]);
 
-  assert.match(header,/const VERSION=7/);
+  // 회계공지 메뉴가 site-chrome 설정을 따르게 되어 공용 헤더 모듈이 8로 올랐다.
+  // 푸터 모듈은 바뀌지 않았으므로 아래 핀은 7 그대로다.
+  assert.match(header,/const VERSION=8/);
   assert.match(header,/https:\/\/ekodi\.kr\/workspace-api\/v1\/site-chrome\/public/);
   assert.match(header,/async function siteChrome\(\)/);
   assert.match(header,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
@@ -243,4 +245,28 @@ test('site-owned chrome takes precedence over shell-generated layout',async()=>{
   assert.match(footer,/function creditNativeFooter\(\)/);
   assert.match(footer,/EKODI \(에코디\)\. All rights reserved/);
   assert.match(footer,/if\(config\.operator\?\.businessRegistrationNumber\)/);
+});
+
+test('BBQ native footer keeps mandatory copyright and visit metrics inside its centered grid',async()=>{
+ const footer=await read('shell/user-ui-footer.js');
+ assert.match(footer,/function bbqCenteredFooterHost\(footer\)/);
+ assert.match(footer,/location\.pathname/);
+ assert.match(footer,/footer\.matches\('\.foot,\.promise-footer'\)/);
+ assert.match(footer,/footer\.querySelector\('\.foot-inner,\.promise-footer-inner'\)/);
+ assert.match(footer,/host\?\.querySelector\('\.foot-copy,\.footer-copy'\)\|\|footer/);
+ assert.match(footer,/appendText\(bbqCenteredFooterHost\(footer\)\|\|footer\.querySelector/);
+ assert.match(footer,/footer\.foot \.foot-inner > \.ekodi-footer-traffic/);
+ assert.match(footer,/footer\.promise-footer \.promise-footer-inner > \.ekodi-footer-traffic/);
+ assert.match(footer,/grid-column:1\/-1!important/);
+ assert.match(footer,/footer\.foot \.foot-copy > \[data-ekodi-copyright-credit\]/);
+ assert.match(footer,/EKODI \(에코디\)\. All rights reserved/);
+ // No blanket service exception or removal of the licensed copyright.
+ assert.match(footer,/SERVICE_OWNED_FOOTER_SERVICES=new Set\(\)/);
+ assert.doesNotMatch(footer,/SITE_COPYRIGHT_ATTR=null/);
+});
+
+test('EKODI platform history page keeps links to the ekodi.kr home in its header', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const header = await readFile(new URL('../shell/user-ui-header.js', import.meta.url), 'utf8');
+  assert.match(header, /new Set\(\['my','auth','admin','privacy','terms','api','shell','history'\]\)/);
 });

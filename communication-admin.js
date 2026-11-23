@@ -37,7 +37,7 @@
     const output=el('section','','communication-notification-panel');
     output.hidden=true;
     const title=el('h3','통합 알림 운영');
-    const hint=el('p','현재 구독 기기 수와 선택 기간의 발행·전달 처리 현황을 구분합니다. 개인별 정보는 표시하지 않습니다.');
+    const hint=el('p','등록된 사이트·서비스의 알림 연결과 기간별 전달 상태를 점검합니다. 등록은 실서비스 수신 성공을 의미하지 않습니다. 개인정보는 표시하지 않습니다.');
     const status=el('p','현황을 선택하면 최신 정보를 불러옵니다.','communication-note');
     status.setAttribute('role','status');
     const list=el('div','','communication-notification-list');
@@ -65,13 +65,109 @@
         const data=await api('/api/notifications/admin/summary?window='+encodeURIComponent(periodSelect.value));
         const top=el('p','웹푸시 발송: '+(data.webPushEnabled?'활성화':'비활성화')+' · 기기 정보 비공개','communication-note');
         list.append(top);
+        if(data.operatorChannel){
+          const op=data.operatorChannel;
+          const count=op.registeredDevices===null?'조회되지 않음':op.registeredDevices+'대';
+          const recent=op.lastGatewayAttemptAt?new Date(op.lastGatewayAttemptAt):null;
+          const last=recent&&Number.isFinite(recent.getTime())?recent.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'이력 없음';
+          list.append(el('p','최고관리자 휴대전화 푸시: '+(op.ready?'전송 준비':'점검 필요')+
+            ' · VAPID '+(op.configured?'설정됨':'미설정')+' · 등록 기기 '+count+
+            ' · 최근 기기별 게이트웨이 성공 '+(op.gatewayAcceptedDevices??'미확인')+
+            ' · 실패 '+(op.gatewayFailedDevices??'미확인')+
+            ' · 마지막 시도 '+last+' · 실제 휴대전화 수신은 별도 시험 필요','communication-note'));
+          const probeLink=el('a','내 휴대전화 푸시 등록·시험','primary communication-link');
+          probeLink.href='/mail/admin#setup';probeLink.target='_blank';probeLink.rel='noopener';
+          list.append(probeLink);
+        }
+        if(data.healthAudit){
+          const audit=data.healthAudit;
+          const scanTime=audit.lastScanAt?new Date(audit.lastScanAt):null;
+          const scanned=scanTime&&Number.isFinite(scanTime.getTime())
+            ?scanTime.toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'점검 이력 없음';
+          const headline=audit.status==='recorded'
+            ?audit.fresh?'10분 주기 자동점검 · 최근 결과':'자동점검 결과 오래됨 · 확인 필요'
+            :audit.status==='no_scan_yet'?'자동점검 최초 실행 대기':'자동점검 원장 연결 확인 필요';
+          list.append(el('p',headline+' · 마지막 진단 '+scanned+
+            ' · 결과는 저장된 주제별 상태이며 실기기 수신을 의미하지 않습니다.','communication-note'));
+          const details=el('details','','communication-fleet-details');
+          details.append(el('summary','자동점검 주제별 기록 '+(audit.topics||[]).length+'개'+
+            (audit.fresh?' · 최신':' · 미실증')));
+          const labels=new Map((data.topics||[]).map(item=>[item.id,item.label]));
+          const states={
+            attention:'발송 실패 또는 지연',configuration_required:'발행 설정 확인 필요',
+            unverified:'발행·구독 실적 미확인',push_paused:'웹푸시 비활성화',
+            queue_clear:'대기열 지연 없음 · 실기기 수신 미검증'
+          };
+          for(const item of audit.topics||[]){
+            const row=el('article','','communication-fleet-row');
+            row.dataset.state=item.state==='attention'?'not_connected':'publisher_not_ready';
+            const label=labels.get(item.topic)||item.topic;
+            row.append(el('strong',label+' · '+(states[item.state]||'상태 미확인')),
+              el('span','지난 24시간 실패 '+item.failed24h+' · 현재 처리 지연 '+item.stalled+
+                ' · 발행 지연 '+item.overdue+' · 연속 위험 '+item.consecutiveAttention+'회'),
+              el('small','최근 점검 '+(item.checkedAt||'없음')+' · 상태 변경 '+(item.changedAt||'없음')));
+            details.append(row);
+          }
+          list.append(details);
+        }
+        if(data.fleet){
+          const fleet=data.fleet,counts=fleet.counts||{};
+          const details=el('details','','communication-fleet-details');
+          const heading=el('summary','등록 사이트 '+(counts.registered||0)+'개 · 주제 연결 '+(counts.topicConnected||0)+
+            '개 · 연결 필요 '+(counts.notConnected||0)+'개 · 발행 준비 미완료 '+(counts.publisherNotReady||0)+'개');
+          details.append(heading);
+          const caution=el('p','현재 등록부 기반 정적 점검입니다. 신규 동적 고객 사이트·현장 수신 성공은 별도 검증 대상입니다.','communication-note');
+          details.append(caution);
+          for(const site of fleet.sites||[]){
+            const row=el('article','','communication-fleet-row');
+            const state=site.state==='not_connected'?'연동 필요':site.state==='publisher_not_ready'?'발행 설정 필요':'발행 구성됨 · 수신 미검증';
+            row.dataset.state=site.state;
+            row.append(el('strong',site.name+' · '+state),
+              el('span',site.path+' · '+(site.topicLabel||'주제 없음')),
+              el('small',site.action));
+            details.append(row);
+          }
+          list.append(details);
+          // Compare against the separately authorized live customer directory.
+          // This is presentation-only: never treat client registry data as sender authority.
+          try {
+            const directory=await api('/api/customers/directory');
+            const known=new Set((fleet.sites||[]).map(site=>site.path));
+            const additional=new Map();
+            for(const group of ['sites','customers','workspaces','items','directory']){
+              for(const site of Array.isArray(directory?.[group])?directory[group]:[]){
+                const value=site.canonicalUrl||site.url||site.public_url||site.publicUrl||site.site_url||site.siteUrl;
+                if(!value)continue;
+                let u;
+                try {u=new URL(String(value),location.origin);}catch{continue;}
+                if(u.origin!=='https://ekodi.kr'||u.search||u.hash)continue;
+                const p=u.pathname.replace(/\/+$/,'')||'/';
+                if(known.has(p)||additional.has(p))continue;
+                additional.set(p,String(site.name||site.site_name||site.siteName||site.organization_name||site.organizationName||site.slug||p).slice(0,90));
+              }
+            }
+            const more=el('details','','communication-fleet-details');
+            more.append(el('summary','동적 고객 등록부 추가 점검 대상: '+additional.size+'개'));
+            more.append(el('p','중앙 정적 등록부에 없는 사이트입니다. 알림 연동·구독·수신은 미검증 상태이며 신규 발신 권한을 자동 부여하지 않습니다.','communication-note'));
+            for(const [path,name] of additional){
+              const row=el('article','','communication-fleet-row');
+              row.dataset.state='not_connected';
+              row.append(el('strong',name+' · 신규 사이트 점검 필요'),
+                el('span',path),el('small','사이트 책임자 인증·알림 주제 연결·실기기 수신 검증 필요'));
+              more.append(row);
+            }
+            list.append(more);
+          } catch {
+            list.append(el('p','동적 고객 등록부는 이번 조회에서 확인할 수 없습니다. 사이트 자동점검 화면에서 별도로 확인하세요.','communication-note'));
+          }
+        }
         for(const item of data.topics||[]){
           const line=el('article','','communication-notification-row');
           const last=item.lastEventAt?new Date(item.lastEventAt):null;
           line.append(el('strong',item.label),
             el('span','현재 구독 기기 '+item.subscriberDevices+' · 기간 내 이벤트 '+item.events+
               ' · 전달 처리 '+item.delivered+' · 대기 '+item.pending+' · 실패 '+item.failed+
-              ' · 지연 '+(item.stalled||0)+' · 발행 지연 '+(item.eventsOverdue||0)),
+              ' · 지연 '+(item.stalled||0)+' · 발행 지연 '+(item.eventsOverdue||0)+' · 점검상태 '+(item.health||'미확인')),
             el('small','자동 발행 준비: '+(item.publisher?.ready?'완료':'대기')+
               ' (서비스 허용 '+(item.publisher?.enabled?'설정됨':'꺼짐')+
               ' · 전용 인증키 '+(item.publisher?.credentialsConfigured?'설정됨':'미설정')+')'),
@@ -84,7 +180,7 @@
           }
           list.append(line);
         }
-        status.textContent='알림 현황을 갱신했습니다.';
+        status.textContent='알림 현황을 갱신했습니다. 실패·지연·미연결 상태는 실제 수신 실패와 구분하여 확인하세요.';
       } catch(error) {
         status.textContent='조회 권한이나 운영 데이터 연결을 확인할 수 없습니다. '+String(error?.message||'');
       } finally {refresh.disabled=false;}

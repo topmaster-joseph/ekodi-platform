@@ -670,3 +670,35 @@ html.sheet-open,html.sheet-open body{overflow:hidden}
 @media print{.lv.doc-view-body .btn-row{display:none}}
 .lv .docs-grid>.panel,.lv .docs-page>.panel{margin:0}
 .lv .ho-instructor{font-size:.8125rem;font-weight:650}
+/* Presenter demo library picker: long demo titles must never widen the presenter on small phones. */
+.lv #aiDemo{flex:1 1 100%;width:100%;max-width:100%;min-width:0;text-overflow:ellipsis}
+.lv #aiHandoff{overflow-wrap:anywhere}
+
+/* Meeting transcription practice: transcript on-screen and immediate scoped cleanup. */
+.meeting-script{margin:10px 0 0;border-top:1px dashed var(--line,#cfd9e0);padding-top:8px}
+.meeting-script summary{cursor:pointer;font-weight:700;min-height:36px}
+.meeting-script .source-text{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto}
+.meeting-cleanup{border:1px solid #d8a882;background:#fff8ed;border-radius:12px;padding:12px;margin:12px 0}
+.meeting-cleanup h3{margin:0 0 8px;color:#773d16}.meeting-cleanup .meta{line-height:1.55}
+@media print{.meeting-script .source-text{max-height:none;overflow:visible}.meeting-cleanup{break-inside:avoid}}
+
+/* Editable HWPX/PPTX practice sample cards — same text in preview, copy and download. */
+.sample-source{padding:10px 12px;margin:10px 0 2px;border:1px solid #cbdcda;border-radius:10px;background:#f4faf9}
+.sample-source summary{font-weight:700;cursor:pointer;min-height:36px;color:#164d59}
+.sample-source .source-text{white-space:pre-wrap;overflow-wrap:anywhere;max-height:390px;overflow:auto;margin-top:8px}
+.sample-source .meta{margin:6px 0;color:#486273}
+.mat .btn-row{display:flex;flex-wrap:wrap;gap:6px}
+@media print{.sample-source .source-text{max-height:none;overflow:visible}}
+
+
+/* Instructor-supplied MNU 2026 notice: additional original PDF, not a converted HWP. */
+.original-pdf-card{border:1px solid #9bbfb9;background:#f5fbf9;margin:12px 0;padding:14px;border-radius:12px}
+.original-pdf-card h3{margin:4px 0 6px}
+.original-pdf-card .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.official-pdf-facts{border-top:1px solid #c4d9d5;padding-top:10px}
+.official-pdf-facts summary{font-weight:700;cursor:pointer;min-height:36px}
+.official-pdf-facts .meta{line-height:1.62;margin:8px 0}
+@media print{.original-pdf-card{break-inside:avoid}}
+.lv .ins-contact,.lv .slide-ins-contact{display:flex;flex-wrap:wrap;gap:8px 16px;margin:2px 0 0}
+.lv .ins-contact a,.lv .slide-ins-contact a{font-weight:700;color:var(--brand,#0b5cab);text-decoration:none;white-space:nowrap}
+.lv .slide-ins-contact{font-size:1.9cqw;gap:.6cqw 2cqw}

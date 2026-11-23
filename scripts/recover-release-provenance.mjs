@@ -6,6 +6,12 @@ const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
 const eventName=String(process.env.GITHUB_EVENT_NAME||'').trim();
 const eventPath=String(process.env.GITHUB_EVENT_PATH||'').trim();
 const ghToken=String(process.env.GH_TOKEN||'').trim();
+// EKODI-RELEASE-WORKFLOWS-TOKEN-001 (owner approval 2026-11-22): GITHUB_TOKEN can never
+// hold the `workflows` permission, so a release whose change touches .github/workflows is
+// refused with HTTP 403. An owner-issued, repository-scoped token with Contents+Workflows
+// write is used for exactly one call — creating the exact-SHA orchestrator branch — and
+// for nothing else. Absent token → unchanged behaviour.
+const refToken=String(process.env.GH_WORKFLOWS_TOKEN||'').trim();
 const cfToken=String(process.env.CLOUDFLARE_API_TOKEN||'').trim();
 const accountId=String(process.env.CLOUDFLARE_ACCOUNT_ID||'').trim();
 const APPROVAL_LABEL='orchestrator-human-gate-approved';
@@ -72,9 +78,10 @@ async function request(url,options={}){
   return {response,data};
 }
 async function githubOnce(path,options={}){
-  return request('https://api.github.com'+path,{...options,headers:{
+  const {token,...rest}=options;
+  return request('https://api.github.com'+path,{...rest,headers:{
     accept:'application/vnd.github+json','x-github-api-version':'2022-11-28',
-    authorization:`Bearer ${ghToken}`,...(options.headers||{})
+    authorization:`Bearer ${token||ghToken}`,...(rest.headers||{})
   }});
 }
 // A quota 403/429 is not a refusal: wait for the reset (bounded by the job
@@ -240,7 +247,9 @@ if(existing.response.ok){
   }
 }else if(existing.response.status===404){
   const refPath=`/repos/${repo}/git/refs`;
-  const ref=await github(refPath,{method:'POST','headers':{'content-type':'application/json'},body:JSON.stringify({ref:`refs/heads/${branchRef}`,sha:headSha})});
+  // Only this exact-SHA ref creation may use the workflows-capable token (least privilege).
+  out('ref_token',refToken?'workflows':'github');
+  const ref=await github(refPath,{method:'POST',token:refToken||undefined,'headers':{'content-type':'application/json'},body:JSON.stringify({ref:`refs/heads/${branchRef}`,sha:headSha})});
   if(!ref.response.ok){
     // Accept only a verified exact-SHA concurrent creation, not a generic 403 bypass.
     if(isIntegrationScopeRefusal(ref.response.status,ref.data)){
@@ -307,6 +316,9 @@ const controlApiTouched=sourceFiles.some(file=>[
 // filter for Site Core. Use only source paths owned by the existing Site Core
 // workflow and only its receipt-bound, staged, guarded workflow_dispatch.
 const sharedSiteTouched=sourceFiles.some(file=>
+  // Immediate recovery merges of Office UI assets must dispatch the same staged
+  // Site Core lane; the GitHub token never triggers ordinary main push workflows.
+  file.startsWith('office-prototype/')||
   // Immediate recovery merge must release the generated /notifications/ static assets.
   file.startsWith('notifications/')||
   // AI Ops source and its shared readable-command stylesheet ship in Site Core.
@@ -321,7 +333,8 @@ const sharedSiteTouched=sourceFiles.some(file=>
    '.github/workflows/verify-admin-production-ui-e2e.yml',
    'scripts/admin-production-ui-coverage.mjs',
    'scripts/ekodi-background-browser-worker.mjs',
-   'scripts/verify-independent-board-live.mjs'].includes(file)||
+   'scripts/verify-independent-board-live.mjs',
+   'scripts/ensure-church-route-ownership.mjs'].includes(file)||
   // Public Invest education / member-entry markup lives in the shared Site Core worker.
   file==='invest-access-ui.js'||
   // A Site Core manifest canary update must deploy even if recovery merges immediately.
@@ -338,7 +351,7 @@ const sharedSiteTouched=sourceFiles.some(file=>
    'live-interpretation.js','live-interpretation.css',
    'realtime-tenant-registry.js',
    'scripts/converge-orchestrated-pr-merge.mjs',
-   'platform-router-entry-worker.js','.github/workflows/deploy-site-core.yml',
+   'platform-router-entry-worker.js','platform-route-registry.js','canonical-surface-router.js','.github/workflows/deploy-site-core.yml',
    'scripts/site-core-staging-10500-recovery.mjs',
    '.github/workflows/stage-shared-site-shell.yml',
    'test/site-core-staging-10500-recovery.test.mjs'].includes(file)

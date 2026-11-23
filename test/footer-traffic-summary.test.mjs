@@ -40,6 +40,33 @@ test('footer public endpoint scopes sessions to a canonical site and correctly l
   assert.equal('requestTotal' in result,false,'shared-host requests must not become site pageviews');
 });
 
+test('BBQ customer footer aggregates both public pages as BBQCG, not EKODI root or another store', async () => {
+  for(const site_path of ['bbqcg','bbqcg/service-guide']) {
+    const calls=[];
+    const db=mockDb([{day:utcAgo(0),sessions:3},{day:utcAgo(6),sessions:8}],calls);
+    const response=await handleTrafficIntelligence(
+      new Request(endpoint+'?site_path='+site_path+'&site_id=space'),{DB:db}
+    );
+    assert.equal(response.status,200,site_path);
+    const body=await response.json();
+    assert.equal(body.status,'ready');
+    assert.equal(body.siteId,'bbqcg');
+    assert.equal(body.today.label,'5 미만');
+    assert.equal(body.today.suppressed,true);
+    assert.equal(body.last7Days.label,'11');
+    assert.equal(body.last30Days.label,'11');
+    assert.equal(body.basis,'anonymous_browser_sessions');
+    assert.equal(body.timezone,'UTC');
+    assert.deepEqual(calls[0],['bbqcg',utcAgo(29)]);
+    assert.equal('requestTotal' in body,false,'shared-host totals must not be exposed as BBQ visits');
+  }
+  for(const [site_path,expected] of [
+    ['pizzamaru','pizzamaru'],['yogurt','yogurt'],['cmpmyi','cmpmyi']
+  ])assert.equal(trafficSiteIdForVisit('ekodi.kr',site_path,'space'),expected);
+  assert.equal(trafficSiteIdForVisit('ekodi.kr','bbqcg','space'),'bbqcg');
+  assert.equal(trafficSiteIdForVisit('ekodi.kr','unregistered-bbq','bbqcg'),'root');
+});
+
 test('small non-zero public counts are masked, without returning the hidden number', async () => {
   const response=await handleTrafficIntelligence(new Request(endpoint+'?site_path=ekodimission'),{
     DB:mockDb([{day:utcAgo(0),sessions:2}],[])

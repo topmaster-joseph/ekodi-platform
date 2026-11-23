@@ -6,14 +6,15 @@ on:
   issue_comment:
     types: [created]
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/church-live-production-e2e.yml'
-      - 'scripts/church-live-production-e2e.mjs'
-  workflow_run:
-    workflows: ['Deploy Control API']
-    types: [completed]
+    inputs:
+      acknowledge_public_synthetic_broadcast:
+        description: 'I acknowledge that this runs a short publicly visible synthetic Church test broadcast'
+        required: true
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
+        default: 'no'
 
 permissions:
   contents: read
@@ -25,17 +26,16 @@ concurrency:
 jobs:
   church-live-e2e:
     if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_branch == 'main') ||
+      (github.event_name == 'workflow_dispatch' &&
+       github.actor == 'topmaster-joseph' &&
+       inputs.acknowledge_public_synthetic_broadcast == 'yes') ||
       (github.event_name == 'issue_comment' &&
        github.repository == 'topmaster-joseph/ekodi-platform' &&
        github.event.issue.number == 5140 &&
        github.event.comment.user.login == 'topmaster-joseph' &&
        github.event.comment.body == '/ekodi-church-live-e2e 2026-10-25')
-    runs-on: ubuntu-latest
+    # Playwright 1.55.0 does not support ubuntu26.04 used by ubuntu-latest.
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -43,7 +43,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
@@ -86,7 +86,7 @@ jobs:
 
       - name: Install Chromium harness
         run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium
 
       - name: Run real Church Live publish and anonymous viewer pull

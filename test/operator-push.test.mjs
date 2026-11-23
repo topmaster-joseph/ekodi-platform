@@ -34,6 +34,10 @@ test('a notice succeeds when either phone push or Gmail delivers; waits when nei
   let pushed;
   const viaPush = await sendOperatorNotice({ DB: fakeDb() }, notice, { push: async (_e, p) => { pushed = p; return { ok: true, sent: 1 }; } });
   assert.equal(viaPush.ok, true); assert.equal(viaPush.push, true); assert.equal(pushed.targetPath, '/ekodimall/order-ops');
+  let mailCalled = false;
+  const pushOnly = await sendOperatorNotice({ DB: fakeDb() }, notice, { push: async () => ({ ok: true, sent: 1 }), send: async () => { mailCalled = true; return { id: 'm' }; } });
+  assert.equal(pushOnly.ok, true); assert.equal(pushOnly.mail, false); assert.equal(mailCalled, false, 'mail is off by default');
+  assert.match(readFileSync(new URL('../wrangler.api.toml', import.meta.url), 'utf8'), /OPERATOR_NOTIFY_MAIL_ENABLED = "false"/);
   const none = await sendOperatorNotice({ DB: fakeDb() }, notice, { push: async () => ({ ok: false, code: 'OPERATOR_PUSH_NO_DEVICE' }) });
   assert.equal(none.code, 'NO_OPERATOR_CHANNEL');
 });
@@ -41,10 +45,13 @@ test('a notice succeeds when either phone push or Gmail delivers; waits when nei
 test('routes, UI and deploy provisioning are wired without rotating existing keys', () => {
   const mail = readFileSync(new URL('../mail-control.js', import.meta.url), 'utf8');
   assert.match(mail, /url\.pathname==='\/api\/mail\/control\/operator-push'/);
-  assert.match(mail, /if\(!isOperator\)return json\(\{error:'운영자 계정만 등록할 수 있습니다\.',code:'OPERATOR_ONLY'\},403,request\)/);
+  assert.match(mail, /if\(!isOperator\|\|!actor\.emailVerified\)return json\(\{error:'인증된 운영자만 등록할 수 있습니다\.',code:'OPERATOR_ONLY'\},403,request\)/);
   const page = readFileSync(new URL('../mail-admin-page.js', import.meta.url), 'utf8');
   assert.match(page, /id="opPush" hidden/);
   assert.match(page, /pushManager\.subscribe\(\{userVisibleOnly:true/);
+  // navigator.serviceWorker.ready never resolves on /mail/admin (outside the /notifications/ scope) → must wait on the registration itself.
+  assert.doesNotMatch(page, /navigator\.serviceWorker\.ready/);
+  assert.match(page, /await swActive\(reg\)/);
   const wf = readFileSync(new URL('../.github/workflows/deploy-control-api.yml', import.meta.url), 'utf8');
   assert.match(wf, /if \[ "\$has_pub" = 0 \] && \[ "\$has_priv" = 0 \]; then/);
   assert.match(wf, /refusing to rotate/);

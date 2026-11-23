@@ -59,6 +59,10 @@ const ALL_SKIPPED = {
   RESEARCH_DESKTOP_RESULT: 'skipped',
   RESEARCH_MOBILE_RESULT: 'skipped',
   ADMIN_RESULT: 'skipped',
+  SINGLES_NATIVE_MEMBER_DESKTOP_RESULT: 'skipped',
+  SINGLES_NATIVE_MEMBER_MOBILE_RESULT: 'skipped',
+  SINGLES_NATIVE_LEGAL_DESKTOP_RESULT: 'skipped',
+  SINGLES_NATIVE_LEGAL_MOBILE_RESULT: 'skipped',
 };
 
 const ALL_SUCCESS = {
@@ -68,6 +72,10 @@ const ALL_SUCCESS = {
   RESEARCH_DESKTOP_RESULT: 'success',
   RESEARCH_MOBILE_RESULT: 'success',
   ADMIN_RESULT: 'success',
+  SINGLES_NATIVE_MEMBER_DESKTOP_RESULT: 'success',
+  SINGLES_NATIVE_MEMBER_MOBILE_RESULT: 'success',
+  SINGLES_NATIVE_LEGAL_DESKTOP_RESULT: 'success',
+  SINGLES_NATIVE_LEGAL_MOBILE_RESULT: 'success',
 };
 
 test('a healthy scheduled no-op is no longer recorded as a blocked release', () => {
@@ -164,4 +172,25 @@ test('the receipt job can see the gate it now depends on', () => {
   const gate = WORKFLOW.slice(WORKFLOW.indexOf('  scheduled_release_gate:'), WORKFLOW.indexOf('  staging_gate:'));
   assert.match(gate, /proceed: \$\{\{ steps\.gate\.outputs\.proceed \}\}/);
   assert.match(gate, /reason: \$\{\{ steps\.gate\.outputs\.reason \}\}/);
+});
+
+
+test('any failed or skipped Singles native browser lane prevents a verified release receipt', () => {
+  for (const [failureVar, expectedName] of [
+    ['SINGLES_NATIVE_MEMBER_DESKTOP_RESULT', 'singles_native_member_desktop'],
+    ['SINGLES_NATIVE_MEMBER_MOBILE_RESULT', 'singles_native_member_mobile'],
+    ['SINGLES_NATIVE_LEGAL_DESKTOP_RESULT', 'singles_native_legal_desktop'],
+    ['SINGLES_NATIVE_LEGAL_MOBILE_RESULT', 'singles_native_legal_mobile'],
+  ]) {
+    const { status, receipt } = runReceipt({
+      ...ALL_SUCCESS,
+      [failureVar]: 'skipped',
+      GATE_PROCEED: 'true',
+      GATE_REASON: 'normal-trigger',
+    });
+    assert.equal(status, 1, expectedName + ' must remain a hard failure');
+    assert.equal(receipt.conclusion, 'blocked');
+    assert.equal(receipt.firstFailure, expectedName);
+    assert.equal(receipt.evidence.find(row => row.name === expectedName)?.verification, 'blocked');
+  }
 });

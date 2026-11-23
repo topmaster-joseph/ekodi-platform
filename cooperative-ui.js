@@ -1,21 +1,26 @@
 import { COOP_LAUNCH_TASKS, COOP_LAUNCH_STAGES, cooperativeProgressSummary, cooperativeLaunchGuidance } from './cooperative-progress.js';
 import { COOP_DOCUMENTS } from './cooperative-registry.js';
 import { cooperativePreparation } from './cooperative-preparation.js';
+import { COOP_PRINTABLE_DOCUMENTS, SIGNATURE_RULES, SIGNATURE_KINDS } from './cooperative-documents.js';
 
 export function cooperativeCss() {
   return `
 .tabs .tab-link{margin-left:auto;padding:8px 16px;font-size:14px}.quiet.danger{color:#a3312a;border-color:#e3c3bf}.table.roster input{min-width:110px}:root{--ink:#173c32;--accent:#1e654d;--accent-light:#e6efe8;--paper:#fbfaf6;--muted:#677a70;--line:#dce4dc;--gold:#bd985b;--white:#fff;--radius:20px;font-family:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;color:var(--ink);background:var(--paper);font-synthesis:none}*{box-sizing:border-box}body{margin:0;font-size:15px;line-height:1.65}.tone-open{--ink:#1c3b4c;--accent:#245c78;--accent-light:#e6eef2;--muted:#667b86;--line:#dce4e8}a{color:inherit;text-decoration:none}button,input,select,textarea{font:inherit}button,a,input,textarea,select{-webkit-tap-highlight-color:transparent}button{cursor:pointer}button:disabled{cursor:wait;opacity:.6}a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--gold);outline-offset:3px}.wrap{width:min(1180px,calc(100% - 64px));margin-inline:auto}.skip{position:fixed;top:-80px;left:20px;z-index:100;background:var(--ink);color:#fff;padding:12px}.skip:focus{top:8px}.site-header{background:rgba(251,250,246,.96);border-bottom:1px solid var(--line)}.header-inner{min-height:96px;display:flex;align-items:center;justify-content:space-between;gap:24px}.brand{display:flex;align-items:center;gap:12px;font-size:20px;font-weight:800;letter-spacing:-.045em;flex-shrink:0}.brand-mark{display:grid;place-items:center;width:43px;height:43px;border:1px solid var(--accent);border-radius:50%;color:var(--accent);font-family:serif;font-size:25px}.brand small{display:block;font-size:10px;font-weight:500;letter-spacing:.1em;color:var(--muted);margin-top:1px}nav{display:flex;align-items:center;gap:28px;font-size:13px;font-weight:650}nav a:hover{color:var(--accent);text-decoration:underline;text-underline-offset:6px}.nav-action{border:1px solid var(--line);padding:9px 14px;border-radius:9px}.hero{display:grid;grid-template-columns:1.1fr 1fr;align-items:center;gap:28px;min-height:560px;padding-top:46px;padding-bottom:44px}.eyebrow{font-size:11px;font-weight:800;letter-spacing:.15em;color:var(--accent);margin:0 0 14px}.hero h1{font-family:Georgia,"Noto Serif KR",serif;font-size:clamp(35px,4.5vw,61px);font-weight:600;letter-spacing:-.07em;line-height:1.28;margin:0 0 24px}.hero h1 em{font-style:normal;color:var(--accent)}.hero-description{max-width:460px;font-size:16px;color:var(--muted);line-height:1.9;margin:0 0 27px}.actions{display:flex;flex-wrap:wrap;gap:11px}.button{display:inline-flex;align-items:center;justify-content:center;gap:18px;min-height:43px;padding:10px 18px;border:1px solid transparent;border-radius:8px;font-size:13px;font-weight:700}.button.primary{background:var(--accent);color:#fff}.button.secondary{background:transparent;border-color:var(--line);color:var(--ink)}.button:hover{filter:brightness(.94)}.hero-note{font-size:11px;color:var(--muted);margin-top:21px}.hero-note span{margin-inline:8px}.hero-visual{position:relative;min-width:0;margin:0}.hero-photo{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;border-radius:var(--radius);background:var(--accent-light)}.art-caption{font-size:11px;color:var(--muted);padding:10px 2px 0;display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:7px}.dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}.principles{border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:grid;grid-template-columns:repeat(3,1fr);padding-block:22px}.principles div{display:flex;flex-direction:column;gap:5px;padding-left:30px;border-left:1px solid var(--line)}.principles div:first-child{border-left:0;padding-left:0}.principles strong{font-size:15px}.principles span{color:var(--muted);font-size:12px}.section{padding-block:68px}.section-heading{margin-bottom:30px}.section-heading h2{font-family:Georgia,"Noto Serif KR",serif;font-size:32px;line-height:1.4;letter-spacing:-.055em;font-weight:600;margin:0}.row-heading{display:flex;justify-content:space-between;align-items:end;gap:20px}.row-heading>p{color:var(--muted);font-size:12px;margin:0}.about-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:100px}.large-copy{font-size:21px;line-height:1.85;letter-spacing:-.045em;margin:0}.about-detail>p{display:flex;justify-content:space-between;gap:24px;font-size:13px;margin:0;padding-block:12px;border-bottom:1px solid var(--line)}.about-detail>p>span{color:var(--muted)}.about-detail>p.muted{font-size:11px;display:block;border:0;margin-top:8px}.soft{background:#f0f2eb}.tone-open .soft{background:#eef2f3}.business-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}.business-card{background:var(--paper);overflow:hidden;border-radius:var(--radius);border:1px solid var(--line);min-height:240px}.business-photo{display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:cover;background:var(--accent-light)}.business-copy{padding:22px 26px 26px;word-break:keep-all}.business-photo-caption{font-size:11px;margin:16px 0 0}.card-index{color:var(--gold);font-family:Georgia,serif;font-size:23px}.business-card h3{font-size:19px;letter-spacing:-.04em;margin:20px 0 10px}.business-card p{font-size:13px;color:var(--muted)}.card-tag{display:inline-block;border-top:1px solid var(--line);padding-top:13px;font-size:10px;color:var(--accent);margin-top:16px}.business-description{font-size:11px;margin:20px 0 0}.journey{display:grid;grid-template-columns:repeat(4,1fr);padding:0;list-style:none;gap:24px}.journey li{border-top:2px solid var(--line);padding-top:16px}.journey span{color:var(--accent);font-size:12px;font-weight:800}.journey h3{font-size:16px;letter-spacing:-.04em;margin:14px 0 10px}.journey p{color:var(--muted);font-size:12px}.notice-list{display:grid;gap:12px}.notice-list article{border:1px solid var(--line);border-radius:12px;padding:23px 25px;background:#fff}.notice-list h3{font-size:16px;margin:11px 0 6px}.notice-list p{font-size:12px;color:var(--muted);margin:0;white-space:pre-wrap}.badge{display:inline-flex;align-items:center;border-radius:30px;background:var(--accent-light);color:var(--accent);font-size:10px;font-weight:750;padding:4px 10px}.join-banner{display:flex;justify-content:space-between;align-items:center;gap:26px;padding:32px 36px;background:var(--accent-light);border-radius:var(--radius);margin-bottom:70px}.join-banner h2{font-size:24px;letter-spacing:-.05em;margin:0 0 6px}.join-banner p:not(.eyebrow){color:var(--muted);font-size:12px;margin:0}.site-footer{border-top:1px solid var(--line);padding-block:32px}.footer-inner{display:grid;grid-template-columns:1fr auto;gap:20px}.site-footer strong{font-size:16px}.site-footer p{font-size:11px;margin:7px 0}.footer-links{display:flex;gap:18px;font-size:11px;flex-wrap:wrap;align-items:start}.copyright{grid-column:1/-1;color:var(--muted);border-top:1px solid var(--line);padding-top:18px}.muted{color:var(--muted)}.quiet{background:transparent;border:1px solid var(--line);border-radius:8px;font-size:12px;padding:7px 12px;color:var(--ink)}[hidden]{display:none!important}.private-main{padding-block:34px;min-height:60vh}.workspace-heading{display:flex;justify-content:space-between;align-items:start;gap:18px;margin-bottom:18px}.workspace-heading h1{font-size:30px;letter-spacing:-.05em;margin:0 0 7px}.workspace-heading p:not(.eyebrow){font-size:13px;color:var(--muted);margin:0}.status-message{font-size:12px;color:var(--muted);min-height:28px;white-space:pre-wrap}.status-message.error{color:#a34336}.card{border:1px solid var(--line);background:#fff;border-radius:14px;padding:24px;margin-bottom:18px;min-width:0}.card h2{font-size:19px;margin:0 0 13px;letter-spacing:-.04em}.card h3{font-size:15px}.card p{font-size:13px}.gate{max-width:680px;margin:26px auto}.gate .button{margin:10px 8px 0 0}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:18px 0}.stat{border:1px solid var(--line);border-radius:12px;background:#fff;padding:18px}.stat b{display:block;font-size:24px;letter-spacing:-.05em}.stat span{font-size:11px;color:var(--muted)}.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 20px;padding-bottom:14px;border-bottom:1px solid var(--line)}.tabs button{background:transparent;border:1px solid var(--line);border-radius:8px;padding:8px 13px;font-size:12px;color:var(--ink)}.tabs button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:#fff}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.form-grid label{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:650}.full{grid-column:1/-1}.form-grid input,.form-grid textarea,.form-grid select,.table input,.table select{width:100%;min-width:0;border:1px solid var(--line);border-radius:7px;background:#fff;padding:9px 10px;color:var(--ink);font-size:13px}.form-grid textarea{min-height:85px;resize:vertical}.form-grid .checkbox{flex-direction:row;align-items:flex-start;gap:10px;font-weight:400}.checkbox .consent-text{flex:1;min-width:0;overflow-wrap:anywhere;line-height:1.6}.checkbox input{width:auto;flex:none;margin-top:5px}.form-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:18px}.table-wrap{overflow-x:auto}.table{width:100%;border-collapse:collapse;font-size:12px}.table th,.table td{word-break:keep-all}.table th{text-align:left;color:var(--muted);font-size:10px;letter-spacing:.02em;padding:10px;border-bottom:1px solid var(--line)}.table td{padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top}.table input{min-width:135px}.table input[type="number"]{min-width:80px}.table small{display:block;color:var(--muted);font-size:10px;margin-top:4px}.table-select{min-width:90px}.notice-small{font-size:11px;color:var(--muted);border-left:3px solid var(--gold);padding:10px 14px;background:var(--paper);margin:16px 0}.check-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.check-item{padding:14px;border:1px solid var(--line);border-radius:9px}.check-item label{display:block;font-size:13px;margin-bottom:8px}.check-item select,.check-item input{width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font:inherit;font-size:12px}.check-item input{margin-top:8px}.empty{color:var(--muted);padding:20px;font-size:13px;border:1px dashed var(--line);border-radius:10px}.record-list{display:grid;gap:10px;margin-top:18px}.record{padding:16px 18px;border:1px solid var(--line);border-radius:9px}.record h3{margin:0 0 8px}.record p{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0;color:var(--muted);font-size:12px}.record .row{display:flex;gap:8px;justify-content:space-between;align-items:center}.record .quiet{font-size:10px}.deadline-list{list-style:none;padding:0;display:grid;gap:8px}.deadline-list li{display:flex;justify-content:space-between;gap:18px;padding:12px 0;border-bottom:1px solid var(--line);font-size:12px}.member-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:18px}.member-grid>.card{margin:0}.status-tag{font-size:10px;background:var(--paper);border:1px solid var(--line);padding:3px 6px;border-radius:6px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.toolbar p{font-size:11px;margin:0;color:var(--muted)}.form-help{font-size:11px!important;color:var(--muted)}
 @media(max-width:950px){.wrap{width:calc(100% - 40px)}.brand{font-size:17px}.header-inner{min-height:88px;gap:18px}nav{gap:14px;font-size:11px}.hero{min-height:490px;gap:15px}.hero-description{font-size:14px}.about-grid{gap:45px}.business-copy{padding:22px}.footer-links{gap:12px}}
-@media(max-width:680px){.wrap{width:calc(100% - 32px)}.header-inner{align-items:stretch;flex-direction:column;gap:12px;padding-block:17px;min-height:0}.brand{font-size:19px}.brand-mark{width:36px;height:36px;font-size:22px}nav{gap:14px;flex-wrap:wrap;justify-content:space-between;font-size:11px}.nav-action{padding:6px 9px}.hero{grid-template-columns:1fr;gap:0;min-height:0;padding-top:37px;padding-bottom:28px}.hero h1{font-size:42px;line-height:1.3;margin-bottom:20px}.hero-description{max-width:100%;font-size:14px;line-height:1.8}.hero-visual{margin-top:16px}.art-caption{font-size:10px}.hero-note{margin-top:15px}.principles{padding-block:17px;gap:10px}.principles div,.principles div:first-child{padding-left:10px}.principles div:first-child{padding-left:0}.principles strong{font-size:12px}.principles span{font-size:10px;line-height:1.6}.section{padding-block:39px}.section-heading{margin-bottom:22px}.section-heading h2{font-size:27px}.about-grid{grid-template-columns:1fr;gap:24px}.large-copy{font-size:18px}.about-detail>p{font-size:12px;padding-block:10px}.row-heading{display:block}.row-heading>p{margin-top:12px}.business-grid{grid-template-columns:1fr;gap:13px}.business-card{min-height:0}.business-copy{padding:22px}.business-card h3{margin-top:10px;font-size:19px}.business-card p{font-size:12px}.card-index{font-size:19px}.card-tag{margin-top:8px}.journey{grid-template-columns:1fr 1fr;gap:22px}.journey h3{font-size:14px;margin-top:10px}.journey p{font-size:11px}.notice-list article{padding:19px}.join-banner{display:block;padding:26px;margin-bottom:40px}.join-banner h2{font-size:21px}.join-banner .button{margin-top:20px}.footer-inner{grid-template-columns:1fr;gap:15px}.footer-links{gap:15px;font-size:10px}.stats{grid-template-columns:1fr 1fr;gap:10px}.stat{padding:15px}.stat b{font-size:21px}.workspace-heading h1{font-size:26px}.workspace-heading>.badge{white-space:nowrap}.workspace-heading p:not(.eyebrow){font-size:12px}.private-main{padding-top:26px}.form-grid{grid-template-columns:1fr}.card{padding:19px}.member-grid,.check-grid{grid-template-columns:1fr}.tabs{gap:5px}.tabs button{font-size:11px;padding:7px 10px}.table td{padding:10px 7px}.table{font-size:11px}.form-help{font-size:10px!important}}
+body,p,h1,h2,h3,dd,li,small,.muted,.form-help{word-break:keep-all;overflow-wrap:break-word}h1,h2,h3{text-wrap:balance}p,.form-help,.muted{text-wrap:pretty}.member-line{margin:4px 0 14px}.sub-heading{font-size:17px;margin:22px 0 10px}.payment-box,.deposit-guide{border:1px solid #d8e4dc;background:#f4f8f5;border-radius:16px;padding:16px 18px;margin:6px 0 4px}.deposit-guide h3,.payment-head h3{margin:0;font-size:16px}.deposit-guide p{margin:8px 0}.payment-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.pay-badge{display:inline-block;padding:5px 11px;border-radius:999px;font-size:13px;font-weight:800;white-space:nowrap}.pay-badge.unpaid{background:#fff1d9;color:#8a5b14}.pay-badge.reported{background:#e6eefb;color:#234c8c}.pay-badge.confirmed{background:#dcefe3;color:#17603a}.payment-facts{display:grid;gap:8px;margin:12px 0 6px}.payment-facts div{display:grid;grid-template-columns:84px minmax(0,1fr);gap:10px;align-items:baseline}.payment-facts dt{color:#5e6f66;font-size:13px}.payment-facts dd{margin:0;line-height:1.55}.deposit-account{line-height:1.6}.account-number{font-size:17px;letter-spacing:.02em;white-space:nowrap}.bank,.holder{white-space:nowrap}.payment-box .button{margin-top:6px}@media(max-width:680px){.wrap{width:calc(100% - 32px)}.header-inner{align-items:stretch;flex-direction:column;gap:12px;padding-block:17px;min-height:0}.brand{font-size:19px}.brand-mark{width:36px;height:36px;font-size:22px}nav{gap:14px;flex-wrap:wrap;justify-content:space-between;font-size:11px}.nav-action{padding:6px 9px}.hero{grid-template-columns:1fr;gap:0;min-height:0;padding-top:37px;padding-bottom:28px}.hero h1{font-size:42px;line-height:1.3;margin-bottom:20px}.hero-description{max-width:100%;font-size:14px;line-height:1.8}.hero-visual{margin-top:16px}.art-caption{font-size:10px}.hero-note{margin-top:15px}.principles{padding-block:17px;gap:10px}.principles div,.principles div:first-child{padding-left:10px}.principles div:first-child{padding-left:0}.principles strong{font-size:12px}.principles span{font-size:10px;line-height:1.6}.section{padding-block:39px}.section-heading{margin-bottom:22px}.section-heading h2{font-size:27px}.about-grid{grid-template-columns:1fr;gap:24px}.large-copy{font-size:18px}.about-detail>p{font-size:12px;padding-block:10px}.row-heading{display:block}.row-heading>p{margin-top:12px}.business-grid{grid-template-columns:1fr;gap:13px}.business-card{min-height:0}.business-copy{padding:22px}.business-card h3{margin-top:10px;font-size:19px}.business-card p{font-size:12px}.card-index{font-size:19px}.card-tag{margin-top:8px}.journey{grid-template-columns:1fr 1fr;gap:22px}.journey h3{font-size:14px;margin-top:10px}.journey p{font-size:11px}.notice-list article{padding:19px}.join-banner{display:block;padding:26px;margin-bottom:40px}.join-banner h2{font-size:21px}.join-banner .button{margin-top:20px}.footer-inner{grid-template-columns:1fr;gap:15px}.footer-links{gap:15px;font-size:10px}.stats{grid-template-columns:1fr 1fr;gap:10px}.stat{padding:15px}.stat b{font-size:21px}.workspace-heading h1{font-size:26px}.workspace-heading>.badge{white-space:nowrap}.workspace-heading p:not(.eyebrow){font-size:12px}.private-main{padding-top:26px}.form-grid{grid-template-columns:1fr}.card{padding:19px}.member-grid,.check-grid{grid-template-columns:1fr}.tabs{gap:5px}.tabs button{font-size:11px;padding:7px 10px}.table td{padding:10px 7px}.table{font-size:11px}.form-help{font-size:10px!important}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
  .progress-task{border:1px solid var(--line);border-radius:12px;margin:12px 0;min-width:0}.progress-task summary{cursor:pointer;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:16px;word-break:keep-all}.progress-task summary span{font-size:12px;color:var(--muted);white-space:normal}.progress-body{padding:0 16px 16px}.progress-body p,.progress-body label,.progress-phases strong{word-break:keep-all;overflow-wrap:normal}.progress-filter{display:block;max-width:300px;margin-top:20px}.progress-phases{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.progress-phases div{display:flex;flex-direction:column;gap:6px;background:var(--accent-light);padding:12px;border-radius:10px;min-width:0}.progress-phases span{font-size:12px}.progress-body .full{grid-column:1/-1}@media(max-width:760px){.progress-phases{grid-template-columns:1fr 1fr}.progress-task summary{grid-template-columns:1fr;gap:6px}}@media(max-width:420px){.progress-phases{grid-template-columns:1fr}}
  .launch-guidance{margin-block:18px;word-break:keep-all}.launch-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.launch-action{min-width:0;border:1px solid var(--line);border-radius:12px;padding:18px;background:var(--paper)}.launch-action h3{margin:12px 0 8px}.launch-action p{white-space:pre-wrap;overflow-wrap:anywhere}.launch-action .actions{align-items:stretch}.launch-action .button{gap:8px;min-height:44px}.launch-uncertainties{margin-block:18px;border:1px solid var(--line);border-radius:10px;padding:14px}.launch-uncertainties summary{cursor:pointer;min-height:40px}.launch-uncertainties li{margin-block:12px}.launch-guidance .quiet{min-height:40px}.launch-guidance .notice-small p{margin-block:8px}@media(max-width:1100px){.launch-actions{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:680px){.launch-actions{grid-template-columns:1fr}}
  .preparation-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.preparation-grid form{padding:18px;border:1px solid var(--line);border-radius:12px;min-width:0}.preparation-grid h3{margin:0}.preparation-grid textarea{min-height:340px;line-height:1.7}.preparation-grid .button{min-height:44px;gap:8px}.preparation-packet{margin-block:20px;padding:16px;border:1px solid var(--line);border-radius:12px;min-width:0}.preparation-packet summary{cursor:pointer;min-height:40px;word-break:keep-all}.preparation-packet pre{font:inherit;font-size:13px;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere}.preparation-drafts p,.preparation-drafts label{word-break:keep-all}@media(max-width:850px){.preparation-grid{grid-template-columns:1fr}}
 @media print{nav,.tabs,.form-actions,button,.gate,.site-footer{display:none!important}.wrap{width:100%}.site-header{position:static}.card{break-inside:avoid;border-color:#aaa}body{background:#fff;color:#111}.table-wrap{overflow:visible}.table input{min-width:0}.private-main{min-height:0}}
+ .signature-desk{margin-top:26px;padding-top:18px;border-top:1px solid var(--line)}.signature-desk h3{margin:18px 0 8px}.signature-desk .table td{vertical-align:top}.signature-desk .doc-actions{display:flex;flex-wrap:wrap;gap:6px}.sig-need{font-size:13px}.sig-need b{color:#a3312a}.sig-composer,.sig-issued{border:1px solid var(--line);border-radius:12px;padding:16px;margin:14px 0;background:#fbfcfa}.sig-composer fieldset{border:0;padding:0;margin:0 0 10px;display:flex;flex-wrap:wrap;gap:8px 16px}.sig-composer legend{font-weight:700;margin-bottom:6px}.sig-link-row{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:8px;align-items:center;margin:8px 0}.sig-link-row input{width:100%;font-size:13px}.sig-link-row .doc-actions a{display:inline-flex;align-items:center}.sig-status{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#eef2ef}.sig-status.uploaded{background:#fff3cd}.sig-status.accepted{background:#dff3e6}.sig-status.rejected{background:#f8dedb}.sig-status.cancelled{background:#eee;color:#777}.sign-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0}.sign-facts dt{font-size:12px;color:#5c6f68}.sign-facts dd{margin:2px 0 0;font-weight:700}.sign-steps{padding-left:20px;line-height:1.8}.print-preview{overflow:auto}.print-toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px}#printSheet{display:none}
+.print-doc{font-family:"Noto Serif KR","Batang",serif;color:#111;line-height:1.7;max-width:760px;margin:0 auto}.print-doc h1{text-align:center;font-size:24px;margin:6px 0 18px;letter-spacing:.08em}.print-doc h2{font-size:17px;margin:18px 0 8px}.print-coop{text-align:center;margin:0;color:#444}.print-signer{text-align:center;margin:0 0 8px}.print-doc p{margin:4px 0}.print-facts{display:grid;grid-template-columns:120px minmax(0,1fr);gap:6px 12px;margin:12px 0}.print-facts dt{font-weight:700}.print-facts dd{margin:0}.print-table{width:100%;border-collapse:collapse;margin:10px 0;font-size:14px}.print-table th,.print-table td{border:1px solid #333;padding:6px 8px;text-align:left}.print-sign-cell{min-width:120px;height:44px}.print-short{min-width:3em!important}.print-wide{min-width:min(22em,100%)!important}.print-blank{display:inline-block;min-width:8em;border-bottom:1px solid #333;height:1.1em;vertical-align:bottom}.print-seal{color:#555;font-size:13px}.print-right{text-align:right}.print-date{text-align:center;margin:18px 0}.print-note{font-size:13px;color:#444}.print-foot{margin-top:24px;border-top:1px solid #999;padding-top:8px;font-size:12px;color:#555}.print-page+.print-page{border-top:1px dashed #bbb;margin-top:28px;padding-top:20px}
+@media(max-width:680px){.sign-facts{grid-template-columns:1fr}.sig-link-row{grid-template-columns:1fr}}
+@media print{body.print-doc-mode>*:not(#printSheet){display:none!important}body.print-doc-mode #printSheet{display:block!important}body.print-doc-mode{background:#fff}.print-page{break-after:page;border:0!important;margin:0!important;padding:0!important}.print-page:last-child{break-after:auto}.print-table tr{break-inside:avoid}}
 `;
 }
 
-function clientMain(documents, launchTasks, launchStages, progressSummary, launchGuidance, preparation) {
+function clientMain(documents, launchTasks, launchStages, progressSummary, launchGuidance, preparation, printables, signatureRules, signatureKinds) {
   'use strict';
   const root = document.documentElement;
   const slug = root.dataset.coopSlug;
@@ -32,6 +37,9 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
   const PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
   const errors = {
     COOP_JOIN_CONSENT_REQUIRED: '조합원 등록에 동의 체크가 필요합니다.',
+    COOP_SHARE_ACCOUNT_INVALID: '계좌번호는 숫자와 하이픈(-)으로 입력해 주세요.',
+    COOP_SHARE_ACCOUNT_INCOMPLETE: '계좌번호를 등록할 때는 은행과 예금주도 함께 입력해 주세요.',
+    COOP_DEPOSIT_AGREEMENT_REQUIRED: '출자금 납입 안내를 확인하고 동의에 체크해 주세요.',
     COOP_JOIN_BLOCKED: '이 계정은 조합 관리자가 이용을 제한했습니다. 조합 관리자에게 문의해 주세요.',
     COOP_REPRESENTATIVE_REQUIRED: '대표자명(성함)을 입력해 주세요.',
     COOP_PHONE_REQUIRED: '연락처를 입력해 주세요.',
@@ -57,6 +65,24 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
     COOP_PROGRESS_STATUS: '진행 상태를 확인해 주세요.',
     COOP_PROGRESS_VERSION: '체크리스트 형식이 변경되었습니다. 입력 내용을 보관하고 다시 불러와 주세요.',
     COOP_ACCOUNT_NOT_LINKED: '관리자가 이 대표자 명부와 로그인 계정을 연결해야 합니다.',
+    COOP_SIGN_LINK_INVALID: '서명 링크가 올바르지 않거나 새 링크로 바뀌었습니다. 관리자에게 새 링크를 요청해 주세요.',
+    COOP_SIGN_LINK_EXPIRED: '서명 링크의 제출 기한이 지났습니다. 관리자에게 새 링크를 요청해 주세요.',
+    COOP_SIGN_LINK_CLOSED: '이미 승인되었거나 취소된 요청입니다. 관리자에게 문의해 주세요.',
+    COOP_SIGN_FILE_REQUIRED: '올릴 파일을 선택해 주세요.',
+    COOP_SIGN_FILE_TYPE: 'PDF·JPG·PNG·WEBP 파일만 올릴 수 있습니다.',
+    COOP_SIGN_FILE_TOO_LARGE: '파일은 10MB 이하로 올려 주세요.',
+    COOP_SIGN_STORAGE_UNAVAILABLE: '지금은 파일을 저장할 수 없습니다. 잠시 뒤 다시 시도해 주세요.',
+    COOP_SIGN_SIGNERS_REQUIRED: '서명할 사람을 한 명 이상 선택해 주세요.',
+    COOP_SIGN_DAYS_INVALID: '링크 유효기간은 1~30일로 입력해 주세요.',
+    COOP_SIGN_KIND_INVALID: '요청 방식을 선택해 주세요.',
+    COOP_SIGN_STATE: '현재 상태에서는 할 수 없는 작업입니다. 새로 불러와 주세요.',
+    COOP_SIGN_CONFLICT: '다른 곳에서 먼저 처리되었습니다. 새로 불러와 주세요.',
+    COOP_SIGN_REJECT_REASON: '반려 사유를 입력해 주세요.',
+    COOP_SIGN_DECISION_INVALID: '승인 또는 반려를 선택해 주세요.',
+    COOP_SIGN_FILE_MISSING: '업로드된 파일을 찾을 수 없습니다.',
+    COOP_SIGN_NOT_FOUND: '요청을 찾을 수 없습니다. 새로 불러와 주세요.',
+    COOP_DOCUMENT_UNKNOWN: '알 수 없는 서류입니다.',
+    SAME_ORIGIN_REQUIRED: '에코디 화면에서 다시 시도해 주세요.',
   };
   let token = '';
   let project = null;
@@ -67,6 +93,10 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
   const dirtyForms = new Set();
   const editingRecords = new Map();
   const recordForms = { notices: 'noticeForm', meetings: 'meetingForm', supports: 'supportForm' };
+  let signatures = null;
+  let signatureError = '';
+  let composerDoc = '';
+  let issuedLinks = null;
 
   function formDrafts(exclude = '') {
     const result = {};
@@ -156,6 +186,16 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
     setStatus($('#gateMessage').textContent, true);
     return true;
   }
+  function accountLine(a) { return `<span class="bank">${esc(a.bank)}</span> <strong class="account-number">${esc(a.number)}</strong> <span class="holder">예금주 ${esc(a.holder)}</span>`; }
+  const PAYMENT_LABEL = { unpaid: '입금 전', reported: '입금 알림 · 운영진 확인 중', confirmed: '입금 확인 완료' };
+  function paymentPanel(own, p) {
+    const status = own.payment || 'unpaid';
+    const a = p.shareAccount?.number ? p.shareAccount : null;
+    const amount = own.shares ? `${own.shares.toLocaleString('ko-KR')}좌 · ${won(own.shares * p.shareUnit)}` : `1좌 이상 · 1좌 ${won(p.shareUnit)}`;
+    return `<div class="payment-box" data-payment="${status}"><div class="payment-head"><h3>출자금 납입</h3><span class="pay-badge ${status}">${PAYMENT_LABEL[status]}</span></div>
+      <dl class="payment-facts"><div><dt>출자 금액</dt><dd>${amount}</dd></div><div><dt>입금 계좌</dt><dd>${a ? accountLine(a) : '운영진이 계좌를 등록하면 여기에 안내됩니다.'}</dd></div>${status === 'confirmed' && own.paymentConfirmedAt ? `<div><dt>확인일</dt><dd>${esc(own.paymentConfirmedAt)}</dd></div>` : ''}</dl>
+      ${status === 'unpaid' ? `<p class="form-help">입금자명은 대표자 성함으로 해 주세요. 입금하신 뒤 아래 버튼을 눌러 운영진에게 알려 주세요.</p><button class="button primary" type="button" id="reportDeposit"${a ? '' : ' disabled'}>입금했어요 · 운영진에게 알리기</button>` : status === 'reported' ? '<p class="form-help">입금 알림이 접수되었습니다. 운영진이 통장과 대조해 확인하면 ‘입금 확인 완료’로 바뀝니다.</p>' : '<p class="form-help">출자금 납입이 확인되었습니다. 감사합니다.</p>'}</div>`;
+  }
   function field(label, name, value, { type = 'text', full = false, area = false, maxLength = 4000 } = {}) {
     return `<label${full ? ' class="full"' : ''}>${esc(label)}${area ? `<textarea name="${name}" maxlength="${maxLength}">${esc(value)}</textarea>` : `<input name="${name}" type="${type}" value="${esc(value)}"${type === 'number' ? ' min="0" step="1"' : ''}>`}</label>`;
   }
@@ -237,9 +277,9 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
     $('#workspace').innerHTML = `<div class="toolbar"><p>${esc(p.name)} · 서버 저장 · 수정본 ${project.revision}</p><div class="actions"><button class="quiet" id="reload" type="button">새로 불러오기</button><button class="quiet" id="export" type="button">현재 조합 내보내기</button><button class="quiet" id="print" type="button">인쇄</button></div></div><div class="stats"><div class="stat"><b>${state.founders.length}명</b><span>구성원 대표자 · 자격 확인 별도</span></div><div class="stat"><b>${state.founders.filter(f => f.business).length}/${state.founders.length}</b><span>사업자명 입력</span></div><div class="stat"><b>${won(capital)}</b><span>예정 출자 · 납입 확정 아님</span></div><div class="stat"><b>${complete}/8</b><span>설립서류 검토 완료</span></div></div><div class="tabs" role="tablist" aria-label="관리 분류">${tabs.map(([id, label]) => `<button type="button" role="tab" data-tab="${id}" aria-selected="${id === currentTab}">${label}</button>`).join('')}</div>
     <section class="card" data-panel="overview">${renderGuidance(state,'overview')}<p><button class="button secondary" type="button" id="openProgress">출범 체크리스트 전체 보기</button></p><p class="form-help">설립 준비 기록입니다. 법인 설립·임원 선출·출자 납입은 실제 증빙으로 각각 확인합니다. 지원사업은 해당 공고 기준으로 별도 검토합니다.</p></section>
     ${renderProgress(state)}
-    <section class="card" data-panel="profile"><h2>조합 기본정보</h2><form id="profileForm" class="form-grid">${field('표시 조합명', 'name', p.name)}${field('설립용 법인명(안)', 'legalName', p.legalName)}${field('조합장 예정', 'chair', p.chair)}${field('주사무소 소재지', 'office', p.office)}${field('사업구역', 'businessArea', p.businessArea)}${field('신고 관할 시·도', 'jurisdiction', p.jurisdiction)}${field('출자 1좌 금액(원)', 'shareUnit', p.shareUnit, { type: 'number' })}${field('첫해 운영예산(원) · 미정은 공란', 'firstYearBudget', p.firstYearBudget, { type: 'number' })}${field('목적', 'purpose', p.purpose, { full: true, area: true })}${field('조합원 자격·업종', 'industries', p.industries, { full: true, area: true })}${field('공동사업', 'businesses', p.businesses, { full: true, area: true })}<label>명칭 검토 상태<select name="legalNameStatus">${['draft', 'checking', 'confirmed'].map((v, i) => `<option value="${v}"${p.legalNameStatus === v ? ' selected' : ''}>${['정관 초안', '중복·사용 가능성 확인중', '명칭 확정'][i]}</option>`).join('')}</select></label><label class="checkbox"><input type="checkbox" name="officeConfirmed"${p.officeConfirmed ? ' checked' : ''}>주사무소 소재지 확정</label><button class="button primary" type="submit">조합정보 저장</button></form><p class="form-help">광주광역시는 첨부 정관의 참고값이며 현재 두 신규 조합의 확정 소재지가 아닙니다.</p></section>
-    <section class="card" data-panel="founders"><h2>조합원 명부·사업장 정보</h2><p class="form-help">조합원 각자의 사업장 정보를 입력한 뒤 <b>명부 저장</b>을 누르세요. 사업자명·사업자등록번호는 공란으로 저장할 수 있습니다. 삭제는 최고관리자·조합장만 할 수 있으며, 조합장 예정자는 삭제할 수 없습니다.</p><form id="foundersForm"><div class="table-wrap"><table class="table roster"><thead><tr><th>대표자</th><th>연락처</th><th>사업자명</th><th>사업자등록번호</th><th>업종</th><th>예정 출자좌수</th><th>설립동의</th><th>로그인 계정</th><th>관리</th></tr></thead><tbody>${state.founders.map(f => `<tr data-founder-id="${esc(f.id)}"><td><input data-key="representative" aria-label="대표자명" value="${esc(f.representative)}"><small>${f.position === 'chair-designate' ? '조합장 예정' : f.position === 'member' ? '조합원(자가 등록)' : '구성원 대표자'}</small></td><td><input data-key="phone" type="tel" aria-label="${esc(f.representative)} 연락처" placeholder="010-0000-0000" value="${esc(f.phone)}"></td><td><input data-key="business" aria-label="${esc(f.representative)} 사업자명" placeholder="추후 등록" value="${esc(f.business)}"></td><td><input data-key="businessNumber" inputmode="numeric" aria-label="${esc(f.representative)} 사업자등록번호" placeholder="000-00-00000" value="${esc(f.businessNumber)}"></td><td><input data-key="industry" aria-label="업종" placeholder="확인 전" value="${esc(f.industry)}"></td><td><input data-key="shares" aria-label="예정 출자좌수" type="number" min="1" step="1" placeholder="미정" value="${esc(f.shares)}"></td><td><select data-key="consent" aria-label="설립동의 상태"><option value="pending"${f.consent === 'pending' ? ' selected' : ''}>확인 전</option><option value="confirmed"${f.consent === 'confirmed' ? ' selected' : ''}>동의 확인</option></select></td><td class="muted">${esc(f.accountEmail || '미연결')}</td><td>${f.position === 'chair-designate' ? '<small>삭제 불가</small>' : `<button class="quiet danger" type="button" data-delete-founder="${esc(f.id)}">삭제</button>`}</td></tr>`).join('')}</tbody></table></div><div class="form-actions"><button class="button primary" type="submit">명부 저장</button></div></form><p class="form-help">1좌 1만 원 · 1인 1좌 이상 · 한 조합원의 출자좌수는 전체의 30% 이하. 입력한 출자액은 예정 금액입니다.</p></section>
-    <section class="card" data-panel="documents"><h2>설립신고 첨부서류 8종</h2>${renderPreparation(state)}<form id="documentsForm"><div class="check-grid">${documents.map(([id, label]) => `<div class="check-item"><label for="doc-${id}">${esc(label)}</label><select id="doc-${id}" name="${id}">${['pending', 'draft', 'prepared', 'reviewed'].map((s, i) => `<option value="${s}"${state.documents[id].status === s ? ' selected' : ''}>${['준비 전', '초안 작성', '서류 준비', '검토 완료'][i]}</option>`).join('')}</select><input name="${id}-note" aria-label="${esc(label)} 메모" placeholder="진행 메모" value="${esc(state.documents[id].note)}"></div>`).join('')}</div><div class="form-actions"><button class="button primary" type="submit">준비상태 저장</button><button class="button secondary" id="charter" type="button">이 조합 정관 초안 받기</button></div></form><p class="form-help">정관은 첨부 자료를 바탕으로 명칭·발기인·사업 범위를 반영한 검토용 초안입니다. 소재지·사업구역·임원과 최종 조문은 창립총회 전에 확인해야 합니다.</p></section>
+    <section class="card" data-panel="profile"><h2>조합 기본정보</h2><form id="profileForm" class="form-grid">${field('표시 조합명', 'name', p.name)}${field('설립용 법인명(안)', 'legalName', p.legalName)}${field('조합장 예정', 'chair', p.chair)}${field('주사무소 소재지', 'office', p.office)}${field('사업구역', 'businessArea', p.businessArea)}${field('신고 관할 시·도', 'jurisdiction', p.jurisdiction)}${field('출자 1좌 금액(원)', 'shareUnit', p.shareUnit, { type: 'number' })}${field('출자금 입금 은행', 'shareAccountBank', p.shareAccount?.bank)}${field('출자금 입금 계좌번호', 'shareAccountNumber', p.shareAccount?.number)}${field('출자금 계좌 예금주', 'shareAccountHolder', p.shareAccount?.holder)}${field('첫해 운영예산(원) · 미정은 공란', 'firstYearBudget', p.firstYearBudget, { type: 'number' })}${field('목적', 'purpose', p.purpose, { full: true, area: true })}${field('조합원 자격·업종', 'industries', p.industries, { full: true, area: true })}${field('공동사업', 'businesses', p.businesses, { full: true, area: true })}<label>명칭 검토 상태<select name="legalNameStatus">${['draft', 'checking', 'confirmed'].map((v, i) => `<option value="${v}"${p.legalNameStatus === v ? ' selected' : ''}>${['정관 초안', '중복·사용 가능성 확인중', '명칭 확정'][i]}</option>`).join('')}</select></label><label class="checkbox"><input type="checkbox" name="officeConfirmed"${p.officeConfirmed ? ' checked' : ''}>주사무소 소재지 확정</label><button class="button primary" type="submit">조합정보 저장</button></form><p class="form-help">광주광역시는 첨부 정관의 참고값이며 현재 두 신규 조합의 확정 소재지가 아닙니다.</p></section>
+    <section class="card" data-panel="founders"><h2>조합원 명부·사업장 정보</h2><p class="form-help">조합원 각자의 사업장 정보를 입력한 뒤 <b>명부 저장</b>을 누르세요. 사업자명·사업자등록번호는 공란으로 저장할 수 있습니다. 삭제는 최고관리자·조합장만 할 수 있으며, 조합장 예정자는 삭제할 수 없습니다.</p><form id="foundersForm"><div class="table-wrap"><table class="table roster"><thead><tr><th>대표자</th><th>연락처</th><th>사업자명</th><th>사업자등록번호</th><th>업종</th><th>예정 출자좌수</th><th>설립동의</th><th>출자금 납입</th><th>로그인 계정</th><th>관리</th></tr></thead><tbody>${state.founders.map(f => `<tr data-founder-id="${esc(f.id)}"><td><input data-key="representative" aria-label="대표자명" value="${esc(f.representative)}"><small>${f.position === 'chair-designate' ? '조합장 예정' : f.position === 'member' ? '조합원(자가 등록)' : '구성원 대표자'}</small></td><td><input data-key="phone" type="tel" aria-label="${esc(f.representative)} 연락처" placeholder="010-0000-0000" value="${esc(f.phone)}"></td><td><input data-key="business" aria-label="${esc(f.representative)} 사업자명" placeholder="추후 등록" value="${esc(f.business)}"></td><td><input data-key="businessNumber" inputmode="numeric" aria-label="${esc(f.representative)} 사업자등록번호" placeholder="000-00-00000" value="${esc(f.businessNumber)}"></td><td><input data-key="industry" aria-label="업종" placeholder="확인 전" value="${esc(f.industry)}"></td><td><input data-key="shares" aria-label="예정 출자좌수" type="number" min="1" step="1" placeholder="미정" value="${esc(f.shares)}"></td><td><select data-key="consent" aria-label="설립동의 상태"><option value="pending"${f.consent === 'pending' ? ' selected' : ''}>확인 전</option><option value="confirmed"${f.consent === 'confirmed' ? ' selected' : ''}>동의 확인</option></select></td><td><select data-key="payment" aria-label="${esc(f.representative)} 출자금 납입 상태">${Object.entries(PAYMENT_LABEL).map(([v, l]) => `<option value="${v}"${(f.payment || 'unpaid') === v ? ' selected' : ''}>${v === 'reported' ? '입금 알림(확인 필요)' : l}</option>`).join('')}</select>${f.paymentConfirmedAt ? `<small>${esc(f.paymentConfirmedAt)} 확인</small>` : ''}</td><td class="muted">${esc(f.accountEmail || '미연결')}</td><td>${f.position === 'chair-designate' ? '<small>삭제 불가</small>' : `<button class="quiet danger" type="button" data-delete-founder="${esc(f.id)}">삭제</button>`}</td></tr>`).join('')}</tbody></table></div><div class="form-actions"><button class="button primary" type="submit">명부 저장</button></div></form><p class="form-help">1좌 1만 원 · 1인 1좌 이상 · 한 조합원의 출자좌수는 전체의 30% 이하. 입력한 출자액은 예정 금액입니다.</p></section>
+    <section class="card" data-panel="documents"><h2>설립신고 첨부서류 8종</h2>${renderPreparation(state)}<form id="documentsForm"><div class="check-grid">${documents.map(([id, label]) => `<div class="check-item"><label for="doc-${id}">${esc(label)}</label><select id="doc-${id}" name="${id}">${['pending', 'draft', 'prepared', 'reviewed'].map((s, i) => `<option value="${s}"${state.documents[id].status === s ? ' selected' : ''}>${['준비 전', '초안 작성', '서류 준비', '검토 완료'][i]}</option>`).join('')}</select><input name="${id}-note" aria-label="${esc(label)} 메모" placeholder="진행 메모" value="${esc(state.documents[id].note)}"></div>`).join('')}</div><div class="form-actions"><button class="button primary" type="submit">준비상태 저장</button><button class="button secondary" id="charter" type="button">이 조합 정관 초안 받기</button></div></form><p class="form-help">정관은 첨부 자료를 바탕으로 명칭·발기인·사업 범위를 반영한 검토용 초안입니다. 소재지·사업구역·임원과 최종 조문은 창립총회 전에 확인해야 합니다.</p><div id="signatureDesk" class="signature-desk"></div><section class="card print-preview" id="printArea" hidden></section></section>
     <section class="card" data-panel="schedule"><h2>총회·신고 일정</h2><form id="datesForm" class="form-grid">${Object.entries({ foundingMeetingDate: '창립총회 예정/개최일', filingDate: '설립신고 접수일', confirmationDate: '신고확인증 수령일', capitalPaidDate: '출자금 납입 완료일', registrationDate: '법인등기 완료일' }).map(([k, label]) => field(label, k, state.dates[k], { type: 'date' })).join('')}<button class="button primary" type="submit">일정 저장</button></form><ul class="deadline-list"><li><span>창립총회 공고 마감 참고일</span><b>${datePlus(state.dates.foundingMeetingDate, -8)}</b></li><li><span>설립신고 법정 통지기간 참고</span><b>${datePlus(state.dates.filingDate, 20)}</b></li><li><span>납입 완료 후 설립등기 기한</span><b>${datePlus(state.dates.capitalPaidDate, 14)}</b></li></ul><p class="form-help">창립총회: 설립동의자 과반수 출석과 출석자 3분의 2 이상 찬성. 신고 보완·기간 연장 여부는 관할기관 안내에 따라 확인합니다.</p></section>
     <section class="card" data-panel="notices"><h2>공지 작성</h2><form id="noticeForm" class="form-grid">${field('제목', 'title', '', { full: true })}${field('내용', 'body', '', { full: true, area: true })}<label>공개 범위<select name="visibility"><option value="members">조합원 전용</option><option value="public">공개 홈페이지</option></select></label><label>게시 상태<select name="status"><option value="draft">초안</option><option value="published">게시</option></select></label><button class="button primary" type="submit">공지 저장</button></form>${records(state.notices, 'notices')}</section>
     <section class="card" data-panel="meetings"><h2>회의록·의결 기록</h2><form id="meetingForm" class="form-grid">${field('회의명', 'title', '')}${field('회의일', 'date', '', { type: 'date' })}${field('안건·논의·의결 내용', 'body', '', { full: true, area: true })}<label>조합원 공유<select name="status"><option value="draft">검토중</option><option value="published">조합원 공유</option></select></label><button class="button primary" type="submit">회의록 저장</button></form>${records(state.meetings, 'meetings')}</section>
@@ -248,7 +288,180 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
     showTab(currentTab);
     restoreDrafts(drafts);
     filterProgress();
+    renderSignatureDesk();
   }
+  const SIG_STATUS = { requested: '제출 대기', uploaded: '제출됨 · 확인 필요', accepted: '승인', rejected: '반려 · 재제출 대기', cancelled: '취소' };
+  const docLabel = key => (printables.find(([id]) => id === key) || [key, key])[1];
+  const kstDate = value => value ? new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'numeric', day: 'numeric' }).format(new Date(value)) : '';
+  function signerDefaults(key) {
+    const rule = signatureRules[key] || {};
+    const founders = project.state.founders;
+    if (rule.signers === 'chair') return new Set(founders.filter(f => f.position === 'chair-designate').map(f => f.id));
+    return new Set(founders.map(f => f.id));
+  }
+  function shareText(row) {
+    return `[${project.state.profile.name}] ${row.signerName}님, 「${docLabel(issuedLinks.documentKey)}」 서명·직인 요청입니다. 아래 링크에서 서류를 인쇄해 서명(또는 날인)한 뒤 사진이나 스캔본을 올려 주세요. 기한 ${kstDate(row.expiresAt)}까지.\n${row.link}`;
+  }
+  function smsHref(row) {
+    const phone = String(row.phone || '').replace(/[^0-9]/g, '');
+    return `sms:${phone}?&body=${encodeURIComponent(shareText(row))}`;
+  }
+  function renderSignatureDesk() {
+    const desk = document.getElementById('signatureDesk');
+    if (!desk || !project?.state) return;
+    const requests = signatures?.requests || [];
+    const count = (key, status) => requests.filter(r => r.documentKey === key && (!status || r.status === status)).length;
+    const rows = printables.map(([key, label]) => {
+      const rule = signatureRules[key] || {};
+      const need = rule.required ? `<span class="sig-need"><b>필요</b> · ${esc(rule.who)}<br><small>${esc(rule.how)}</small></span>` : rule.signers === 'chair' ? `<span class="sig-need">선택 · ${esc(rule.who)} ${esc(rule.how)}</span>` : '<span class="sig-need">불필요</span>';
+      const total = count(key);
+      const summary = total ? `요청 ${total} · 제출 ${count(key, 'uploaded')} · 승인 ${count(key, 'accepted')}` : '—';
+      return `<tr><td><b>${esc(label)}</b></td><td>${need}</td><td>${summary}</td><td><div class="doc-actions"><button class="quiet" type="button" data-doc-view="${key}">보기</button><button class="quiet" type="button" data-doc-print="${key}">인쇄</button>${rule.signers !== 'none' ? `<button class="quiet" type="button" data-sig-open="${key}">서명·직인 요청</button>` : ''}</div></td></tr>`;
+    }).join('');
+    let composer = '';
+    if (composerDoc) {
+      const defaults = signerDefaults(composerDoc);
+      composer = `<form id="sigRequestForm" class="sig-composer form-grid" data-no-dirty="1" data-doc="${esc(composerDoc)}"><h4 class="full">「${esc(docLabel(composerDoc))}」 서명·직인 요청</h4><fieldset class="full"><legend>받을 사람 (사람마다 개별 링크가 만들어집니다)</legend>${project.state.founders.map(f => `<label class="checkbox"><input type="checkbox" name="founder" value="${esc(f.id)}"${defaults.has(f.id) ? ' checked' : ''}>${esc(f.representative)}${f.phone ? '' : ' <small>(연락처 없음 · 링크 복사로 전달)</small>'}</label>`).join('')}</fieldset><label>요청 방식<select name="kind">${Object.entries(signatureKinds).map(([v, l]) => `<option value="${v}"${v === 'either' ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></label><label>링크 유효기간(일)<input name="days" type="number" min="1" max="30" step="1" value="14"></label><label class="full">요청 메시지(선택)<textarea name="message" maxlength="500">「${esc(docLabel(composerDoc))}」 본인 서명란에 서명(또는 날인)해 주세요.</textarea></label><div class="form-actions full"><button class="button primary" type="submit">링크 만들기</button><button class="button secondary" type="button" data-sig-close="1">닫기</button></div></form>`;
+    }
+    let issued = '';
+    if (issuedLinks?.links?.length) {
+      issued = `<div class="sig-issued" id="sigIssued"><h4>「${esc(docLabel(issuedLinks.documentKey))}」 요청 링크 ${issuedLinks.links.length}개</h4><p class="form-help">링크는 지금만 표시됩니다. 각 사람에게 문자·카카오톡으로 보내 주세요. 다시 필요하면 아래 현황에서 「링크 다시 만들기」를 누르세요(이전 링크는 무효).</p>${issuedLinks.links.map((row, i) => `<div class="sig-link-row"><b>${esc(row.signerName)}</b><input readonly value="${esc(row.link)}" aria-label="${esc(row.signerName)} 서명 링크" id="sigLink${i}"><div class="doc-actions"><button class="quiet" type="button" data-sig-copy="${i}">문구+링크 복사</button>${row.phone ? `<a class="button quiet" href="${esc(smsHref(row))}">문자 보내기</a>` : ''}${navigator.share ? `<button class="quiet" type="button" data-sig-share="${i}">공유(카카오톡 등)</button>` : ''}</div></div>`).join('')}<div class="form-actions"><button class="button secondary" type="button" data-sig-issued-close="1">링크 목록 닫기</button></div></div>`;
+    }
+    const list = signatures ? (requests.length ? `<div class="table-wrap"><table class="table"><thead><tr><th>서류</th><th>대상</th><th>방식</th><th>상태</th><th>기한</th><th>제출 파일</th><th>작업</th></tr></thead><tbody>${requests.map(r => {
+      const status = r.expired && r.status !== 'uploaded' ? `${SIG_STATUS[r.status]} · 기한 만료` : SIG_STATUS[r.status] || r.status;
+      const actions = [];
+      if (r.file) actions.push(`<button class="quiet" type="button" data-sig-file="${esc(r.id)}">파일 받기</button>`);
+      if (r.status === 'uploaded') actions.push(`<button class="quiet" type="button" data-sig-accept="${esc(r.id)}">승인</button><button class="quiet danger" type="button" data-sig-reject="${esc(r.id)}">반려</button>`);
+      if (['requested', 'rejected', 'uploaded'].includes(r.status)) actions.push(`<button class="quiet" type="button" data-sig-reissue="${esc(r.id)}">링크 다시 만들기</button>`);
+      if (['requested', 'rejected'].includes(r.status)) actions.push(`<button class="quiet danger" type="button" data-sig-cancel="${esc(r.id)}">취소</button>`);
+      return `<tr><td>${esc(r.documentLabel)}</td><td>${esc(r.signerName)}</td><td>${esc(r.kindLabel)}</td><td><span class="sig-status ${esc(r.status)}">${esc(status)}</span>${r.reviewNote ? `<small>${esc(r.reviewNote)}</small>` : ''}</td><td>${esc(kstDate(r.expiresAt))}</td><td>${r.file ? `${esc(r.file.name)}<small>${esc(kstDate(r.file.uploadedAt))}</small>` : '—'}</td><td><div class="doc-actions">${actions.join('')}</div></td></tr>`;
+    }).join('')}</tbody></table></div>` : '<p class="empty">아직 보낸 서명·직인 요청이 없습니다.</p>') : `<p class="notice-small">${esc(signatureError || '서명 요청 현황을 불러오고 있습니다.')}</p>`;
+    desk.innerHTML = `<h3>서류 보기·인쇄와 서명·직인 요청</h3><p class="form-help">각 서류는 이 조합의 저장된 정보로 만든 검토용 초안입니다. 「보기」로 확인하고 「인쇄」로 출력하세요. 서명·직인이 필요한 서류는 「서명·직인 요청」으로 사람마다 업로드 링크를 보낼 수 있습니다. 정관·의사록·명부처럼 여러 사람의 서명이 한 장에 들어가야 하는 서류는 창립총회 때 함께 서명하는 것이 가장 확실하며, 사람별로 따로 서명한 사본을 관할기관이 그대로 받는지는 접수 전에 확인하세요.</p><div class="table-wrap"><table class="table"><thead><tr><th>서류</th><th>서명·직인</th><th>요청 현황</th><th>보기·인쇄·요청</th></tr></thead><tbody>${rows}</tbody></table></div>${composer}${issued}<h3>서명본 제출 현황</h3>${list}`;
+  }
+  async function loadSignatures() {
+    try { signatures = await request('/signatures'); signatureError = ''; }
+    catch (error) { signatures = null; signatureError = error.status === 401 || error.status === 403 ? '서명 요청 현황은 관리자만 볼 수 있습니다.' : '서명 요청 현황을 불러오지 못했습니다. 잠시 뒤 새로 불러오기를 눌러 주세요.'; }
+    renderSignatureDesk();
+  }
+  async function fetchDocument(key) {
+    token = await accessToken();
+    if (!token) throw Object.assign(new Error('다시 로그인해 주세요.'), { status: 401 });
+    const response = await fetch(apiBase + '/documents/' + encodeURIComponent(key), { headers: { authorization: 'Bearer ' + token }, cache: 'no-store' });
+    if (!response.ok) { const data = await response.json().catch(() => ({})); throw Object.assign(new Error(errors[data.code] || '서류를 불러오지 못했습니다.'), { status: response.status, code: data.code }); }
+    return response.text();
+  }
+  function printNow(html) {
+    let sheet = document.getElementById('printSheet');
+    if (!sheet) { sheet = document.createElement('div'); sheet.id = 'printSheet'; document.body.append(sheet); }
+    sheet.innerHTML = html;
+    document.body.classList.add('print-doc-mode');
+    const done = () => { document.body.classList.remove('print-doc-mode'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    window.print();
+    setTimeout(done, 60000);
+  }
+  function showPreview(html, key) {
+    const area = $('#printArea');
+    area.innerHTML = `<div class="print-toolbar"><strong>${esc(docLabel(key))} 미리보기</strong><div class="doc-actions"><button class="button primary" type="button" data-preview-print="1">인쇄</button><button class="button secondary" type="button" data-preview-close="1">닫기</button></div></div>${html}`;
+    area.dataset.html = '1';
+    area.hidden = false;
+    area.scrollIntoView({ block: 'start', behavior: 'auto' });
+  }
+  async function signatureClick(target) {
+    const d = target.dataset;
+    if (d.docView || d.docPrint) {
+      const key = d.docView || d.docPrint;
+      setStatus(`${docLabel(key)}를 만들고 있습니다.`);
+      const html = await fetchDocument(key);
+      if (d.docView) showPreview(html, key); else printNow(html);
+      setStatus(`${docLabel(key)} 준비 완료 · 검토용 초안입니다.`);
+      return true;
+    }
+    if (d.previewPrint) { const area = $('#printArea'); const clone = area.cloneNode(true); clone.querySelector('.print-toolbar')?.remove(); printNow(clone.innerHTML); return true; }
+    if (d.previewClose) { $('#printArea').hidden = true; $('#printArea').innerHTML = ''; return true; }
+    if (d.sigOpen) { composerDoc = d.sigOpen; issuedLinks = null; renderSignatureDesk(); $('#sigRequestForm')?.scrollIntoView({ block: 'center', behavior: 'auto' }); return true; }
+    if (d.sigClose) { composerDoc = ''; renderSignatureDesk(); return true; }
+    if (d.sigIssuedClose) { issuedLinks = null; renderSignatureDesk(); return true; }
+    if (d.sigCopy !== undefined) {
+      const row = issuedLinks.links[Number(d.sigCopy)];
+      try { await navigator.clipboard.writeText(shareText(row)); setStatus(`${row.signerName}님 안내 문구와 링크를 복사했습니다. 문자·카카오톡에 붙여넣어 보내 주세요.`); }
+      catch { const input = document.getElementById('sigLink' + d.sigCopy); input.select(); setStatus('자동 복사가 막혀 있습니다. 선택된 링크를 길게 눌러 복사해 주세요.', true); }
+      return true;
+    }
+    if (d.sigShare !== undefined) {
+      const row = issuedLinks.links[Number(d.sigShare)];
+      try { await navigator.share({ title: `${docLabel(issuedLinks.documentKey)} 서명·직인 요청`, text: shareText(row) }); } catch { /* 사용자가 공유를 닫은 경우 */ }
+      return true;
+    }
+    if (d.sigFile) { const row = signatures.requests.find(r => r.id === d.sigFile); await download('/signatures/' + encodeURIComponent(d.sigFile) + '/file', row?.file?.name || 'signed-document'); return true; }
+    if (d.sigAccept || d.sigReject || d.sigCancel || d.sigReissue) {
+      const id = d.sigAccept || d.sigReject || d.sigCancel || d.sigReissue;
+      const row = signatures.requests.find(r => r.id === id);
+      if (d.sigAccept) { if (!confirm(`${row.signerName}님의 「${row.documentLabel}」 서명본을 승인할까요? 승인하면 그 링크는 더 쓸 수 없습니다.`)) return true; await request(`/signatures/${encodeURIComponent(id)}/review`, { method: 'POST', body: JSON.stringify({ decision: 'accepted' }) }); setStatus('승인했습니다.'); }
+      if (d.sigReject) { const note = prompt('반려 사유를 입력해 주세요. 서명자에게 그대로 보입니다.', '서명이 잘 보이지 않습니다. 서류 전체가 보이게 다시 찍어 올려 주세요.'); if (!note) return true; await request(`/signatures/${encodeURIComponent(id)}/review`, { method: 'POST', body: JSON.stringify({ decision: 'rejected', note }) }); setStatus('반려했습니다. 같은 링크로 다시 올릴 수 있습니다.'); }
+      if (d.sigCancel) { if (!confirm(`${row.signerName}님의 「${row.documentLabel}」 요청을 취소할까요? 보낸 링크는 바로 무효가 됩니다.`)) return true; await request(`/signatures/${encodeURIComponent(id)}/cancel`, { method: 'POST', body: '{}' }); setStatus('요청을 취소했습니다.'); }
+      if (d.sigReissue) { if (!confirm(`${row.signerName}님에게 보낼 새 링크를 만들까요? 이전 링크는 바로 무효가 됩니다.`)) return true; const result = await request(`/signatures/${encodeURIComponent(id)}/reissue`, { method: 'POST', body: JSON.stringify({ days: 14 }) }); issuedLinks = { documentKey: row.documentKey, links: [result.link] }; composerDoc = ''; setStatus('새 링크를 만들었습니다. 아래에서 보내 주세요.'); }
+      await loadSignatures();
+      if (d.sigReissue) document.getElementById('sigIssued')?.scrollIntoView({ block: 'center', behavior: 'auto' });
+      return true;
+    }
+    return false;
+  }
+  async function submitSignatureRequest(form) {
+    const founderIds = [...form.querySelectorAll('input[name="founder"]:checked')].map(input => input.value);
+    const values = Object.fromEntries(new FormData(form));
+    const result = await request('/signatures', { method: 'POST', body: JSON.stringify({ documentKey: form.dataset.doc, founderIds, kind: values.kind, days: Number(values.days), message: values.message }) });
+    issuedLinks = { documentKey: result.documentKey, links: result.links };
+    composerDoc = '';
+    setStatus(`링크 ${result.links.length}개를 만들었습니다. 아래에서 각 사람에게 보내 주세요.`);
+    await loadSignatures();
+    document.getElementById('sigIssued')?.scrollIntoView({ block: 'center', behavior: 'auto' });
+  }
+  async function signMain() {
+    const signToken = location.hash.slice(1);
+    const fail = message => { setStatus(message, true); };
+    if (!/^[A-Za-z0-9_-]{43}$/.test(signToken)) return fail('링크가 올바르지 않습니다. 받은 링크 전체를 그대로 다시 열어 주세요.');
+    const call = async (path, options = {}) => {
+      const response = await fetch(`${base}/api${path}`, { ...options, headers: { 'x-ekodi-sign-token': signToken, ...(options.headers || {}) }, cache: 'no-store' });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw Object.assign(new Error(errors[data.code] || '요청을 처리하지 못했습니다. 잠시 뒤 다시 시도해 주세요.'), { code: data.code, status: response.status });
+      return data;
+    };
+    let data;
+    try { data = await call('/sign/request'); } catch (error) { return fail(error.message); }
+    const r = data.request;
+    document.querySelectorAll('[data-coop-name]').forEach(el => { el.textContent = data.coopName; });
+    $('#signTitle').textContent = `${data.legalName} · ${r.documentLabel}`;
+    $('#signSigner').textContent = r.signerName;
+    $('#signKind').textContent = r.kindLabel + (r.how ? ` (${r.how})` : '');
+    $('#signExpires').textContent = kstDateSign(r.expiresAt) + '까지';
+    if (r.message) { $('#signMessage').hidden = false; $('#signMessage').textContent = r.message; }
+    if (r.reviewNote) { $('#signReject').hidden = false; $('#signReject').textContent = '다시 올려 주세요 · ' + r.reviewNote; }
+    const contact = data.contact || {};
+    $('#signContact').textContent = `문의: ${data.coopName} ${contact.role || ''} ${contact.name || ''}${contact.phone ? ' · ' + contact.phone : ''}`;
+    if (data.documentHtml) { $('#printArea').innerHTML = data.documentHtml; $('#printArea').hidden = false; }
+    else $('#signPrint').hidden = true;
+    $('#signRequest').hidden = false;
+    setStatus(r.uploaded && r.status === 'uploaded' ? '이미 제출한 파일이 있습니다. 다시 올리면 새 파일로 바뀝니다.' : '요청 내용을 확인했습니다.');
+    $('#signPrint').addEventListener('click', () => printNow(data.documentHtml));
+    $('#signUpload').addEventListener('submit', async event => {
+      event.preventDefault();
+      const form = event.target;
+      const file = form.elements.file.files[0];
+      if (!file) return fail(errors.COOP_SIGN_FILE_REQUIRED);
+      if (file.size > 10 * 1024 * 1024) return fail(errors.COOP_SIGN_FILE_TOO_LARGE);
+      const button = form.querySelector('button'); button.disabled = true;
+      $('#signResult').textContent = '올리고 있습니다…';
+      try {
+        const body = new FormData(); body.append('file', file);
+        await call('/sign/upload', { method: 'POST', body });
+        form.hidden = true; $('#signPrint').hidden = true;
+        $('#signResult').textContent = `정상 접수되었습니다. ${r.documentLabel} 서명본을 ${data.coopName}에 제출했습니다. 관리자가 확인한 뒤 필요하면 다시 연락드립니다.`;
+        setStatus('제출 완료 · 감사합니다.');
+      } catch (error) { $('#signResult').textContent = error.message; button.disabled = false; }
+    });
+  }
+  function kstDateSign(value) { return value ? new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(value)) : ''; }
   function showTab(tab) {
     currentTab = tab;
     document.querySelectorAll('[data-panel]').forEach(el => { el.hidden = el.dataset.panel !== tab; });
@@ -262,7 +475,7 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
     const role = f => f.position === 'chair-designate' ? '조합장 예정' : f.position === 'member' ? '조합원' : '구성원 대표자';
     $('#workspace').innerHTML = `<div class="stats"><div class="stat"><b>${project.founders.length}명</b><span>조합원 명부</span></div><div class="stat"><b>${project.founders.filter(f => f.business).length}/${project.founders.length}</b><span>사업장 정보 입력</span></div><div class="stat"><b>${project.notices.length}건</b><span>게시된 공지</span></div><div class="stat"><b>${p.shareUnit.toLocaleString('ko-KR')}원</b><span>출자 1좌</span></div></div>
     <div class="tabs" role="tablist" aria-label="조합원 공간">${memberTabs.map(([id, label]) => `<button type="button" role="tab" data-tab="${id}" aria-selected="${id === currentTab}">${label}</button>`).join('')}${project.authority.canAdmin ? `<a class="button secondary tab-link" href="${base}/admin">운영관리</a>` : ''}</div>
-    <section class="card" data-panel="mine"><h2>나의 사업정보</h2><p class="muted">로그인 계정: ${esc(project.me.email)}</p>${own ? `<p><strong>${esc(own.representative)}</strong> · ${role(own)}</p><form id="myBusinessForm" class="form-grid">${field('연락처', 'phone', own.phone)}${field('사업자명 (추후 등록 가능)', 'business', own.business)}${field('사업자등록번호 (추후 등록 가능)', 'businessNumber', own.businessNumber)}${field('업종', 'industry', own.industry)}<div class="form-actions full"><button class="button primary" type="submit">나의 사업정보 저장</button></div></form><p class="form-help">예정 출자: ${own.shares ? own.shares.toLocaleString('ko-KR') + '좌 · ' + won(own.shares * p.shareUnit) : '확인 전'} · 설립동의: ${own.consent === 'confirmed' ? '확인됨' : '확인 전'} · 연락처·사업자등록번호는 본인과 관리자만 볼 수 있습니다.</p>` : '<p class="notice-small">관리자가 로그인 계정과 대표자 명부를 연결하면 나의 사업정보를 입력할 수 있습니다.</p>'}</section>
+    <section class="card" data-panel="mine"><h2>나의 사업정보</h2><p class="muted">로그인 계정: ${esc(project.me.email)}</p>${own ? `<p class="member-line"><strong>${esc(own.representative)}</strong> · ${role(own)}</p>${paymentPanel(own, p)}<h3 class="sub-heading">사업장 정보</h3><form id="myBusinessForm" class="form-grid">${field('연락처', 'phone', own.phone)}${field('사업자명 (추후 등록 가능)', 'business', own.business)}${field('사업자등록번호 (추후 등록 가능)', 'businessNumber', own.businessNumber)}${field('업종', 'industry', own.industry)}<div class="form-actions full"><button class="button primary" type="submit">나의 사업정보 저장</button></div></form><p class="form-help">설립동의: ${own.consent === 'confirmed' ? '확인됨' : '확인 전'} · 연락처·사업자등록번호는 본인과 관리자만 볼 수 있습니다.</p>` : '<p class="notice-small">관리자가 로그인 계정과 대표자 명부를 연결하면 나의 사업정보를 입력할 수 있습니다.</p>'}</section>
     <section class="card" data-panel="roster"><h2>함께하는 구성원</h2><div class="table-wrap"><table class="table"><thead><tr><th>대표자</th><th>사업자명</th><th>업종</th></tr></thead><tbody>${project.founders.map(f => `<tr><td>${esc(f.representative)}${f.position === 'chair-designate' ? '<small>조합장 예정</small>' : ''}</td><td>${esc(f.business || '추후 등록')}</td><td>${esc(f.industry || '확인 전')}</td></tr>`).join('')}</tbody></table></div></section>
     <section class="card" data-panel="prep"><h2>우리 조합의 준비자료</h2><p>${esc(p.name)} · 조합장 예정 ${esc(p.chair)}</p><p class="muted">${esc(p.businesses)}</p><button class="button secondary" id="charter" type="button">정관 검토용 초안 받기</button></section>
     <section class="card" data-panel="notices"><h2>조합 공지</h2>${records(project.notices, 'notices')}</section>
@@ -300,7 +513,7 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
       setStatus('관리 권한 확인 · 각 조합의 서버 자료를 불러왔습니다.');
       return;
     }
-    if (surface === 'admin') renderAdmin(); else renderMember();
+    if (surface === 'admin') { renderAdmin(); loadSignatures(); } else renderMember();
     setStatus(`접근 확인 · ${surface === 'admin' ? '관리자' : '조합원'} · 이 조합의 서버 데이터를 불러왔습니다.`);
     document.querySelectorAll('[data-coop-name]').forEach(el => { el.textContent = project.state?.profile?.name || project.profile.name; });
     window.dispatchEvent(new Event('ekodi-cooperative-session-ready'));
@@ -308,7 +521,7 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
   function bind() {
     for (const name of ['input', 'change']) $('#workspace').addEventListener(name, event => {
       if (event.target.id === 'progressFilter') { progressFilter=event.target.value; filterProgress(); return; }
-      const form = event.target.closest('form'); if (form?.id) dirtyForms.add(form.id);
+      const form = event.target.closest('form'); if (form?.id && !form.dataset.noDirty) dirtyForms.add(form.id);
       if (form?.dataset.progressId && ['evidence','completedDate'].includes(event.target.name)) form.elements.verified.checked=false;
       const preparationKey=form?.dataset.preparationKey||(['progress-09','progress-10'].includes(form?.id)?form.id.slice(-2):'');
       if(preparationKey&&['body','note'].includes(event.target.name))syncPreparationNote(preparationKey,event.target.value,form);
@@ -318,7 +531,14 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
       const target = event.target.closest('button');
       if (!target || saving) return;
       try {
+        if (await signatureClick(target)) return;
         if (target.id === 'openProgress') return showTab('progress');
+        if (target.id === 'reportDeposit') {
+          if (!confirm('출자금 입금을 마치셨나요? 운영진에게 입금 알림을 보냅니다.')) return;
+          target.disabled = true;
+          project = await request('/my-business', { method: 'PUT', body: JSON.stringify({ depositReported: true, revision: project.revision }) });
+          renderMember(); setStatus('입금 알림을 보냈습니다. 운영진이 확인하면 ‘입금 확인 완료’로 바뀝니다.'); return;
+        }
         if (target.dataset.deleteFounder) {
           const f = project.state.founders.find(x => x.id === target.dataset.deleteFounder);
           if (!f || !confirm(`${f.representative} 님을 조합원 명부에서 삭제할까요?\n자가 등록으로 받은 조합원 권한도 함께 회수됩니다. 이 작업은 되돌릴 수 없습니다.`)) return;
@@ -378,13 +598,14 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
       const form = event.target;
       const values = Object.fromEntries(new FormData(form));
       try {
+        if (form.id === 'sigRequestForm') return await submitSignatureRequest(form);
         if(form.dataset.preparationId)return await save({progress:{version:1,items:[{id:form.dataset.preparationId,note:values.body}]}},form.id);
         if (form.dataset.progressId) return await save({progress:{version:1,items:[{id:form.dataset.progressId,...values,verified:form.elements.verified.checked}]}},form.id);
         if (form.id === 'myBusinessForm') {
           project = await request('/my-business', { method: 'PUT', body: JSON.stringify({ ...values, revision: project.revision }) });
           dirtyForms.delete(form.id); renderMember(); setStatus('나의 사업정보가 저장되었습니다.'); return;
         }
-        if (form.id === 'profileForm') return await save({ profile: { ...values, shareUnit: Number(values.shareUnit), firstYearBudget: values.firstYearBudget === '' ? null : Number(values.firstYearBudget), officeConfirmed: form.elements.officeConfirmed.checked } }, form.id);
+        if (form.id === 'profileForm') return await save({ profile: { ...values, shareUnit: Number(values.shareUnit), firstYearBudget: values.firstYearBudget === '' ? null : Number(values.firstYearBudget), officeConfirmed: form.elements.officeConfirmed.checked, shareAccount: { bank: values.shareAccountBank, number: values.shareAccountNumber, holder: values.shareAccountHolder } } }, form.id);
         if (form.id === 'foundersForm' || form.id === 'accountsForm') {
           const founders = project.state.founders.map(f => ({ ...f }));
           form.querySelectorAll('[data-founder-id]').forEach(row => {
@@ -407,13 +628,14 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
       event.preventDefault();
       const form = event.target;
       const button = form.querySelector('button'); button.disabled = true;
-      try { const values = Object.fromEntries(new FormData(form)); await request('/join', { method: 'POST', body: JSON.stringify({ representative: values.representative, phone: values.phone, business: values.business, businessNumber: values.businessNumber, consent: form.elements.consent.checked }) }); $('#applicationResult').textContent = '조합원으로 등록되었습니다. 조합원 공간으로 이동합니다.'; setTimeout(() => location.assign(base + '/members'), 900); }
+      try { const values = Object.fromEntries(new FormData(form)); await request('/join', { method: 'POST', body: JSON.stringify({ representative: values.representative, phone: values.phone, business: values.business, businessNumber: values.businessNumber, consent: form.elements.consent.checked, depositAgreement: form.elements.depositAgreement?.checked === true }) }); $('#applicationResult').textContent = '조합원으로 등록되었습니다. 조합원 공간으로 이동합니다.'; setTimeout(() => location.assign(base + '/members'), 900); }
       catch (error) { $('#applicationResult').textContent = error.message; }
       finally { button.disabled = false; }
     });
     $('#logout').addEventListener('click', () => { if (dirtyForms.size && !confirm('저장되지 않은 입력을 버리고 로그아웃할까요?')) return; dirtyForms.clear(); sessionStorage.removeItem(SESSION_KEY); if (platform) sessionStorage.removeItem('ekodi-auth-token'); location.replace(base + '/'); });
   }
   async function main() {
+    if (surface === 'sign') return signMain();
     if (surface === 'public') {
       try {
         const data = await request('/public');
@@ -439,7 +661,7 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
         $('#gateTitle').textContent = hub ? '협동조합 관리 권한을 확인해 주세요' : surface === 'admin' ? '이 조합의 관리자 권한을 확인해 주세요' : '조합원 등록 확인이 필요합니다';
         $('#gateMessage').textContent = '로그인 계정과 이 조합의 접근권한은 별도로 확인합니다. 이름만으로 권한이 부여되지는 않습니다.';
         $('#loginLink').hidden = true;
-        if (!platform && !hub && error.code !== 'COOP_JOIN_BLOCKED') { $('#application').hidden = false; $('#gate').hidden = surface !== 'admin'; request('/join').then(r => { if (r?.email) { $('#joinEmail').textContent = r.email; $('#joinEmailConsent').textContent = r.email; } }).catch(() => { $('#joinEmail').textContent = '확인되지 않음 · 다시 로그인해 주세요'; }); $('#gateTitle').textContent = '이 조합의 관리자 권한이 없습니다'; }
+        if (!platform && !hub && error.code !== 'COOP_JOIN_BLOCKED') { $('#application').hidden = false; $('#gate').hidden = surface !== 'admin'; request('/join').then(r => { if (r?.email) { $('#joinEmail').textContent = r.email; $('#joinEmailConsent').textContent = r.email; } if (r?.shareUnit) $('#joinShareUnit').textContent = won(r.shareUnit); }).catch(() => { $('#joinEmail').textContent = '확인되지 않음 · 다시 로그인해 주세요'; }); $('#gateTitle').textContent = '이 조합의 관리자 권한이 없습니다'; }
         setStatus(!platform && !hub && surface === 'members' ? '아직 이 조합의 조합원으로 등록되지 않은 계정입니다. 아래에서 바로 등록할 수 있습니다.' : '이 계정에 등록된 조합별 권한이 없습니다.');
       } else setStatus(errors[error.code] || error.message || '접근을 확인하지 못했습니다. 다시 시도해 주세요.', true);
     }
@@ -450,5 +672,5 @@ function clientMain(documents, launchTasks, launchStages, progressSummary, launc
 export function cooperativeScript() {
   // Wrangler preserves function names with a lexical __name helper. Serialized
   // client functions need the same helper inside their browser-only scope.
-  return `(()=>{const __name=(target,value)=>Object.defineProperty(target,'name',{value,configurable:true});\n(${clientMain.toString()})(${JSON.stringify(COOP_DOCUMENTS)},${JSON.stringify(COOP_LAUNCH_TASKS)},${JSON.stringify(COOP_LAUNCH_STAGES)},(${cooperativeProgressSummary.toString()}),(${cooperativeLaunchGuidance.toString()}),(${cooperativePreparation.toString()}));})();`;
+  return `(()=>{const __name=(target,value)=>Object.defineProperty(target,'name',{value,configurable:true});\n(${clientMain.toString()})(${JSON.stringify(COOP_DOCUMENTS)},${JSON.stringify(COOP_LAUNCH_TASKS)},${JSON.stringify(COOP_LAUNCH_STAGES)},(${cooperativeProgressSummary.toString()}),(${cooperativeLaunchGuidance.toString()}),(${cooperativePreparation.toString()}),${JSON.stringify(COOP_PRINTABLE_DOCUMENTS)},${JSON.stringify(SIGNATURE_RULES)},${JSON.stringify(SIGNATURE_KINDS)});})();`;
 }

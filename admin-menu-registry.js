@@ -1,5 +1,6 @@
 import './platform-maturity-admin.js';
 import './domain-control-admin.js';
+import './homepage-subscriptions-admin.js';
 import './admin-menu-templates.js';
 import './admin-service-handoffs.js';
 import './admin-context-shell-recovery.js';
@@ -43,6 +44,7 @@ export const ADMIN_MENUS = Object.freeze([
   { id: 'engines', group: 'services', labels: { ko: '서비스 엔진', en: 'Service Engines' }, sections: ['engine-all', 'engine-core', 'engine-common', 'engine-operations', 'engine-professional', 'engine-ai', 'engine-integration', 'engine-preview'] },
   { id: 'platform-content', group: 'services', labels: { ko: '플랫폼 콘텐츠 서비스', en: 'Platform Content Services' }, sections: ['books', 'common-scripture', 'devotional', 'social', 'work'] },
   { id: 'activity-points', group: 'services', labels: { ko: '활동포인트 운영', en: 'Activity Points' }, sections: ['points'] },
+  { id: 'homepage-subscriptions', group: 'services', labels: { ko: '홈페이지 구독 신청', en: 'Homepage Subscriptions' }, sections: ['homepage-subscriptions'] },
   { id: 'revenue', group: 'finance', labels: { ko: '결제·정산', en: 'Payments & Settlement' }, sections: ['finance'] },
   { id: 'usage', group: 'finance', labels: { ko: '사용량·비용', en: 'Usage & Cost' }, sections: ['api-cost'] },
   { id: 'infrastructure-costs', group: 'finance', labels: { ko: '비용·인프라 관리', en: 'Infrastructure & Billing' }, sections: ['infra-costs'] },
@@ -123,6 +125,7 @@ export const ADMIN_MENU_REGISTRY = Object.freeze([
   { id: 'architecture', group: 'ops', icon: '◇', labels: { ko: '시스템 구조', en: 'System Structure' } },
   { id: 'maturity', group: 'ops', icon: 'M5', labels: { ko: '플랫폼 성숙도', en: 'Platform Maturity' }, superAdminOnly: true },
   { id: 'domain-control', group: 'ops', icon: '◎', labels: { ko: '도메인 관제', en: 'Domain Monitoring' }, superAdminOnly: true },
+  { id: 'homepage-subscriptions', group: 'services', icon: '▦', labels: { ko: '홈페이지 구독 신청', en: 'Homepage Subscriptions' }, superAdminOnly: true },
   { id: 'services', group: 'ops', icon: '▦', labels: { ko: '서비스·지표', en: 'Services & Metrics' }, internal: true },
   { id: 'policies', group: 'accounts', icon: '§', labels: { ko: '정책 내부경로', en: 'Policy Internal Route' }, internal: true },
 

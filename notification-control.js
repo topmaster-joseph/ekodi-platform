@@ -5,7 +5,7 @@ export const NOTIFICATION_TOPICS = Object.freeze({
   education:'에코디교육', books:'출판·서점',
   mall:'에코디몰', seonammedi:'서남권 국립의대'
 });
-const TOPIC_PATH = Object.freeze({
+export const NOTIFICATION_TOPIC_PATHS = Object.freeze({
   church:'/ekodichurch', mission:'/ekodimission', community:'/cheonggye',
   education:'/edu', books:'/ekodibooks', mall:'/ekodimall',
   seonammedi:'/seonammedi'
@@ -60,7 +60,7 @@ function validSubscription(input) {
   } catch { return false; }
 }
 function validPath(topic,path) {
-  const root=TOPIC_PATH[topic];
+  const root=NOTIFICATION_TOPIC_PATHS[topic];
   return typeof path==='string' && path.length<=240 && path.startsWith(root)
     && (path.length===root.length || '/?#'.includes(path[root.length]))
     && !path.includes('\\') && !path.includes('//')

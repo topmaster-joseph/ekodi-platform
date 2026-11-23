@@ -1,0 +1,179 @@
+name: Apply EKODI Points Nonverified Guard (Owner-Approved Development Only)
+
+# Owner-triggered, development-only schema release. No on:push/PR/schedule.
+# Never promotes to production, activates economic rewards or expands Access.
+on:
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: 'Authorized EKODI Orchestrator branch (ai/.../orch_...)'
+        required: true
+        type: string
+      release_task_id:
+        description: 'Exact matching orchestrator task ID'
+        required: true
+        type: string
+      expected_main_sha:
+        description: 'Exact protected main SHA to validate and release'
+        required: true
+        type: string
+      owner_confirms_dev_only:
+        description: 'I approve only the two additive CHECK constraints in DEVELOPMENT'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-points-nonverified-development-schema-owner
+  cancel-in-progress: false
+
+env:
+  DEV_PROJECT: lxcxwbdwwojjkgybbqii
+  MIGRATION: supabase/migrations/20261108224500_ekodi_points_nonverified_reward_guard.sql
+  PREFLIGHT: scripts/sql/points-nonverified-development-preflight.sql
+  POSTFLIGHT: scripts/sql/points-nonverified-development-postflight.sql
+  MIGRATION_GIT_BLOB: 17a1003aa5968c4a7a4914684a144abf5b462ce6
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify one-purpose contract without database mutation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --test test/points-development-guard-release.test.mjs test/points-nonverified-award-guard.test.mjs test/points-release-readiness.test.mjs
+          node scripts/validate-supabase-environment-boundary.mjs
+          test "$(git hash-object "$MIGRATION")" = "$MIGRATION_GIT_BLOB"
+
+  development:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: development
+    env:
+      EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref }}
+      EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id }}
+      EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+      OWNER_CONFIRMS_DEV_ONLY: ${{ inputs.owner_confirms_dev_only }}
+      TOKEN_A: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      TOKEN_B: ${{ secrets.SUPABASE_TOKEN }}
+      TOKEN_C: ${{ secrets.SUPABASE_PAT }}
+      TOKEN_D: ${{ secrets.SUPABASE_MANAGEMENT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Verify owner, development scope, exact main SHA and SQL fingerprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$GITHUB_ACTOR" = topmaster-joseph
+          test "$OWNER_CONFIRMS_DEV_ONLY" = true
+          test "$GITHUB_REF" = refs/heads/main
+          [[ "$EXPECTED_MAIN_SHA" =~ ^[a-f0-9]{40}$ ]]
+          test "$GITHUB_SHA" = "$EXPECTED_MAIN_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_MAIN_SHA"
+          test "$(git ls-remote origin refs/heads/main | awk '{print $1}')" = "$EXPECTED_MAIN_SHA"
+          git merge-base --is-ancestor 33ed214f7f08cd4f11ad7e31e8ce1e3562a48003 "$EXPECTED_MAIN_SHA"
+          test "$DEV_PROJECT" = lxcxwbdwwojjkgybbqii
+          test "$(git hash-object "$MIGRATION")" = "$MIGRATION_GIT_BLOB"
+          test -s "$PREFLIGHT"
+          test -s "$POSTFLIGHT"
+          [[ "$EKODI_RELEASE_BRANCH_REF" =~ ^ai/[a-zA-Z0-9._-]+/orch_[a-zA-Z0-9_-]+$ ]]
+          test "${EKODI_RELEASE_BRANCH_REF##*/}" = "$EKODI_RELEASE_TASK_ID"
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Resolve development-only Management API credential
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="${TOKEN_A:-${TOKEN_B:-${TOKEN_C:-${TOKEN_D:-}}}}"
+          test -n "$token" || { echo '::error::Approved development Management API secret missing'; exit 2; }
+          echo "::add-mask::$token"
+          echo "SUPABASE_ACCESS_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Classify clean install or verified existing guard (read-only)
+        id: preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query:.,read_only:true}' "$PREFLIGHT" > /tmp/points-dev-preflight-request.json
+          code="$(curl --silent --show-error --max-time 25 -o /tmp/points-dev-preflight-result.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$DEV_PROJECT/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H 'Content-Type: application/json' \
+            --data-binary @/tmp/points-dev-preflight-request.json)"
+          test "$code" = 201
+          mode="$(node scripts/classify-points-development-guard-preflight.mjs < /tmp/points-dev-preflight-result.json)" || exit 2
+          test "$mode" = fresh || test "$mode" = already_applied
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Points development schema::Preflight classified as $mode"
+      - name: Reverify protected main before any development database change
+        if: steps.preflight.outputs.mode == 'fresh'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(git rev-parse HEAD)" = "$EXPECTED_MAIN_SHA"
+          test "$(git ls-remote origin refs/heads/main | awk '{print $1}')" = "$EXPECTED_MAIN_SHA"
+          test "$(git hash-object "$MIGRATION")" = "$MIGRATION_GIT_BLOB"
+      - name: Apply exactly one reviewed additive migration and ledger receipt atomically
+        if: steps.preflight.outputs.mode == 'fresh'
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            printf 'BEGIN;\n'
+            cat "$MIGRATION"
+            printf '\n'
+            printf "%s\n" "INSERT INTO supabase_migrations.schema_migrations(version,name)" \
+              "VALUES ('20261108224500','ekodi_points_nonverified_reward_guard');" \
+              'COMMIT;'
+          } > /tmp/points-dev-guard-atomic.sql
+          jq -Rs '{query:.,read_only:false}' /tmp/points-dev-guard-atomic.sql > /tmp/points-dev-guard-request.json
+          # Do not auto-retry an ambiguous mutation result.
+          code="$(curl --silent --show-error --max-time 60 -o /tmp/points-dev-guard-result.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$DEV_PROJECT/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H 'Content-Type: application/json' \
+            --data-binary @/tmp/points-dev-guard-request.json)" || {
+              echo '::error::Development mutation outcome uncertain; inspect read-only postflight before any retry'
+              exit 2
+            }
+          test "$code" = 201 || {
+            echo "::error::Development migration refused HTTP $code; do not retry automatically"
+            exit 2
+          }
+          echo 'Reviewed development-only economic-protection SQL submitted; postflight required.'
+      - name: Verify development CHECK validity, migration history and zero economic credit
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -Rs '{query:.,read_only:true}' "$POSTFLIGHT" > /tmp/points-dev-postflight-request.json
+          code="$(curl --silent --show-error --max-time 25 -o /tmp/points-dev-postflight-result.json -w '%{http_code}' \
+            -X POST "https://api.supabase.com/v1/projects/$DEV_PROJECT/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H 'Content-Type: application/json' \
+            --data-binary @/tmp/points-dev-postflight-request.json)"
+          test "$code" = 201
+          jq -e 'length == 1 and (.[0] | all(.[]; . == true))' /tmp/points-dev-postflight-result.json >/dev/null || {
+            echo '::error::Postflight guard or migration history failed verification'
+            exit 2
+          }
+          echo 'Development-only guard and migration history independently verified. Existing installation was read-only, no duplicate DDL. POINTS_ENABLED remains false.'
+      - name: Record separate production/economic Human Gate
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '### EKODI Points development guard release'
+            echo 'Owner-only DEV workflow. Fresh schema gets one pinned transaction; fully verified existing schema is read-only no-op.'
+            echo 'No production schema, points issuance, economic enablement, Access permission change or backup claim.'
+            echo 'On ambiguous mutation result, inspect the DB read-only before any retry.'
+          } >> "$GITHUB_STEP_SUMMARY"

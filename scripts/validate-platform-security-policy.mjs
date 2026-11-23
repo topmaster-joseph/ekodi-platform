@@ -43,6 +43,12 @@ assert(router.includes("from './public-edge-cache.js'"),'canonical router must i
 assert(router.includes('withPublicEdgeCache(request,ctx'),'SeonamMedi safe public reads must use edge cache wrapper');
 assert(router.includes('await enforcePlatformRequestSecurity(request,env)'),'canonical router must enforce request security before dispatch');
 assert(router.includes('applyPlatformSecurityHeaders(response,request)'),'canonical router must secure every returned response');
+// EKODI-CONTENT-PROTECTION-001 / EKODI-MEDIA-SHIELD-001
+assert(router.includes("from './content-protection-policy.js'"),'canonical router must import the content protection layer');
+assert(router.includes('applyContentProtection(response,request,env)'),'protected documents must pass the content protection layer');
+assert(router.includes('contentProtectionAssetResponse(request)'),'source maps must be refused before tenant routing');
+assert(router.includes('handleMediaShieldRequest(request,env'),'media shield API must be routed before tenant routing');
+assert(wrangler.includes('binding = "MEDIA_SHIELD_BUCKET"'),'media shield bucket binding missing');
 
 for(const marker of [
   'name = "PLATFORM_SENSITIVE_RATE_LIMITER"',

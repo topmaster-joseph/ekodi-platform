@@ -51,3 +51,37 @@ test('non-deploy release still requires required workflows and live health', asy
   const sick = fakeGithub({ files: ['docs/a.md'], health: { ok: false } });
   assert.equal((await collectOrchestratorCompletionEvidence({ taskId, branchRef, fetchImpl: sick.fetchImpl })).verified, false);
 });
+
+test('tooling surface: CI scripts, device tools and staging configs only', () => {
+  assert.equal(isNonDeploySurface(['scripts/converge-orchestrated-pr-merge.mjs', 'scripts/lib/converge-unapproved-runs.mjs']), true);
+  assert.equal(isNonDeploySurface(['tools/ekodi-device-agent/windows/ekodi-device-agent.ps1', 'tools/remote-agent-watchdog/README.md']), true);
+  assert.equal(isNonDeploySurface(['wrangler.my.staging.toml', 'wrangler.energy-staging.toml']), true);
+  assert.equal(isNonDeploySurface(['wrangler.my.toml']), false);
+  assert.equal(isNonDeploySurface(['scripts/lib/deep/x.mjs']), false);
+  assert.equal(isNonDeploySurface(['education/study/index.html']), false);
+  assert.equal(isNonDeploySurface(['supabase/functions/singles-api/bank-transfer.ts']), false);
+});
+
+test('guardrail: no deployed runtime module imports from scripts/ or tools/', async () => {
+  const { readdirSync, readFileSync, statSync } = await import('node:fs');
+  const { join, resolve, dirname } = await import('node:path');
+  const root = new URL('..', import.meta.url).pathname;
+  const skip = new Set(['node_modules', '.git', 'scripts', 'tools', 'test', 'tests', 'docs', 'eval', 'evidence', '.github']);
+  const offenders = [];
+  const walk = dir => {
+    for (const name of readdirSync(dir)) {
+      if (skip.has(name)) continue;
+      const path = join(dir, name);
+      const st = statSync(path);
+      if (st.isDirectory()) { walk(path); continue; }
+      if (!/\.(m?js|ts)$/.test(name)) continue;
+      const src = readFileSync(path, 'utf8');
+      for (const m of src.matchAll(/(?:from\s*|import\s*\(\s*)['"]((?:\.\.?\/)+[^'"]+)['"]/g)) {
+        const target = resolve(dirname(path), m[1]).slice(root.length).replace(/^\/+/, '');
+        if (/^(?:scripts|tools)\//.test(target)) offenders.push(`${path.slice(root.length)} -> ${target}`);
+      }
+    }
+  };
+  walk(root);
+  assert.deepEqual(offenders, []);
+});

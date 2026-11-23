@@ -36,6 +36,13 @@ pattern = "ekodi.kr"
 custom_domain = true
 
 
+# First-party EKODI Mission short URL is a native Shared Site route, not a redirect.
+# Preserve all existing worker_first entries at the Cloudflare 100-route cap;
+# the Mission path has no directly emitted static assets at this root.
+[[routes]]
+pattern = "ekodi.kr/mission*"
+zone_name = "ekodi.kr"
+
 # Canonical Mail contact and send API must reach the Shared Site Worker before asset fallback.
 [[routes]]
 pattern = "ekodi.kr/mail*"
@@ -56,6 +63,25 @@ zone_name = "ekodi.kr"
 # Canonical Church admin must outrank the public /ekodichurch* path gateway.
 [[routes]]
 pattern = "ekodi.kr/ekodichurch/admin*"
+zone_name = "ekodi.kr"
+
+# Release-blocking public accounting notice is owned by Shared Site on exact subpaths.
+# Site-specific wildcard gateways (e.g. /ekodichurch/*) must not capture these
+# pages and return a 200 site homepage instead of the finance disclosure.
+[[routes]]
+pattern = "ekodi.kr/ekodibiz/accounting"
+zone_name = "ekodi.kr"
+
+[[routes]]
+pattern = "ekodi.kr/ekodichurch/accounting"
+zone_name = "ekodi.kr"
+
+[[routes]]
+pattern = "ekodi.kr/ekodimission/accounting"
+zone_name = "ekodi.kr"
+
+[[routes]]
+pattern = "ekodi.kr/seonammedi/accounting"
 zone_name = "ekodi.kr"
 
 # Canonical Church board must outrank the public /ekodichurch/* path gateway.
@@ -119,6 +145,17 @@ database_name = "ekodi-auth"
 database_id = "e38778f1-b059-4fe7-8816-300f3eec6e19"
 migrations_dir = "migrations"
 
+# 협동조합 서명·직인 서명본 원본(workspace/{조합 slug}/documents/coop-signatures/ prefix, private;
+# served only through the cooperative signature API to the cooperative's administrators).
+[[r2_buckets]]
+binding = "COOP_SIGNATURE_FILES"
+bucket_name = "ekodi-storage"
+
+# EKODI-MEDIA-SHIELD-001: encrypted media lives under the media-shield/ prefix of the existing bucket.
+[[r2_buckets]]
+binding = "MEDIA_SHIELD_BUCKET"
+bucket_name = "ekodi-storage"
+
 [[ratelimits]]
 name = "MAIL_CONTACT_RATE_LIMITER"
 namespace_id = "3901"
@@ -159,6 +196,22 @@ name = "TRAFFIC_PROTECT_RATE_LIMITER"
 namespace_id = "3912"
 [ratelimits.simple]
 limit = 3000
+period = 10
+
+# EKODI-EDGE-TRAFFIC-SHIELD-001: per-client isolation. One flooding client is answered
+# 429 alone instead of raising the site-wide tier for every visitor.
+[[ratelimits]]
+name = "TRAFFIC_CLIENT_RATE_LIMITER"
+namespace_id = "3913"
+[ratelimits.simple]
+limit = 600
+period = 10
+
+[[ratelimits]]
+name = "TRAFFIC_NETWORK_RATE_LIMITER"
+namespace_id = "3914"
+[ratelimits.simple]
+limit = 2000
 period = 10
 
 

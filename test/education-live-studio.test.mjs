@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,readdir} from 'node:fs/promises';
 import {COURSE} from '../education/study/live/courses/mnu-factchat-2026.js';
+import './education-official-mnu-pdf.test.mjs'; // Exact uploaded university PDF and additive practice integration.
+import './education-factchat-editable-samples.test.mjs'; // HWPX/PPTX sources, full visible text and Office ZIP/XML roundtrip
+import './education-meeting-transcript-cleanup.test.mjs';
 import {NOTES} from '../education/study/live/courses/mnu-factchat-2026.notes.js';
 import {COURSES} from '../education/study/live/courses/registry.js';
 import {COURSE as BOOTCAMP} from '../education/study/ai-bootcamp/catalog.js';
@@ -168,8 +171,8 @@ test('Learner Lab never imports instructor notes; pages are CSP-compatible (no i
 
 test('Study hub links the new studio and the existing bootcamp; deploy pipeline verifies it natively',async()=>{
   const [study,deploy,ci]=await Promise.all([read('education/study/index.html'),read('.github/workflows/deploy-education.yml'),read('.github/workflows/ci.yml')]);
-  assert.match(study,/href="\/study\/live\/\?c=mnu-factchat-2026"/);
-  assert.match(study,/href="\/study\/ai-bootcamp\/"/);
+  assert.match(study,/href="\/edu\/study\/live\/\?c=mnu-factchat-2026"/);
+  assert.match(study,/href="\/edu\/study\/ai-bootcamp\/"/);
   assert.match(deploy,/node --test test\/education-live-studio\.test\.mjs/);
   assert.match(deploy,/node scripts\/verify-education-live-studio-native\.mjs/);
   assert.match(ci,/test\/education-live-studio\.test\.mjs/);
@@ -238,7 +241,10 @@ test('instructor intro: public facts only, portrait asset present, intro and hoo
   const {INSTRUCTOR}=await import('../education/study/live/courses/instructor.js');
   const {stat}=await import('node:fs/promises');
   const src=await read('education/study/live/courses/instructor.js');
-  assert.doesNotMatch(src,/01[016789]-?\d{3,4}-?\d{4}|@[a-z0-9.-]+\.[a-z]{2,}|\d{3}-\d{2}-\d{5}/i,'no phone, e-mail or business ID in public instructor data');
+  const pub=src.replace(/contact:Object\.freeze\(\{[^}]*\}\)/,'');
+  assert.doesNotMatch(pub,/01[016789]-?\d{3,4}-?\d{4}|@[a-z0-9.-]+\.[a-z]{2,}|\d{3}-\d{2}-\d{5}/i,'contact details only in the approved contact field');
+  assert.deepEqual({...INSTRUCTOR.contact},{phone:'010-3501-8542',email:'joseph@ekodi.kr'},'instructor-approved contact (2026-11-18)');
+  assert.match((await import('../education/study/live/engine/render.js')).instructorCard(INSTRUCTOR,''),/href="tel:01035018542"[\s\S]*href="mailto:joseph@ekodi\.kr"/);
   assert.ok((await stat(new URL('../education/study/live/'+INSTRUCTOR.photo,import.meta.url))).size>10000);
   assert.ok(INSTRUCTOR.sites.every(x=>/^https:\/\//.test(x.url)));
   const s1=sessionSlides(COURSE,1),s2=sessionSlides(COURSE,2);
@@ -372,7 +378,7 @@ test('presenter AI demo: institutional FactChat through the EKODI server route o
   const src=await readFile(new URL('../education/study/live/engine/factchat-demo.js',import.meta.url),'utf8');
   assert.doesNotMatch(src,/FACTCHAT_MOKPO_API_KEY|mokpo\.factchat\.bot\/api|sk-[A-Za-z0-9]/,'no key or direct provider call in the browser');
   const auth=await readFile(new URL('../auth-site/admin-auth.js',import.meta.url),'utf8');
-  assert.match(auth,/u\.pathname==='\/edu\/study\/live\/'\|\|u\.pathname==='\/edu\/study\/live\/present\/'\|\|u\.pathname==='\/edu\/study\/live\/unlock\/'\|\|u\.pathname==='\/edu\/study\/live\/docs\/'\)\)return u\.href;/,'exact instructor paths only (studio, presenter, unlock, docs)');
+  assert.match(auth,/u\.pathname==='\/edu\/study\/live\/'\|\|u\.pathname==='\/edu\/study\/live\/present\/'\|\|u\.pathname==='\/edu\/study\/live\/unlock\/'\|\|u\.pathname==='\/edu\/study\/live\/docs\/'\|\|u\.pathname==='\/edu\/study\/live\/screen-share\/'\|\|u\.pathname==='\/edu\/study\/live\/guide\/'\|\|u\.pathname==='\/edu\/study\/live\/guide\/stats\.html'\|\|u\.pathname==='\/edu\/study\/live\/guide\/feedback\.html'\)\)return u\.href;/,'exact instructor paths only (studio, presenter, unlock, docs, screen-share room, lecture guide)');
   assert.doesNotMatch(auth,/pathname\.startsWith\('\/edu/,'no /edu prefix wildcard');
 });
 

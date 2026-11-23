@@ -1,3 +1,4 @@
+import { essayAdmin } from './publishing-journal-essays.js';
 // PUBLISH-PIPELINE-001 — Publisher owns private manuscripts; no bookstore DB access.
 import { FIELD_CATALOG } from './publishing/human/editorial-policy.js';
 import { publicationTransition, permittedAiRequest } from './publishing/workflow-policy.js';
@@ -293,6 +294,10 @@ export async function handlePublishingWorkflow(req,env){
       if(!['publisher','admin'].includes(r))return error(403,'PUBLISHER_ONLY');
       const data=await db.prepare("SELECT id,title,edition_id,scheduled_at FROM publishing_workflow_projects WHERE stage='scheduled' AND scheduled_at<=? ORDER BY scheduled_at LIMIT 100").bind(now()).all();
       return result(200,{ok:true,due:data.results||[],note:'인계 후보이며 자동 판매가 아님'});
+    }
+    if(path.startsWith('/api/workflow/admin/journal-essays')){
+      const res=await essayAdmin(db,req,path,r,(status,data)=>result(status,data));
+      if(res)return res;
     }
     if(path.startsWith('/api/workflow/admin/ai-books')){
       const res=await aiFactoryAdmin(db,req,path,u,r,(status,data)=>result(status,data),env);

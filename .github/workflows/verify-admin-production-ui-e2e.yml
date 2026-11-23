@@ -6,6 +6,8 @@ on:
   pull_request:
     paths:
       - 'scripts/verify-admin-production-ui-e2e.mjs'
+      - 'scripts/verify-admin-three-surfaces-live-layout.mjs'
+      - 'test/admin-three-surfaces-live-layout.test.mjs'
       - 'test/admin-production-ui-e2e-isolation.test.mjs'
       - 'scripts/verify-bbqcg-production-readonly.mjs'
       - 'test/bbqcg-production-readonly.test.mjs'
@@ -18,8 +20,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  offline-layout-chromium:
+    # PR-time visual proof has no authenticated session and NO calls to the production origin.
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install isolated Chromium for offline source layout assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.55.1
+          npx playwright install --with-deps chromium
+      - name: Run three-screen read-only source fixture at five viewports
+        shell: bash
+        env:
+          EKODI_LAYOUT_CANARY_SOURCE: repo
+        run: |
+          set -euo pipefail
+          node scripts/verify-admin-three-surfaces-live-layout.mjs
+      - name: Upload offline viewport screenshots and JSON evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-three-surfaces-offline-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/admin-three-surfaces-layout
+          if-no-files-found: warn
+          retention-days: 7
   chromium:
-    runs-on: ubuntu-latest
+    # Playwright 1.55.x Chromium does not install on ubuntu-26.04 (ubuntu-latest); keep browser jobs on LTS.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -32,13 +66,14 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/validate-canonical-api-execution.mjs
-          node --test test/apex-api-retirement.test.mjs test/admin-production-ui-e2e-isolation.test.mjs test/bbqcg-production-readonly.test.mjs
+          node --check scripts/verify-admin-three-surfaces-live-layout.mjs
+          node --test test/apex-api-retirement.test.mjs test/admin-production-ui-e2e-isolation.test.mjs test/bbqcg-production-readonly.test.mjs test/admin-three-surfaces-live-layout.test.mjs
       - name: Install isolated Chromium test runtime
         if: ${{ github.event_name != 'pull_request' }}
         shell: bash
         run: |
           set -euo pipefail
-          npm install --no-save --no-package-lock playwright
+          npm install --no-save --no-package-lock playwright@1.65.1
           npx playwright install --with-deps chromium
       - name: Verify production Admin menu paths
         if: ${{ github.event_name != 'pull_request' }}
@@ -48,6 +83,12 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/verify-admin-production-ui-e2e.mjs
+      - name: Verify deployed layouts with inert fixtures (320–1440px)
+        if: ${{ github.event_name != 'pull_request' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/verify-admin-three-surfaces-live-layout.mjs
       - name: Verify BBQCG guest/public production contracts (read-only)
         if: ${{ github.event_name != 'pull_request' }}
         shell: bash
@@ -61,6 +102,7 @@ jobs:
           name: admin-production-ui-e2e-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             artifacts/admin-production-ui-e2e
+            artifacts/admin-three-surfaces-layout
             artifacts/bbqcg-production-readonly
           if-no-files-found: warn
           retention-days: 7

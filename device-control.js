@@ -1566,6 +1566,9 @@ async function handleAdmin(request, env) {
       if (payload.service === 'domeggook-business' && authCapabilities.domeggookNativeAuth !== true) {
         return json({ error: '도매꾹 자체 브라우저 지원을 위한 EKODI Agent 업데이트가 필요합니다.', code: 'DOMEGGOOK_NATIVE_AUTH_AGENT_UPGRADE_REQUIRED' }, 409, request, env);
       }
+      if (payload.service === 'korail-ticket' && authCapabilities.korailNativeAuth !== true) {
+        return json({ error: '코레일 공식 로그인 지원을 위한 EKODI Agent 업데이트가 필요합니다.', code: 'KORAIL_NATIVE_AUTH_AGENT_UPGRADE_REQUIRED' }, 409, request, env);
+      }
       if (statusFor(device.last_seen_at, null) !== 'online') {
         return json({ error: '기기가 온라인이 아닙니다. 사용자가 PC 앞에 있을 때만 로그인 창을 열 수 있습니다.', code: 'INTERACTIVE_AUTH_DEVICE_OFFLINE' }, 409, request, env);
       }

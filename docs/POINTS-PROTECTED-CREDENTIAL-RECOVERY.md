@@ -28,3 +28,12 @@
 ### 판정
 
 CI 통과, Storage Worker 배포, 백업 명세 문서 또는 미리 생성된 폴더만으로는 운영 백업/복원/포인트 활성화 완료로 처리하지 않습니다. 단 하나라도 확인되지 않으면 `blocked`로 보고 원인을 그대로 남깁니다.
+
+## 4. 원래 값을 복구할 수 없을 때: 소유자 승인 일괄 교체 (2026-11-22 결정)
+
+Cloudflare는 저장된 Worker 비밀값을 다시 보여주지 않고, 소유자 드라이브·메일에서도 기존 값을 찾지 못해 소유자가 교체를 결정했습니다. 임의 발행 대신 `.github/workflows/rotate-storage-gateway-key.yml`로만 교체합니다.
+
+1. 사전검사: Cloudflare 자격증명, `EKODI_GITHUB_ADMIN_TOKEN`의 production 환경 비밀값 쓰기 권한(무해한 시험 값 쓰기·삭제), 두 Worker의 기존 키 이름 존재를 모두 확인합니다. 하나라도 실패하면 아무것도 바꾸지 않습니다.
+2. 같은 새 값을 Control API(호출자) → Storage Worker(검증자) → GitHub production 순으로 넣습니다. Control API가 즉시 수정을 거부하면 그 자리에서 중단해 불일치를 만들지 않습니다.
+3. `ekodi.kr/api/storage/v1/backup-acl`이 새 키를 받아들이는지 읽기 전용으로 확인합니다. 값은 출력·저장되지 않습니다.
+4. 그 뒤 1번 ACL 검사 워크플로를 다시 실행합니다.

@@ -30,8 +30,9 @@ const sample = {
 test('public history renders verified timeline without private source metadata', () => {
   const html = renderPublicHistory([sample]);
   assert.match(html, /지나온 길/);
-  assert.match(html, /2018년 3월 14일/);
-  assert.match(html, /문서 확인/);
+  assert.match(html, /<time class="history-day">03\.14<\/time>/);
+  assert.match(html, /id="history-2018"/);
+  assert.doesNotMatch(html, /문서 확인|역사 아카이브|사역의 흐름/);
   assert.match(html, /한국외국인선교회 무안지부/);
   assert.doesNotMatch(html, /secret-internal-reference/);
   assert.doesNotMatch(html, /내부 검증 메모/);
@@ -65,4 +66,22 @@ test('worker routes stay on canonical ekodi.kr path hierarchy', async () => {
   assert.match(config, /ekodi\.kr\/ekodichurch\/admin\/history\*/);
   assert.match(config, /ekodi\.kr\/api\/church\/admin\/history\*/);
   assert.doesNotMatch(config, /history\.ekodi\.kr/);
+});
+
+test('public history lists months and days in descending order within a year', () => {
+  const html = renderPublicHistory([
+    { start_date: '2018-03-14', date_label: '2018년 3월 14일', title: '삼월' },
+    { start_date: '2018-08-13', date_label: '2018년 8월 13일', title: '팔월' },
+    { start_date: '2018-10-09', date_label: '2018년 10월 9일', title: '시월' },
+  ]);
+  assert.ok(html.indexOf('시월') < html.indexOf('팔월') && html.indexOf('팔월') < html.indexOf('삼월'));
+});
+
+test('weekly recurring schedules sit at the top of their year as "M월 ~ 현재"', () => {
+  const html = renderPublicHistory([
+    { start_date: '2024-10-05', date_label: '2024년 10월 5일', title: '가을행사' },
+    { start_date: '2024-01-06', date_label: '2024년 1월부터 현재', kind: 'weekly', title: '토요모임' },
+  ]);
+  assert.match(html, /<li class="history-recurring"><time class="history-day">1월 ~ 현재<\/time><span>토요모임<\/span><\/li>/);
+  assert.ok(html.indexOf('토요모임') < html.indexOf('가을행사'));
 });

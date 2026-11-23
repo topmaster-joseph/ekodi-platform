@@ -54,7 +54,7 @@ test('canonical Cloud HTML keeps shared Shell after legacy host loses manifest l
 });
 
 test('public execution surface roots canonicalize slashless URLs to the same trailing-slash route',async()=>{
-  const publicRoots=PLATFORM_EXECUTION_SURFACES.filter(spec=>spec.id!=='ai'&&!spec.exact&&!spec.id.endsWith('-api')&&!spec.prefix.includes('/api/'));
+  const publicRoots=PLATFORM_EXECUTION_SURFACES.filter(spec=>!['ai','volunteer'].includes(spec.id)&&!spec.exact&&!spec.id.endsWith('-api')&&!spec.prefix.includes('/api/'));
   assert.ok(PLATFORM_EXECUTION_SURFACES.some(spec=>spec.id==='ai'));
   for(const spec of publicRoots){
     const response=await routeCanonicalSurface(new Request(`https://ekodi.kr${spec.prefix}`),{});
@@ -63,6 +63,20 @@ test('public execution surface roots canonicalize slashless URLs to the same tra
     assert.equal(location.pathname,`${spec.prefix}/`,`${spec.id} must preserve the canonical service root`);
     assert.equal(location.hostname,'ekodi.kr');
   }
+});
+
+test('Volunteer module root is served directly, with no 301/302/307/308 redirect',async()=>{
+  const visits=[];
+  const env={SPACE:{fetch:async request=>{visits.push(new URL(request.url).pathname);return new Response('<main>EKODI VOLUNTEER</main>',{headers:{'content-type':'text/html'}})}}};
+  for(const path of ['/volunteer','/volunteer/','/volunteer/activities/2026-coal-delivery']){
+    const response=await routeCanonicalSurface(new Request('https://ekodi.kr'+path),env);
+    assert.equal(response.status,200);
+    assert.equal(response.headers.get('location'),null,'native volunteer routes must not redirect');
+    assert.equal(response.headers.get('x-ekodi-canonical-surface'),'volunteer');
+  }
+  assert.deepEqual(visits,['/volunteer','/volunteer/','/volunteer/activities/2026-coal-delivery']);
+  const offline=await routeCanonicalSurface(new Request('https://ekodi.kr/volunteer'),{});
+  assert.equal(offline.status,503,'missing SPACE service must fail closed');
 });
 
 test('Research canonical route is owned by Education and never served by the workspace fallback',async()=>{
@@ -462,4 +476,28 @@ test('Publishing Studio execution proxy keeps canonical API calls outside the se
   assert.match(transformed,/api\('books\/me'\)/);
   assert.doesNotMatch(transformed,/\/publishing\/api\/books\/me/);
   assert.equal(new URL('books/me','https://ekodi.kr/api/').pathname,'/api/books/me');
+});
+
+test('bare /study/live paths redirect to the /edu lecture studio, other /study paths are untouched',async()=>{
+  for(const [path,want] of [['/study/live/guide/stats','/edu/study/live/guide/stats'],['/study/live/guide/stats.html?x=1','/edu/study/live/guide/stats.html?x=1'],['/study/live','/edu/study/live']]){
+    const r=await routeCanonicalSurface(new Request('https://ekodi.kr'+path),{});
+    assert.equal(r.status,308,path);assert.equal(r.headers.get('location'),'https://ekodi.kr'+want,path);
+  }
+  const post=await routeCanonicalSurface(new Request('https://ekodi.kr/study/live/x',{method:'POST'}),{});
+  assert.ok(!post||post.status!==308,'POST is not redirected');
+  const other=await routeCanonicalSurface(new Request('https://ekodi.kr/study/notes'),{});
+  assert.ok(!other||other.status!==308,'other /study paths untouched');
+});
+
+test('root-relative upstream redirects keep the /edu mount (ekodi.kr/edu/study/live must not fall out)',async()=>{
+  const education={fetch:async request=>{
+    const u=new URL(request.url);
+    if(u.pathname==='/study/live')return new Response(null,{status:307,headers:{location:'/study/live/'}});
+    if(u.pathname==='/study/live/guide/stats.html')return new Response(null,{status:307,headers:{location:'/study/live/guide/stats?a=1'}});
+    return new Response('ok',{status:200,headers:{'content-type':'text/plain'}});
+  }};
+  const a=await routeCanonicalSurface(new Request('https://ekodi.kr/edu/study/live'),{EDUCATION:education});
+  assert.equal(a.headers.get('location'),'/edu/study/live/');
+  const b=await routeCanonicalSurface(new Request('https://ekodi.kr/edu/study/live/guide/stats.html'),{EDUCATION:education});
+  assert.equal(b.headers.get('location'),'/edu/study/live/guide/stats?a=1');
 });

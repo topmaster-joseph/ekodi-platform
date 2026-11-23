@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {chromium} from 'playwright';
+// 공유 감사 분류기. 메서드와 URL 을 완전일치로 보므로 분류되지 않는 쓰기 요청은
+// 전과 같이 치명적으로 남는다.
+import {classifyMutationSecurityBlock} from './education-native-security-observations.mjs';
 
 // First-party EKODI isolated browser. The browser loads actual production UI,
 // but never receives a real user's session or sends a fabricated token upstream.
@@ -14,7 +17,7 @@ const FAKE_TOKEN='ekodi-native-canary-fixture-not-a-user';
 const artifactDir=path.resolve('artifacts/ekodi-church-native-ui');
 await fs.mkdir(artifactDir,{recursive:true});
 const browser=await chromium.launch({headless:true});
-const checks=[],errors=[],httpErrors=[],blockedMethods=[];
+const checks=[],errors=[],httpErrors=[],blockedMethods=[],blockedMutations=[];
 let intercepted=0;
 let preflights=0;
 let assetStatus=null;
@@ -55,7 +58,9 @@ try{
       return route.abort('blockedbyclient');
     }
     if(!['GET','HEAD','OPTIONS'].includes(method)){
-      blockedMethods.push(method);
+      // 메서드만 기록하면 2026-11-08 푸터 방문통계 비콘과 실제 쓰기를 구분할 수
+      // 없다. URL 까지 기록해 공유 분류기가 판정하게 한다.
+      blockedMutations.push({method,url:route.request().url().slice(0,300)});
       return route.abort('blockedbyclient');
     }
     return route.continue();
@@ -195,7 +200,11 @@ try{
   assert.equal(await admin.evaluate(el=>el.hidden),true);
   assert.equal(intercepted,beforeLogout,'logout without a token must not probe the API');
   checks.push({step:'in-browser synthetic logout',result:'hidden-no-API-call',intercepted});
-  assert.deepEqual(blockedMethods,[],'ordinary public site must not perform mutations');
+  // 가짜 토큰 누출은 분류 대상이 아니다 — 항상 실패해야 한다. 메시지를 분리해
+  // 누출과 떠돌이 쓰기 요청을 혼동하지 않게 한다.
+  assert.deepEqual(blockedMethods,[],'fixture token must never reach the network');
+  const unexpectedMutations=blockedMutations.filter(item=>classifyMutationSecurityBlock(item.method,item.url)===null);
+  assert.deepEqual(unexpectedMutations,[],'ordinary public site must not perform mutations');
   console.log('EKODI_NATIVE_CHURCH_ROLE_UI_CANARY='+JSON.stringify({
     mode:'EKODI-owned Chromium',origin:ORIGIN,
     realUserAuthenticated:false,serverRoleResponsesSimulated:true,

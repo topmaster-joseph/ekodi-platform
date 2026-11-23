@@ -100,6 +100,14 @@ function dbFixture(){
             row.completed_at=this.args[5];
             return {meta:{changes:1}};
           }
+          if(sql.startsWith("UPDATE ekodi_orchestrator_tasks SET state='blocked'")){
+            if(row.state!=='assigned')return {meta:{changes:0}};
+            row.state='blocked';
+            row.state_version+=1;
+            row.dead_letter_reason='unclaimed_no_worker_14d';
+            row.updated_at=this.args[0];
+            return {meta:{changes:1}};
+          }
           if(sql.includes('INSERT INTO ekodi_orchestrator_task_events')){
             events.push({args:this.args});
             return {meta:{changes:1}};
@@ -303,4 +311,43 @@ test('no-deploy-surface evidence listing runtime files is rejected as invalid sh
   const response=await handleOrchestratorCompletionReconciliation(request(token,{action:'complete',taskId,branchRef,evidence:noDeployEvidence(['admin-ai-governor.js'])}),env,{fetchImpl});
   assert.equal(response.status,400);
   assert.equal(row.state,'assigned');
+});
+
+function githubBranchState(fetchImpl,{pulls=[],branchStatus=404}={}){
+  return async input=>{
+    const url=String(input);
+    if(url.startsWith('https://api.github.com/repos/topmaster-joseph/ekodi-platform/pulls?state=all'))return new Response(JSON.stringify(pulls),{status:200});
+    if(url.startsWith('https://api.github.com/repos/topmaster-joseph/ekodi-platform/branches/'))return new Response('{}',{status:branchStatus});
+    return fetchImpl(input);
+  };
+}
+
+test('unclaimed task older than 14 days is parked as blocked, not completed or deleted',async()=>{
+  const {token,fetchImpl}=oidcFixture();
+  const {env,row,events}=dbFixture();
+  const response=await handleOrchestratorCompletionReconciliation(request(token,{action:'park',taskId,branchRef}),env,{fetchImpl:githubBranchState(fetchImpl)});
+  assert.equal(response.status,200);
+  assert.equal(row.state,'blocked');
+  assert.equal(row.dead_letter_reason,'unclaimed_no_worker_14d');
+  assert.ok(events.length>=1);
+  const again=await handleOrchestratorCompletionReconciliation(request(token,{action:'park',taskId,branchRef}),env,{fetchImpl:githubBranchState(fetchImpl)});
+  assert.equal((await again.json()).idempotent,true);
+});
+
+test('park is refused when a worker touched the branch, the task is recent, or GitHub cannot confirm',async()=>{
+  const cases=[
+    {opts:{pulls:[{number:1}]},reason:'unclaimed_unconfirmed'},
+    {opts:{branchStatus:200},reason:'unclaimed_unconfirmed'},
+    {opts:{branchStatus:403},reason:'unclaimed_unconfirmed'},
+    {recent:true,opts:{},reason:'task_too_recent_to_park'},
+  ];
+  for(const c of cases){
+    const {token,fetchImpl}=oidcFixture();
+    const {env,row}=dbFixture();
+    if(c.recent)row.created_at=new Date().toISOString();
+    const response=await handleOrchestratorCompletionReconciliation(request(token,{action:'park',taskId,branchRef}),env,{fetchImpl:githubBranchState(fetchImpl,c.opts)});
+    assert.equal(response.status,409);
+    assert.equal((await response.json()).reason,c.reason);
+    assert.equal(row.state,'assigned');
+  }
 });

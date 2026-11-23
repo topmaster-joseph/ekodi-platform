@@ -92,3 +92,27 @@ test('wrangler routes dynamic discovery artifacts through Worker first',async()=
   assert.match(config,/run_worker_first\s*=\s*\[[^\]]*"\/llms\.txt"/s);
   assert.match(config,/run_worker_first\s*=\s*\[[^\]]*"\/public-registry\.json"/s);
 });
+
+test('approved Korean-IDN canonical keeps SeonamMedi managed but does not advertise EKODI alias for indexing',async()=>{
+  const {isApexSearchSubmissionUrl,APEX_EXTERNAL_CANONICAL_ALIASES}=await import('../public-discovery-registry.js');
+  const alias='https://ekodi.kr/seonammedi';
+  assert.equal(APEX_EXTERNAL_CANONICAL_ALIASES.has('/seonammedi'),true);
+  assert.equal(isApexSearchSubmissionUrl(alias),false);
+  assert.equal(isApexSearchSubmissionUrl(alias+'/'),false);
+  assert.equal(isApexSearchSubmissionUrl('https://ekodi.kr/seonammedi/notices/7'),true,
+    'other content must not be removed before canonical evidence');
+  assert.equal(isApexSearchSubmissionUrl('https://ekodi.kr/jadam'),true);
+  assert.equal(isApexSearchSubmissionUrl('https://other.example/jadam'),false);
+  assert.equal(isApexSearchSubmissionUrl('https://ekodi.kr/jadam?token=secret'),false);
+  assert.equal(isApexSearchSubmissionUrl('https://ekodi.kr@other.example/jadam'),false);
+  const registry=await buildEkodiPublicRegistry({DB:db()});
+  assert.ok(registry.urls.includes(alias), 'public site admin registry must retain accessible alias');
+  const sitemap=await (await ekodiDynamicSitemapResponse({DB:db()})).text();
+  assert.ok(!sitemap.includes('<loc>'+alias+'</loc>'));
+  assert.ok(!sitemap.includes('<loc>'+alias+'/</loc>'));
+  assert.ok(sitemap.includes('<loc>https://ekodi.kr/jadam</loc>'));
+  const {readFile}=await import('node:fs/promises');
+  const schedule=await readFile(new URL('../marketing-indexnow-scheduler.js',import.meta.url),'utf8');
+  assert.match(schedule,/isApexSearchSubmissionUrl\(resource\.url\)/,
+    'platform IndexNow must not submit the noncanonical SeonamMedi mount');
+});

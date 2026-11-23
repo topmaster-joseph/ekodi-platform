@@ -64,6 +64,19 @@ test('summary aggregates per-topic data without exposing endpoint, token or priv
   assert.equal(json.topics[0].events,1);
   assert.equal(json.topics[0].delivered,1);
   assert.equal(json.webPushEnabled,false);
+  assert.equal(json.healthAudit.status,'unavailable');
+  assert.equal(json.healthAudit.fresh,false);
+  assert.equal(json.fleet.scope,'registered_sites_only');
+  assert.equal(json.fleet.dynamicCustomerWorkspacesIncluded,false);
+  assert.equal(json.fleet.liveDeliveryVerified,false);
+  assert.ok(json.fleet.counts.registered>7);
+  assert.ok(json.fleet.counts.notConnected>0);
+  assert.deepEqual(json.operatorChannel,{
+    configured:false,registeredDevices:null,gatewayAcceptedDevices:null,gatewayFailedDevices:null,
+    lastGatewayAttemptAt:null,ready:false,deliveredToPhoneVerified:false
+  });
+  assert.equal(json.topics[0].health,'configuration_required');
+  assert.ok(json.topics[0].diagnosis.includes('publisher_not_ready'));
   const output=JSON.stringify(json);
   for(const secret of ['private-token-hash','Private body','Private title','/ekodimission/'])assert.equal(output.includes(secret),false);
   assert.equal(result.headers.get('cache-control'),'no-store');
@@ -122,4 +135,29 @@ test('period windows isolate historical events while subscriber count remains cu
   for(const secret of ['private-device-token','Private old title','Private new message']){
     assert.equal(JSON.stringify(all.body).includes(secret),false);
   }
+});
+
+test('platform health snapshot visibility is dated and never asserts phone delivery',async()=>{
+  const f=fixture();await f.authorize();
+  f.raw.exec(readFileSync(new URL('../migrations/202611210730_notification_health_snapshots.sql',import.meta.url),'utf8'));
+  f.raw.prepare(`INSERT INTO notification_health_snapshots
+    (topic,state,subscriber_devices,events_24h,failed_24h,stalled,events_overdue,
+     publisher_ready,push_enabled,checked_at,changed_at,consecutive_attention)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+      'church','attention',2,5,1,1,0,1,0,
+      '2026-11-21T00:20:00.000Z','2026-11-21T00:10:00.000Z',2);
+  const res=await handleNotificationAdminSummary(request(f.token),{DB:f.db},
+    {now:new Date('2026-11-21T00:30:00.000Z')});
+  assert.equal(res.status,200);
+  const data=await res.json();
+  assert.equal(data.healthAudit.status,'recorded');
+  assert.equal(data.healthAudit.fresh,true);
+  assert.equal(data.healthAudit.topics.length,1);
+  assert.equal(data.healthAudit.topics[0].failed24h,1);
+  assert.equal(data.healthAudit.topics[0].consecutiveAttention,2);
+  assert.equal(data.healthAudit.handsetReceiptVerified,false);
+  assert.doesNotMatch(JSON.stringify(data),/token_hash|endpoint|p256dh|auth_secret/);
+  const stale=await handleNotificationAdminSummary(request(f.token),{DB:f.db},
+    {now:new Date('2026-11-21T01:30:00.000Z')});
+  assert.equal((await stale.json()).healthAudit.fresh,false);
 });

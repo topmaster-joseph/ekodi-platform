@@ -7,6 +7,7 @@ import {previewSiteAiMicroIntent} from '../ekodi-site-ai-intent-preview.js';
 import {ORIGIN,verifyLiveSiteAiFleet,verifyLiveSiteAiPreview,verifyProductionSiteAi} from '../scripts/verify-ekodi-site-ai-live.mjs';
 
 const first=sites.existingWorkspaceSites.find(s=>s.class==='workspace_user_site'
+  &&s.lifecycleState!=='retired'&&s.visibility!=='archive-only'
   &&/^https:\/\/ekodi\.kr\/[a-z0-9-]+\/?$/.test(s.canonicalUrl)
   &&!/planned|preparing|pending/i.test(s.migrationState));
 const makeFleet=()=>({ok:true,...projectSiteAiFleet(sites,[],{ledgerAvailable:true})});

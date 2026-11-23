@@ -22,7 +22,8 @@ concurrency:
 jobs:
   verify:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
+    # Playwright 1.55.x Chromium does not install on ubuntu-26.04 (ubuntu-latest); keep browser jobs on LTS.
+    runs-on: ubuntu-24.04
     timeout-minutes: 14
     steps:
       - uses: actions/checkout@v7
@@ -44,7 +45,7 @@ jobs:
           node --test test/ekodipay-canonical.test.mjs test/ekodipay-demo-flow.test.mjs
       - name: Install first-party isolated Chromium
         run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium
       - name: Verify actual canonical PC and mobile screens and no-charge checkout
         env:

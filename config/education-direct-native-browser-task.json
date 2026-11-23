@@ -1,0 +1,20 @@
+{
+  "taskId": "edu-direct-canonical-20261121",
+  "kind": "public-readonly",
+  "deviceProfile": "desktop",
+  "screenshots": false,
+  "timeoutMs": 120000,
+  "paths": [
+    "/edu/courses/",
+    "/edu/fields/safety/",
+    "/edu/audiences/foreign-workers/",
+    "/edu/courses/foreign-worker-cold-safety-2026/",
+    "/edu/courses/mnu-factchat-120m-2026/",
+    "/edu/courses/mnu-factchat-2026/",
+    "/edu/courses/mnu-ai-bootcamp-2026/",
+    "/edu/courses/farm-marketing-2026/",
+    "/edu/courses/pizza-experience-2026/",
+    "/edu/learn/mnu-factchat-2026/",
+    "/edu/study/"
+  ]
+}

@@ -24,6 +24,7 @@ on:
       - 'scripts/edu-instructor-gate-verifier.mjs'
       - 'scripts/verify-education-live-studio-native.mjs'
       - 'scripts/verify-education-screen-share-native.mjs'
+      - 'scripts/verify-education-deep-links-native.mjs'
       - 'test/education-screen-share-probe-fixture.test.mjs'
       - 'scripts/education-probe-annotate.mjs'
       - 'test/education-native-security-observations.test.mjs'
@@ -53,6 +54,7 @@ on:
       - 'scripts/edu-instructor-gate-verifier.mjs'
       - 'scripts/verify-education-live-studio-native.mjs'
       - 'scripts/verify-education-screen-share-native.mjs'
+      - 'scripts/verify-education-deep-links-native.mjs'
       - 'test/education-screen-share-probe-fixture.test.mjs'
       - 'scripts/education-probe-annotate.mjs'
       - 'test/education-native-security-observations.test.mjs'
@@ -107,6 +109,13 @@ jobs:
           node --check education/research/planner.js
           node --check education/research/app.js
           node --check education/app.js
+          node --check education/course-hub/router.js
+          node --check education/course-hub/hub.js
+          node --check education/course-hub/auth.js
+          node --check scripts/verify-education-course-hub-native.mjs
+          node --check scripts/verify-education-deep-links-native.mjs
+          node --test test/education-direct-links-qr.test.mjs
+          node --test test/education-course-hub.test.mjs test/education-course-hub-canonical-urls.test.mjs
           node --check scripts/verify-education-farm-marketing-native.mjs
           node --check scripts/verify-education-release-snapshot.mjs
           node --check education/study/farm-marketing/app.js
@@ -180,13 +189,20 @@ jobs:
             study=$(curl -L -sS -o /tmp/edu-stage-study.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/study" || true)
             health=$(curl -sS -o /tmp/edu-stage-health.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/health" || true)
             config=$(curl -sS -o /tmp/edu-stage-config.js -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/config.js" || true)
-            if [[ "$root" == '200' && "$admission" == '200' && "$study" == '200' && "$health" == '200' && "$config" == '200' ]] \
+            hub=$(curl -sS -o /tmp/edu-stage-hub.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/courses/" || true)
+            learner=$(curl -sS -o /tmp/edu-stage-learner.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/learn/foreign-worker-cold-safety-2026/" || true)
+            teacher=$(curl -sS -o /tmp/edu-stage-teacher.html -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/teach/" || true)
+            hub_catalog=$(curl -sS -o /tmp/edu-stage-courses.json -w '%{http_code}' --connect-timeout 5 --max-time 15 "$STAGING_URL/courses/catalog.json" || true)
+            if [[ "$root" == '200' && "$admission" == '200' && "$study" == '200' && "$health" == '200' && "$config" == '200' && "$hub" == '200' && "$learner" == '200' && "$teacher" == '401' && "$hub_catalog" == '200' ]] \
               && grep -Fq 'EKODI Education' /tmp/edu-stage.html \
               && grep -Fq 'ADMISSION · SOURCE FIRST' /tmp/edu-stage-admission.html \
               && grep -Fq 'STUDY · CONTINUITY' /tmp/edu-stage-study.html \
               && grep -Fq '"service":"ekodi-education"' /tmp/edu-stage-health.json \
               && grep -Fq '"submissionExecution":false' /tmp/edu-stage-health.json \
               && grep -Fq '"dataMode":"isolated-staging"' /tmp/edu-stage-health.json \
+              && grep -Fq 'hubMain' /tmp/edu-stage-hub.html \
+              && grep -Fq 'Verified instructor sign-in' /tmp/edu-stage-teacher.html \
+              && grep -Fq 'foreign-worker-cold-safety-2026' /tmp/edu-stage-courses.json \
               && grep -Fq '"dataEnabled":false' /tmp/edu-stage-config.js \
               && grep -Eiq '^x-ekodi-shell: v2' /tmp/edu-stage-headers; then
               echo 'EKODI Education isolated staging verified.'
@@ -199,7 +215,8 @@ jobs:
   production:
     if: always() && github.event_name != 'pull_request' && needs.validate.result == 'success'
     needs: [validate, staging]
-    runs-on: ubuntu-latest
+    # Playwright 1.55.x Chromium does not install on ubuntu-26.04 (ubuntu-latest); keep browser jobs on LTS.
+    runs-on: ubuntu-24.04
     timeout-minutes: 22
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -392,6 +409,15 @@ jobs:
         run: node scripts/verify-education-documents-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-documents-native; exit 1; }
       - name: Verify Premium Studio instructor, presenter and learner flows on desktop and mobile
         run: node scripts/verify-education-live-studio-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-live-native; exit 1; }
+      - name: Verify unified Education catalog, learner and teacher boundaries in real Chromium
+        run: node scripts/verify-education-course-hub-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-course-hub-native; exit 1; }
+      - name: Verify all Education deep links, QR entry targets and zero-redirect direct routes
+        run: node scripts/verify-education-deep-links-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-deep-link-qr-native; exit 1; }
+      - name: Verify all direct Education URLs with EKODI independent native browser v2
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/education-direct-native
+          node scripts/ekodi-independent-browser.mjs config/education-direct-native-browser-task.json | tee artifacts/education-direct-native/receipt.json
       - name: Verify instructor QR room and learner-approved screen preview in real Education production
         run: node scripts/verify-education-screen-share-native.mjs || { node scripts/education-probe-annotate.mjs artifacts/education-screen-share-native; exit 1; }
       - uses: actions/upload-artifact@v4
@@ -405,6 +431,9 @@ jobs:
             artifacts/education-live-native/
             artifacts/education-farm-marketing-native/
             artifacts/education-screen-share-native/
+            artifacts/education-course-hub-native/
+            artifacts/education-deep-link-qr-native/
+            artifacts/education-direct-native/
           retention-days: 7
       - name: Publish Education production status
         if: always()

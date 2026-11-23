@@ -13,7 +13,10 @@ const MODERN=[
   ['/ekodichurch/schedule/','주요일정'],
   ['/ekodichurch/#together','함께하기'],
   ['/ekodichurch/my/','마이페이지']
-];
+]; 
+// Preserve dormant central import V2 proof while requiring QTIN for the current independent Church Pages release.
+const QTIN=MODERN.map(([href,label],i)=>i===5?['/qtin/church','큐티인 신청']:[href,label]);
+const matchesItems=(items,contract)=>items.length===contract.length&&contract.every(([href,label],index)=>items[index][0]===href&&items[index][1]===label);
 const requiredNested=[
   "['예배안내','#worship']",
   "['주보·PPT','#weekly-worship']",
@@ -36,13 +39,14 @@ const links=nav=>[...nav.matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/g)].map(([,attrs,
   return [href,body.replace(/<[^>]*>/g,'').trim()];
 });
 
-export function verifyChurchHeaderNavigation(html,nestedScript=''){
+export function verifyChurchHeaderNavigation(html,nestedScript='',options={}){
   const nav=extractNav(html),items=links(nav);
   const legacy=items.some(([href,label])=>href==='#weekly-worship'&&label==='예배자료');
-  const modern=items.length===MODERN.length && MODERN.every(([href,label],index)=>
-    items[index][0]===href && items[index][1]===label);
+  const modernMy=matchesItems(items,MODERN),modernQtin=matchesItems(items,QTIN);
+  const modern=options.requireQtinPrimary===true?modernQtin:(modernMy||modernQtin);
   if(legacy && modern)fail('ambiguous navigation version');
   if(legacy){
+    if(options.requireQtinPrimary===true)fail('QTIN primary menu required for current Church Pages release');
     if(!html.includes('data-church-weekly'))fail('legacy worship editor missing');
     return Object.freeze({contract:'legacy-reviewed',primaryItems:items.length});
   }
@@ -60,7 +64,7 @@ export function verifyChurchHeaderNavigation(html,nestedScript=''){
     fail('back-forward navigation restoration missing');
   if(nav.includes('오늘의 삶')||nav.includes('공동체')||nav.includes('협력소식'))
     fail('retired primary menu item returned');
-  return Object.freeze({contract:'six-item-selected-content',primaryItems:6,contextItems:requiredNested.length});
+  return Object.freeze({contract:modernQtin?'six-item-qtin-selected-content':'six-item-selected-content',primaryItems:6,contextItems:requiredNested.length});
 }
 
 
@@ -70,11 +74,11 @@ export function verifyChurchHeaderNavigation(html,nestedScript=''){
  * a successful static Pages deploy may mask an older routed or cached page.
  * This is a read-only release gate, not a source-switch authorization.
  */
-export function verifyChurchPublicSubpageNavigation(html,page) {
+export function verifyChurchPublicSubpageNavigation(html,page,options={}) {
   if(!['devotion','notices','schedule'].includes(page))fail('unsupported subpage');
   const nav=extractNav(html),items=links(nav);
-  if(items.length!==MODERN.length||!MODERN.every(([href,label],index)=>
-    items[index][0]===href&&items[index][1]===label)){
+  const modernMy=matchesItems(items,MODERN),modernQtin=matchesItems(items,QTIN);
+  if(!(options.requireQtinPrimary===true?modernQtin:(modernMy||modernQtin))){
     fail('public '+page+' subpage has stale or inconsistent six-item navigation');
   }
   const expected='/ekodichurch/'+page+'/';
@@ -94,15 +98,16 @@ export function verifyChurchPublicSubpageNavigation(html,page) {
     schedule:['data-church-shared-schedules','data-church-public-manage hidden']
   };
   for(const marker of required[page])if(!html.includes(marker))fail('public '+page+' content/role guard missing: '+marker);
-  return Object.freeze({contract:'six-item-subpage',page,primaryItems:6});
+  return Object.freeze({contract:modernQtin?'six-item-qtin-subpage':'six-item-subpage',page,primaryItems:6});
 }
 
 if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]){
   try{
     const args=process.argv.slice(2);
+    const options={requireQtinPrimary:args.includes('--expect-qtin')};
     if(args[0]==='--subpage'){
       if(!args[1]||args[2]!=='--kind'||!args[3])fail('expected --subpage PUBLIC_HTML --kind devotion|notices|schedule');
-      const result=verifyChurchPublicSubpageNavigation(readFileSync(args[1],'utf8'),args[3]);
+      const result=verifyChurchPublicSubpageNavigation(readFileSync(args[1],'utf8'),args[3],options);
       process.stdout.write(JSON.stringify(result)+'\n');
       process.exit(0);
     }
@@ -113,7 +118,7 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]){
     try{nested=readFileSync(args[3],'utf8')}catch(error){
       if(error.code!=='ENOENT')throw error;
     }
-    const result=verifyChurchHeaderNavigation(html,nested);
+    const result=verifyChurchHeaderNavigation(html,nested,options);
     process.stdout.write(JSON.stringify(result)+'\n');
   }catch(error){console.error(error.message);process.exitCode=1;}
 }

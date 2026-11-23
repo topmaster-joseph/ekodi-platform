@@ -197,4 +197,6 @@ test('private trade portal uses apex identity and clears proof before asynchrono
   assert.ok(source.includes("const startupWatchdog=setTimeout("));
   assert.ok(source.includes("state('연결 확인 지연')"));
   assert.ok(source.includes("clearTimeout(startupWatchdog)"));
+  assert.ok(source.includes("TRADE_PORTAL_NAME_PRELUDE='(()=>{const __name="));
+  assert.ok(source.includes("'cache-control':'no-store'"),'fixed browser runtime must not remain in a five-minute edge cache');
 });

@@ -133,7 +133,34 @@ function activeStatus(record) {
   }
   return record.status;
 }
-export async function agencyApi(request, url, env) {
+// Private operator notification only after durable application creation.
+// Never include receipt token, customer identity, email, supplier or payment details.
+export function agencyIntakeOperatorNotice(record) {
+  return {
+    source:'agency',
+    subject:'AI 위탁계약 새 신청 접수',
+    lines:['AI 서비스 구매·결제 위탁 신청 접수',
+      '신청 유형: '+(record.type==='institution'?'기관':'개인'),
+      '견적 검토 대기'],
+    link:'https://ekodi.kr/ekodibiz/ai-agency/manage'
+  };
+}
+export async function notifyAgencyIntake(env,record,ctx) {
+  if (env.AGENCY_OPERATOR_NOTIFY_ENABLED!=='true') return {ok:false,code:'AGENCY_NOTICE_DISABLED'};
+  if (!env.OPERATOR_NOTIFY?.notify) return {ok:false,code:'AGENCY_NOTICE_BINDING_UNAVAILABLE'};
+  const task=Promise.resolve().then(()=>env.OPERATOR_NOTIFY.notify(agencyIntakeOperatorNotice(record)))
+    .then(result=>{
+      if(!result?.ok)console.warn('EKODIBIZ agency operator notice unavailable:',String(result?.code||'unknown').slice(0,48));
+      return {ok:Boolean(result?.ok),code:result?.code||null};
+    }).catch(()=>{
+      console.warn('EKODIBIZ agency operator notice failed');
+      return {ok:false,code:'AGENCY_NOTICE_RPC_FAILED'};
+    });
+  // In production, keep customer response independent of phone gateway latency.
+  if(ctx?.waitUntil) {ctx.waitUntil(task);return {ok:true,queued:true};}
+  return task;
+}
+export async function agencyApi(request, url, env, ctx) {
   const path = url.pathname.replace(/^\/ekodibiz(?=\/)/, '');
   if (!path.startsWith('/api/agency/')) return null;
   if (path === '/api/agency/health' && request.method === 'GET') {
@@ -172,6 +199,8 @@ export async function agencyApi(request, url, env) {
         termsVersion:'2026-11-06-v1', issuedAt:new Date().toISOString(),
         consentAt:new Date().toISOString(), audit:[{ at:new Date().toISOString(), action:'submitted' }] };
       await store(env, '/agency/create', { record });
+      // Notification failure must never roll back an already-saved application.
+      await notifyAgencyIntake(env,record,ctx);
       return reply({ ok:true, id, receiptToken:token, status:record.status, months:record.months }, 201);
     }
     if (path === '/api/agency/status' || path === '/api/agency/accept' || path === '/api/agency/checkout' || path === '/api/agency/confirm') {

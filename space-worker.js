@@ -1,17 +1,21 @@
 import { realtimeTenant } from './realtime-tenant-registry.js';
+import { isMissionCanonicalPath, missionRuntimePath, missionPublicReferences } from './mission-public-path.js';
 import { handleMissionActivityEditor, MISSION_ACTIVITY_EDITOR_PATH } from './mission-activity-editor-api.js';
 import { tenantLivePage } from './tenant-live-page.js';
 import { isPublicWorkspacePath, workspaceRouteFromPublicPath, workspaceSlugFromPublicPath } from './workspace-route-policy.js';
 import { renderStorefrontPage, storefrontCss } from './storefront-page.js';
+import { isHomepageSubscriptionSlug, renderHomepageSubscriptionSite } from './homepage-subscription-site.js';
 import { renderBbqCheonggyePage, bbqCheonggyeCss, bbqCheonggyeQrScript } from './bbq-cheonggye-site.js';
+import { renderBbqcgOrderPortal, bbqcgOrderPortalCss, bbqcgOrderClientScript } from './bbqcg-order-portal.js';
 import { renderBbqcgServiceStandards, bbqcgServiceStandardsCss, bbqcgPublicResourceDownload, bbqcgHomeWithResources } from './bbqcg-service-standards.js';
 import { renderJadamStorefrontPage, jadamStorefrontCss } from './jadam-storefront.js';
 import { renderRestaurantStorefrontPage, restaurantStorefrontCss } from './restaurant-storefront.js';
-import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage } from './organization-public-page.js';
+import { isOrganizationWorkspaceSlug, renderOrganizationPublicPage, organizationPublicCss } from './organization-public-page.js';
 import { renderBnslovePublicPage, bnslovePublicCss } from './bnslove-public-page.js';
 import { isMnuBizWorkspaceSlug, renderMnuBizPublicPage, mnubizPublicCss } from './mnubiz-public-page.js';
 import { isMnuBizSuncheonPath, renderMnuBizSuncheonPage } from './mnubiz-suncheon-page.js';
 import { injectEkodiShell } from './ekodi-shell-injector.js';
+import { routeVolunteer } from './volunteer-module.js';
 
 const EKODIMISSION_PREFIX='/ekodimission';
 const EKODIMISSION_PUBLIC_ROUTE='ekodimission-public';
@@ -58,7 +62,7 @@ function missionShareDate(value){
   return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'long',day:'numeric',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(date);
 }
 function missionShareResponse(env,html,status=200){
-  const response=withHeaders(env,new Response(html,{status,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}}),'ekodimission-share');
+  const response=withHeaders(env,new Response(missionPublicReferences(html),{status,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store'}}),'ekodimission-share');
   response.headers.set('x-ekodi-independent-site','true');
   response.headers.set('x-ekodi-site-class','brand-site');
   response.headers.set('x-ekodi-workspace','ekodimission');
@@ -130,7 +134,7 @@ async function routeMissionCollabPage(request,env){
   const target=new URL(request.url);target.pathname='/ekodimission-trip-collab.page';target.search='';target.hash='';
   const asset=await env.ASSETS.fetch(new Request(target.toString(),request));const headers=new Headers(asset.headers);
   headers.set('content-type','text/html; charset=utf-8');headers.set('cache-control','no-store');headers.delete('content-length');
-  const html=await asset.text();const response=withHeaders(env,new Response(request.method==='HEAD'?null:html,{status:asset.status,headers}),'ekodimission-collab');
+  const html=missionPublicReferences(await asset.text());const response=withHeaders(env,new Response(request.method==='HEAD'?null:html,{status:asset.status,headers}),'ekodimission-collab');
   response.headers.set('x-ekodi-independent-site','true');response.headers.set('x-ekodi-workspace','ekodimission');response.headers.set('x-ekodi-publication-status','private-edit');response.headers.set('x-robots-tag','noindex, nofollow, noarchive');return response;
 }
 
@@ -345,9 +349,9 @@ async function routeMissionAdminActivityRpc(request,env){
   }
 }
 async function routeEkodiMission(request,env){
-  const url=new URL(request.url);const pathname=normalizedMissionPath(url.pathname);if(pathname===MISSION_ACTIVITY_EDITOR_PATH)return handleMissionActivityEditor(request,env,{respond:(data,status)=>json(env,data,status),publicRpc:(rpc,args)=>missionSupabaseRpc(env,rpc,args)});if(pathname===MISSION_ADMIN_ME_API)return routeMissionAdminMe(request,env);if(pathname===MISSION_ADMIN_ACTIVITY_RPC_API)return routeMissionAdminActivityRpc(request,env);if(pathname===MISSION_TRIP_CONTENT_API)return routeMissionTripContent(request,env);if(pathname===MISSION_COLLAB_API)return routeMissionCollabApi(request,env);if(pathname===MISSION_TRIP_COLLAB_PATH)return routeMissionCollabPage(request,env);const registrationMatch=pathname.match(MISSION_ACTIVITY_REGISTRATION_RE);if(registrationMatch)return routeMissionActivityRegistration(request,env,registrationMatch[1]);const uploadMatch=pathname.match(MISSION_ACTIVITY_MEDIA_UPLOAD_RE);if(uploadMatch)return routeMissionActivityMediaUpload(request,env,uploadMatch[1]);const mediaFileMatch=pathname.match(MISSION_ACTIVITY_MEDIA_FILE_RE);if(mediaFileMatch)return routeMissionActivityMediaFile(request,env,mediaFileMatch[1]);const mediaMatch=pathname.match(MISSION_ACTIVITY_MEDIA_RE);if(mediaMatch)return routeMissionActivityMedia(request,env,mediaMatch[1]);const archiveMatch=pathname.match(MISSION_ACTIVITY_ARCHIVE_RE);if(archiveMatch)return routeMissionActivityArchive(request,env,archiveMatch[1]);const shareMatch=pathname.match(MISSION_SHARE_PATH_RE);
+  const url=new URL(request.url);const originalPath=missionRuntimePath(url.pathname);const pathname=MISSION_EVENT_LEGACY_PATHS.has(originalPath)&&isMissionCanonicalPath(url.pathname)?MISSION_EVENT_PATH:originalPath;if(pathname===MISSION_ACTIVITY_EDITOR_PATH)return handleMissionActivityEditor(request,env,{respond:(data,status)=>json(env,data,status),publicRpc:(rpc,args)=>missionSupabaseRpc(env,rpc,args)});if(pathname===MISSION_ADMIN_ME_API)return routeMissionAdminMe(request,env);if(pathname===MISSION_ADMIN_ACTIVITY_RPC_API)return routeMissionAdminActivityRpc(request,env);if(pathname===MISSION_TRIP_CONTENT_API)return routeMissionTripContent(request,env);if(pathname===MISSION_COLLAB_API)return routeMissionCollabApi(request,env);if(pathname===MISSION_TRIP_COLLAB_PATH)return routeMissionCollabPage(request,env);const registrationMatch=pathname.match(MISSION_ACTIVITY_REGISTRATION_RE);if(registrationMatch)return routeMissionActivityRegistration(request,env,registrationMatch[1]);const uploadMatch=pathname.match(MISSION_ACTIVITY_MEDIA_UPLOAD_RE);if(uploadMatch)return routeMissionActivityMediaUpload(request,env,uploadMatch[1]);const mediaFileMatch=pathname.match(MISSION_ACTIVITY_MEDIA_FILE_RE);if(mediaFileMatch)return routeMissionActivityMediaFile(request,env,mediaFileMatch[1]);const mediaMatch=pathname.match(MISSION_ACTIVITY_MEDIA_RE);if(mediaMatch)return routeMissionActivityMedia(request,env,mediaMatch[1]);const archiveMatch=pathname.match(MISSION_ACTIVITY_ARCHIVE_RE);if(archiveMatch)return routeMissionActivityArchive(request,env,archiveMatch[1]);const shareMatch=pathname.match(MISSION_SHARE_PATH_RE);
   if(shareMatch)return routeMissionShare(request,env,shareMatch[1]);
-  if(MISSION_EVENT_LEGACY_PATHS.has(pathname)){const target=new URL(MISSION_EVENT_PATH+url.search,'https://ekodi.kr');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-route':'ekodimission-event-canonical','x-ekodi-publication-status':'published'}});}
+if(MISSION_EVENT_LEGACY_PATHS.has(pathname)){const target=new URL(MISSION_EVENT_PATH+url.search,'https://ekodi.kr');return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-route':'ekodimission-event-canonical','x-ekodi-publication-status':'published'}});}
   if(pathname==='/ekodimission/live'){
     const tenant=realtimeTenant('ekodimission');if(!tenant)return withHeaders(env,new Response('Not Found',{status:404}),'ekodimission-not-found');
     return brandSiteResponse(liveStudioHeaders(withHeaders(env,tenantLivePage(tenant),EKODIMISSION_PUBLIC_ROUTE)));
@@ -356,7 +360,8 @@ async function routeEkodiMission(request,env){
   if(!assetPath)return brandSiteResponse(withHeaders(env,new Response('Not Found',{status:404,headers:{'content-type':'text/plain; charset=utf-8'}}),'ekodimission-not-found'));
   const target=new URL(request.url);target.pathname=assetPath;target.search='';const asset=await env.ASSETS.fetch(new Request(target.toString(),request));
   const isPage=EKODIMISSION_PAGES.has(pathname);let served=asset;
-  if(isPage){const headers=new Headers(asset.headers);headers.set('content-type','text/html; charset=utf-8');headers.delete('content-length');const html=publishMissionHtml(await asset.text());const rendered=pathname==='/ekodimission/presence'?html.replace('content="index,follow"','content="noindex,nofollow,noarchive"'):html;served=new Response(request.method==='HEAD'?null:rendered,{status:asset.status,statusText:asset.statusText,headers});}
+  if(isPage){const headers=new Headers(asset.headers);headers.set('content-type','text/html; charset=utf-8');headers.delete('content-length');const html=missionPublicReferences(publishMissionHtml(await asset.text()));const rendered=pathname==='/ekodimission/presence'?html.replace('content="index,follow"','content="noindex,nofollow,noarchive"'):html;served=new Response(request.method==='HEAD'?null:rendered,{status:asset.status,statusText:asset.statusText,headers});}
+  else if(/\.(?:js|css|svg)$/.test(pathname)){const headers=new Headers(asset.headers);headers.delete('content-length');headers.delete('content-encoding');served=new Response(request.method==='HEAD'?null:missionPublicReferences(await asset.text()),{status:asset.status,statusText:asset.statusText,headers});}
   const branded=brandSiteResponse(withHeaders(env,served,EKODIMISSION_ASSETS.has(pathname)?'ekodimission-asset':EKODIMISSION_PUBLIC_ROUTE));
   if(pathname==='/ekodimission/presence')branded.headers.set('x-robots-tag','noindex, nofollow, noarchive');
   if(isPage&&MISSION_PUBLIC_ADMIN_PATHS.has(pathname)&&typeof HTMLRewriter==='function'){
@@ -518,6 +523,14 @@ async function appShell(request,env,route='space-home',profile=DEFAULT_PAGE_PROF
 export default{
   async fetch(request,env){
     const url=new URL(request.url);
+    // Reusable, tenant-scoped Volunteer service; canonical /volunteer is direct, never a redirect.
+    if(/^\/volunteer(?:\/|$)/.test(url.pathname)){
+      const response=await routeVolunteer(request,env,{json,withHeaders});
+      if(request.method==='GET'&&response.status===200&&String(response.headers.get('content-type')||'').includes('text/html')&&typeof HTMLRewriter==='function'){
+        return injectEkodiShell(response,'ekodi','public',{existingHeader:true,memberGate:'service-owned'});
+      }
+      return response;
+    }
     const legacyAlias=url.hostname.toLowerCase()==='space.ekodi.kr';
     const canonicalRedirect=()=>{
       const target=new URL(url.pathname+url.search,'https://ekodi.kr');
@@ -529,16 +542,16 @@ export default{
         status:410,headers:{'content-type':'text/plain; charset=utf-8','cache-control':'no-store','x-robots-tag':'noindex, nofollow, noarchive'}
       }),'space-gone');
     }
-    const missionApplicationMatch=normalizedMissionPath(url.pathname).match(MISSION_ACTIVITY_APPLICATION_RE);
+    const missionApplicationMatch=missionRuntimePath(url.pathname).match(MISSION_ACTIVITY_APPLICATION_RE);
     if(missionApplicationMatch)return submitMissionEventApplication(request,env,missionApplicationMatch[1],missionApplicationMatch[1]);
-    if(normalizedMissionPath(url.pathname)===MISSION_TRIP_CONTENT_API)return routeMissionTripContent(request,env);
-    if(normalizedMissionPath(url.pathname)===MISSION_COLLAB_API)return routeMissionCollabApi(request,env);
-    if(normalizedMissionPath(url.pathname)===MISSION_ADMIN_ACTIVITY_RPC_API||normalizedMissionPath(url.pathname)===MISSION_ACTIVITY_EDITOR_PATH)return routeEkodiMission(request,env);
+    if(missionRuntimePath(url.pathname)===MISSION_TRIP_CONTENT_API)return routeMissionTripContent(request,env);
+    if(missionRuntimePath(url.pathname)===MISSION_COLLAB_API)return routeMissionCollabApi(request,env);
+    if(missionRuntimePath(url.pathname)===MISSION_ADMIN_ACTIVITY_RPC_API||missionRuntimePath(url.pathname)===MISSION_ACTIVITY_EDITOR_PATH)return routeEkodiMission(request,env);
     // Public post-event photo/link submissions must reach the Mission media handlers.
     // All body, consent, origin and file signature checks remain inside routeEkodiMission.
-    const missionWritePath=normalizedMissionPath(url.pathname);
+    const missionWritePath=missionRuntimePath(url.pathname);
     if(request.method==='POST'&&(MISSION_ACTIVITY_MEDIA_UPLOAD_RE.test(missionWritePath)||MISSION_ACTIVITY_MEDIA_RE.test(missionWritePath)))return routeEkodiMission(request,env);
-    if(['GET','HEAD'].includes(request.method)&&(normalizedMissionPath(url.pathname)===EKODIMISSION_PREFIX||normalizedMissionPath(url.pathname).startsWith(EKODIMISSION_PREFIX+'/')))return routeEkodiMission(request,env);
+    if(['GET','HEAD'].includes(request.method)&&(missionWritePath===EKODIMISSION_PREFIX||missionWritePath.startsWith(EKODIMISSION_PREFIX+'/')))return routeEkodiMission(request,env);
     if(url.pathname==='/health')return json(env,{ok:true,service:'ekodi-space',product:'operating-space',identity:'ekodi-id',workspaceIdentity:'workspace-id',routeModel:['root-slug','workspace-service'],memberNamespaceRequired:false,dataEnabled:runtimeConfig(env).dataEnabled,dataMode:runtimeConfig(env).dataMode});
     if(url.pathname==='/config.js')return withHeaders(env,new Response(`window.EKODI_SPACE_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store'}}),'config');
     if(url.pathname==='/storefront.json'){
@@ -548,6 +561,8 @@ export default{
       return data?json(env,data):json(env,{error:'storefront_unavailable'},503);
     }
     if(url.pathname==='/bbqcg/assets/site.css')return withHeaders(env,bbqCheonggyeCss(),'bbqcg-asset');
+    if(url.pathname==='/bbqcg/assets/order.css'&&['GET','HEAD'].includes(request.method))return withHeaders(env,bbqcgOrderPortalCss(),'bbqcg-asset');
+    if(url.pathname==='/bbqcg/assets/order-client.js'&&['GET','HEAD'].includes(request.method))return withHeaders(env,bbqcgOrderClientScript(),'bbqcg-asset');
     if(url.pathname==='/bbqcg/assets/service-standards.css'&&['GET','HEAD'].includes(request.method))return withHeaders(env,bbqcgServiceStandardsCss(),'bbqcg-asset');
     if(/^\/bbqcg\/resources\/(?:store-promise\.html|qcs-gms-checklist\.csv)$/.test(url.pathname)){
       if(!['GET','HEAD'].includes(request.method))return withHeaders(env,new Response(null,{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}}),'bbqcg-materials');
@@ -555,6 +570,13 @@ export default{
       const resolved=await pageProfile('/bbqcg',env);
       if(resolved.source!=='store-user-sites'||resolved.status==='paused')return withHeaders(env,new Response('Site unavailable',{status:404,headers:{'cache-control':'no-store'}}),'bbqcg-materials');
       return withHeaders(env,bbqcgPublicResourceDownload(request,url.pathname),'bbqcg-materials');
+    }
+    if(url.pathname==='/bbqcg/order'){
+      if(!['GET','HEAD'].includes(request.method))return withHeaders(env,new Response(null,{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}}),'bbqcg-qr-order');
+      if(legacyAlias)return canonicalRedirect();
+      const resolved=await pageProfile('/bbqcg',env);
+      if(resolved.source!=='store-user-sites'||resolved.status==='paused')return withHeaders(env,new Response('Site unavailable',{status:404,headers:{'cache-control':'no-store'}}),'bbqcg-qr-order');
+      return withHeaders(env,await renderBbqcgOrderPortal(request,env),'bbqcg-qr-order');
     }
     if(url.pathname==='/bbqcg/service-guide'){
       if(!['GET','HEAD'].includes(request.method))return withHeaders(env,new Response(null,{status:405,headers:{allow:'GET, HEAD','cache-control':'no-store'}}),'bbqcg-service-guide');
@@ -569,6 +591,7 @@ export default{
     if(url.pathname==='/jadam-storefront.css'||url.pathname==='/_ekodi/space/jadam-storefront.css')return withHeaders(env,jadamStorefrontCss(),'storefront-asset');
     if(url.pathname==='/restaurant-storefront.css'||url.pathname==='/_ekodi/space/restaurant-storefront.css')return withHeaders(env,restaurantStorefrontCss(),'storefront-asset');
     if(url.pathname==='/mnubiz/assets/site.css')return withHeaders(env,mnubizPublicCss(),'mnubiz-asset');
+    if(url.pathname==='/organization.css'||url.pathname==='/_ekodi/space/organization.css')return withHeaders(env,organizationPublicCss(),'organization-asset');
 
     if(['GET','HEAD'].includes(request.method)&&isMnuBizSuncheonPath(url.pathname)){
       return injectEkodiShell(withHeaders(env,renderMnuBizSuncheonPage(url.pathname),'mnubiz-suncheon-page'),'community','public',{existingHeader:true});
@@ -617,6 +640,9 @@ export default{
       if(isMnuBizWorkspaceSlug(requested)&&!workspaceRoute?.service){
         const page=withHeaders(env,renderMnuBizPublicPage(),'space-organization');
         return injectEkodiShell(page,'community','public',{existingHeader:true});
+      }
+      if(isHomepageSubscriptionSlug(requested)&&!workspaceRoute?.service){
+        return await renderHomepageSubscriptionSite(request,env,requested);
       }
       if(isOrganizationWorkspaceSlug(requested)&&!workspaceRoute?.service){
         return withHeaders(env,await renderOrganizationPublicPage(request,env,resolved,requested),'space-organization');

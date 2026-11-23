@@ -167,6 +167,32 @@ async function latestVerdictRun({github,owner,repo,runs}){
   return null;
 }
 
+// Release-provenance recovery PRs carry a source change whose staging ran on the
+// source PR (pull_request runs never fire for GITHUB_TOKEN recovery PRs, and
+// main runs skip staging by design). Accept that staging only when the recovery
+// task id is derived from the recorded source commit, and only from a successful
+// `staging` job of the same deploy workflow on that exact commit.
+export function recoverySourceSha(taskId,body){
+  const match=/^orch_recovery_([a-f0-9]{32})$/i.exec(text(taskId,160));
+  if(!match)return null;
+  const source=/Source:\s*`[^`@\s]+@([a-f0-9]{40})`/i.exec(String(body||''));
+  if(!source)return null;
+  return source[1].toLowerCase().startsWith(match[1].toLowerCase())?source[1].toLowerCase():null;
+}
+async function sourceStagingJobs({github,owner,repo,run,sourceSha}){
+  if(!sourceSha)return [];
+  const response=await github.rest.actions.listWorkflowRunsForRepo({owner,repo,head_sha:sourceSha,per_page:100});
+  const candidates=(response.data?.workflow_runs||[])
+    .filter(item=>Number(item?.workflow_id)===Number(run.workflow_id)&&item?.head_sha===sourceSha&&success(item))
+    .sort((a,b)=>String(b?.created_at||'').localeCompare(String(a?.created_at||'')));
+  for(const candidate of candidates){
+    const jobs=(await github.rest.actions.listJobsForWorkflowRun({owner,repo,run_id:Number(candidate.id),per_page:100})).data?.jobs||[];
+    const staged=jobs.filter(job=>stagingJob(job)&&success(job)).map(job=>`${text(job.name,120)} (source ${sourceSha.slice(0,8)}, run ${Number(candidate.id)})`);
+    if(staged.length)return staged;
+  }
+  return [];
+}
+
 export async function collectAuthenticatedCompletionEvidence({github,owner='topmaster-joseph',repo='ekodi-platform',taskId,branchRef}={}){
   const task=text(taskId,160),branch=text(branchRef,220);
   if(!/^orch_[a-z0-9][a-z0-9_-]{15,120}$/i.test(task)||!branch.endsWith(`/${task}`))return {verified:false,reason:'invalid_task_or_branch'};
@@ -175,7 +201,14 @@ export async function collectAuthenticatedCompletionEvidence({github,owner='topm
   const pr=(pulls.data||[])
     .filter(item=>item?.merged_at&&item?.head?.ref===branch&&item?.base?.ref==='main')
     .sort((a,b)=>String(b.merged_at).localeCompare(String(a.merged_at)))[0];
-  if(!pr)return {verified:false,reason:'merged_pr_not_found'};
+  if(!pr){
+    // Report whether any worker ever touched the branch, so the reconciler can
+    // park long-unclaimed tasks. The endpoint re-verifies before parking.
+    const anyPulls=await github.rest.pulls.list({owner,repo,state:'all',head:`${owner}:${branch}`,per_page:5});
+    let branchExists=true;
+    try{await github.rest.repos.getBranch({owner,repo,branch});}catch(error){if(Number(error?.status)===404)branchExists=false;}
+    return {verified:false,reason:'merged_pr_not_found',unclaimed:!(anyPulls.data||[]).length&&!branchExists};
+  }
   const mergeSha=text(pr.merge_commit_sha,80);
   if(!/^[a-f0-9]{40}$/i.test(mergeSha))return {verified:false,reason:'merge_commit_missing'};
 
@@ -184,7 +217,13 @@ export async function collectAuthenticatedCompletionEvidence({github,owner='topm
   const validatedHeadSha=text(pr.head?.sha,80);
   if(!/^[a-f0-9]{40}$/i.test(validatedHeadSha))return {verified:false,reason:'merged_pr_head_missing'};
   const checkResponse=await github.rest.actions.listWorkflowRunsForRepo({owner,repo,head_sha:validatedHeadSha,event:'pull_request',per_page:100});
-  const checkRuns=checkResponse.data?.workflow_runs||[];
+  // PRs opened by the release-provenance recovery use GITHUB_TOKEN, which does
+  // not emit pull_request runs; their CI and gate are dispatched explicitly.
+  // Accept those only when bound to the same head SHA and the PR's own branch.
+  const dispatchResponse=await github.rest.actions.listWorkflowRunsForRepo({owner,repo,head_sha:validatedHeadSha,event:'workflow_dispatch',per_page:100});
+  const prBranch=text(pr.head?.ref,240);
+  const dispatchedChecks=(dispatchResponse.data?.workflow_runs||[]).filter(run=>run?.event==='workflow_dispatch'&&run?.head_sha===validatedHeadSha&&text(run?.head_branch,240)===prBranch);
+  const checkRuns=[...(checkResponse.data?.workflow_runs||[]),...dispatchedChecks];
   const requiredWorkflows=[];
   for(const name of REQUIRED_WORKFLOWS){
     const run=await latestVerdictRun({github,owner,repo,runs:checkRuns.filter(item=>item?.name===name)});
@@ -230,6 +269,7 @@ export async function collectAuthenticatedCompletionEvidence({github,owner='topm
   }
   const deployments=[];
   let hasStaging=false,hasProduction=false;
+  const sourceSha=recoverySourceSha(task,pr.body);
   for(const original of triggered){
     let run=original;
     let supersedesRunId=null;
@@ -242,6 +282,7 @@ export async function collectAuthenticatedCompletionEvidence({github,owner='topm
     const jobs=jobsResponse.data?.jobs||[];
     const stagingJobs=jobs.filter(job=>stagingJob(job)&&success(job)).map(job=>text(job.name,160));
     if(!stagingJobs.length)stagingJobs.push(...stagingEquivalentJobs(run,jobs));
+    if(!stagingJobs.length)stagingJobs.push(...await sourceStagingJobs({github,owner,repo,run,sourceSha}));
     const productionJobs=jobs.filter(job=>productionJob(job)&&success(job)).map(job=>text(job.name,160));
     if(!productionJobs.length)productionJobs.push(...productionEquivalentJobs(run,jobs));
     if(stagingJobs.length)hasStaging=true;

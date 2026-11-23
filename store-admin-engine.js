@@ -719,6 +719,71 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
     document.querySelectorAll('[data-menu-action]').forEach(button=>button.onclick=async()=>{const row=button.closest('[data-menu-ref]'),action=button.dataset.menuAction,value=action==='price'?row.querySelector('[data-menu-price]')?.value:null;if(action==='price'&&!/^\d+$/.test(String(value||''))){setState('판매가 확인 필요','warn');return}button.disabled=true;try{const result=await rpc('store_platform_menu_queue_action',{p_slug:SLUG,p_provider:row.dataset.menuProvider,p_external_item_ref:row.dataset.menuRef,p_action:action,p_value:value});setState(result.status==='needs_connection'?'메뉴 변경 저장 · 공식 쓰기 연결 필요':'메뉴 변경 요청 대기열 등록',result.status==='needs_connection'?'warn':'live')}catch(e){$('pageCopy').textContent=e.message;setState('메뉴 변경 요청 실패','warn')}finally{button.disabled=false}});
     document.querySelectorAll('[data-review-action]').forEach(button=>button.onclick=async()=>{const row=button.closest('[data-review]'),draft=row.querySelector('[data-review-draft]').value;button.disabled=true;try{if(button.dataset.reviewAction==='draft')await rpc('store_platform_review_save_draft',{p_slug:SLUG,p_review_id:row.dataset.review,p_draft:draft});else await rpc('store_platform_review_queue_reply',{p_slug:SLUG,p_review_id:row.dataset.review,p_reply:draft});await loadData();setState(button.dataset.reviewAction==='draft'?'답글 초안 저장 완료':'답글 게시 대기 등록','live')}catch(e){$('pageCopy').textContent=e.message;setState('리뷰 처리 실패','warn')}finally{button.disabled=false}});
   }
+
+  // BBQ only: store-owner approval must precede public QR menu visibility.
+  // This form never enables checkout, orders, notifications or payment.
+  function bbqQrOwnerMenuPanel(){
+    if(SLUG!=='bbqcg')return '';
+    const own=Array.isArray(state.menu?.menu)?state.menu.menu:[];
+    const drafts=own.filter(item=>item.source_basis==='pending').length;
+    const declared=own.length-drafts;
+    const canApprove=canSection('menu')&&canSection('members')&&roleCapabilities(state.role).includes('*');
+    const form=canApprove?
+      '<form id="bbqQrOwnerMenuForm" autocomplete="off"><div class="site-grid">'
+      +'<label class="site-field"><strong>판매 메뉴명</strong><input name="name" minlength="2" maxlength="100" placeholder="매장 판매 메뉴명" required></label>'
+      +'<label class="site-field"><strong>분류</strong><input name="category" maxlength="60" placeholder="예: 치킨"></label>'
+      +'<label class="site-field"><strong>판매가격(원)</strong><input name="price" type="number" min="1" max="500000" step="1" placeholder="매장 실제 판매가격"></label>'
+      +'<label class="site-field"><strong>메뉴·가격 출처 URL</strong><input name="source_url" type="url" maxlength="1000" pattern="https://.*" placeholder="https://..."></label>'
+      +'<label class="site-field site-wide"><strong>설명</strong><textarea name="description" maxlength="300" rows="2" placeholder="실제 매장 메뉴에 한해 입력"></textarea></label>'
+      +'<label class="site-field site-wide"><input name="owner_confirmation" type="checkbox" value="yes"> 가맹본부 운영기준과 실제 메뉴·가격·출처를 확인했고 고객 공개에 동의합니다.</label>'
+      +'</div><div class="actions"><button class="button" type="submit" name="action" value="draft">비공개 초안 저장</button>'
+      +'<button class="button primary" type="submit" name="action" value="approve">점주 확인 후 공개</button>'
+      +'<a class="button" href="/bbqcg/order" target="_blank" rel="noopener noreferrer">고객 QR 메뉴 확인</a></div>'
+      +'<p class="panel-lead">기존에 승인된 메뉴를 여기서 덮어쓰지 않습니다. 가격 변경·품절 처리에는 별도 검증이 필요합니다.</p></form>'
+      :'<p class="note">메뉴 등록과 공개는 매장 점주 또는 인가된 관리자만 할 수 있습니다.</p>';
+    return '<section class="site-lifecycle" id="bbqQrOwnerMenu" aria-labelledby="bbqQrOwnerTitle">'
+      +'<h2 id="bbqQrOwnerTitle">BBQ QR 직접주문 · 판매메뉴 등록</h2>'
+      +'<p class="panel-lead">초안은 고객에게 숨겨집니다. 점주가 직접 확인한 실제 메뉴·판매가격·근거만 QR 화면에 공개할 수 있습니다.</p>'
+      +'<div class="menu-readiness bad"><div><small>QR 온라인 결제·매장 자동접수</small><strong>매장 PG 계약과 수신 검증 전 비활성</strong>'
+      +'<p>메뉴를 공개해도 결제나 주문 접수는 자동 활성화되지 않습니다.</p></div>'
+      +'<div class="menu-readiness-stats"><span>원장 <b>'+own.length+'</b></span><span>비공개 초안 <b>'+drafts+'</b></span><span>승인 표시 <b>'+declared+'</b></span></div></div>'
+      +form
+      +'<div class="note">독립 가맹점 PG, 수신 담당자, 서버 결제 검증 및 환불 절차가 승인되기 전까지 결제·알림은 차단됩니다.</div>'
+      +'</section>';
+  }
+  function bindBbqQrOwnerMenuForm(){
+    if(SLUG!=='bbqcg')return;
+    const form=document.getElementById('bbqQrOwnerMenuForm');
+    if(!form)return;
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();
+      const action=event.submitter?.value==='approve'?'approve':'draft';
+      const data=new FormData(form);
+      const name=String(data.get('name')||'').trim();
+      const rawPrice=String(data.get('price')||'').trim();
+      const price=rawPrice===''?null:Number(rawPrice);
+      const sourceUrl=String(data.get('source_url')||'').trim();
+      if(name.length<2||name.length>100){setState('메뉴 이름 확인 필요','warn');return}
+      if(price!==null&&(!Number.isSafeInteger(price)||price<1||price>500000)){setState('실제 판매가격 확인 필요','warn');return}
+      if(sourceUrl&&!/^https:\/\/\S+$/.test(sourceUrl)){setState('HTTPS 출처만 등록할 수 있습니다','warn');return}
+      if(action==='approve'&&(!data.get('owner_confirmation')||price===null||!sourceUrl)){
+        setState('공개하려면 직접 확인 동의·판매가격·출처 URL이 필요합니다','warn');return;
+      }
+      for(const button of form.querySelectorAll('button[type="submit"]'))button.disabled=true;
+      try{
+        const out=await rpc('bbqcg_qr_menu_owner_submit',{
+          p_slug:'bbqcg',p_name:name,
+          p_category:String(data.get('category')||'').trim(),
+          p_description:String(data.get('description')||'').trim(),
+          p_price:price,p_source_url:sourceUrl||null,p_approve:action==='approve'
+        });
+        if(!out?.ok)throw new Error('등록 결과를 확인할 수 없습니다');
+        await loadData();
+        setState(action==='approve'?'메뉴 승인 등록 완료 · 고객 QR 화면을 확인하세요':'비공개 초안 저장 완료','live');
+      }catch(e){setState('메뉴 등록 불가: '+String(e.message||e).slice(0,90),'warn')}
+      finally{for(const button of form.querySelectorAll('button[type="submit"]'))button.disabled=false}
+    });
+  }
   function menuPanel(){
     const items=menuItems(),mismatch=menuMismatches(items),readiness=deliveryMenuReadiness();
     const canonical=Array.isArray(state.menu?.menu)?state.menu.menu:[];
@@ -734,7 +799,7 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
       const disabled=writable.length?'':'disabled';
       return `<article class="batch-menu-row" data-canonical-menu-id="${esc(item.id)}"><div class="batch-menu-copy"><small>${esc(item.category||'미분류')} · 기준가 ${item.base_price==null?'확인 필요':won(item.base_price)}</small><strong>${esc(item.name)}</strong><div class="batch-provider-list">${providerChecks||'<span class="tag warn">플랫폼 매핑 필요</span>'}</div></div><div class="batch-menu-actions"><input data-batch-price type="number" min="0" step="100" value="${esc(item.base_price??'')}" aria-label="${esc(item.name)} 일괄 판매가" ${disabled}><button class="button" data-batch-menu-action="price" type="button" ${disabled}>가격변경</button><button class="button" data-batch-menu-action="available" type="button" ${disabled}>판매</button><button class="button" data-batch-menu-action="sold_out" type="button" ${disabled}>품절</button><button class="button" data-batch-menu-action="hidden" type="button" ${disabled}>숨김</button></div></article>`;
     }).join('');
-    $('mainPanel').innerHTML=`<h2>통합 메뉴 일괄관리</h2><p class="panel-lead">기준메뉴 한 번의 변경을 선택한 배달플랫폼에 동시에 요청합니다. 실제 쓰기 권한이 확인된 플랫폼만 실행 대상으로 활성화합니다.</p>${readinessPanel}<div class="batch-menu-list">${batchRows||'<div class="empty"><strong>일괄관리할 기준메뉴가 없습니다.</strong>아래 검증 스냅샷 또는 공식 연결에서 실제 메뉴 원장을 먼저 확보해 주세요.</div>'}</div><div class="note">가격변경·판매·품절·숨김은 사람 승인 기록과 공식 쓰기 어댑터가 모두 확인된 경우에만 실행 대기열에 등록됩니다. 화면 표시만으로 외부 앱 반영을 완료로 간주하지 않습니다.</div><section class="site-lifecycle"><h2>플랫폼 원장 비교</h2><p class="panel-lead">배달앱·POS의 공식 또는 승인된 Bridge 스냅샷만 표시합니다. 직접 입력한 가상 메뉴는 사용하지 않습니다.</p>${rows?`<div class="table-wrap"><table><thead><tr><th>메뉴</th><th>분류</th><th>채널</th><th>가격</th><th>상태</th><th>옵션</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty"><strong>아직 가져온 메뉴가 없습니다.</strong>연결관리에서 POS 또는 배달플랫폼 Bridge가 승인·연결되면 실제 등록 메뉴와 가격이 이곳에 나타납니다.</div>'}${warning}</section>${platformImportPanel()}`;
+    $('mainPanel').innerHTML=`${bbqQrOwnerMenuPanel()}<h2>통합 메뉴 일괄관리</h2><p class="panel-lead">기준메뉴 한 번의 변경을 선택한 배달플랫폼에 동시에 요청합니다. 실제 쓰기 권한이 확인된 플랫폼만 실행 대상으로 활성화합니다.</p>${readinessPanel}<div class="batch-menu-list">${batchRows||'<div class="empty"><strong>일괄관리할 기준메뉴가 없습니다.</strong>아래 검증 스냅샷 또는 공식 연결에서 실제 메뉴 원장을 먼저 확보해 주세요.</div>'}</div><div class="note">가격변경·판매·품절·숨김은 사람 승인 기록과 공식 쓰기 어댑터가 모두 확인된 경우에만 실행 대기열에 등록됩니다. 화면 표시만으로 외부 앱 반영을 완료로 간주하지 않습니다.</div><section class="site-lifecycle"><h2>플랫폼 원장 비교</h2><p class="panel-lead">배달앱·POS의 공식 또는 승인된 Bridge 스냅샷만 표시합니다. 직접 입력한 가상 메뉴는 사용하지 않습니다.</p>${rows?`<div class="table-wrap"><table><thead><tr><th>메뉴</th><th>분류</th><th>채널</th><th>가격</th><th>상태</th><th>옵션</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty"><strong>아직 가져온 메뉴가 없습니다.</strong>연결관리에서 POS 또는 배달플랫폼 Bridge가 승인·연결되면 실제 등록 메뉴와 가격이 이곳에 나타납니다.</div>'}${warning}</section>${platformImportPanel()}`;
     document.querySelectorAll('[data-batch-menu-action]').forEach(button=>button.onclick=async()=>{
       const row=button.closest('[data-canonical-menu-id]');
       const action=button.dataset.batchMenuAction;
@@ -752,6 +817,7 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
       finally{buttons.forEach(item=>item.disabled=!row.querySelector('[data-batch-provider]:checked:not(:disabled)'))}
     });
     bindPlatformImport();
+    bindBbqQrOwnerMenuForm();
   }
   const SMS_ORDER_STATUS_LABELS={awaiting_customer_confirmation:'고객 확인 대기',customer_confirmed:'매장 확인 필요',store_accepted:'매장 접수',completed:'완료',cancelled:'취소',rejected:'접수 불가'};
   function smsOrderActions(order){const id=esc(order.id);if(order.status==='customer_confirmed')return `<div class="order-actions" data-sms-order="${id}"><button data-sms-action="accept">접수</button><button class="danger" data-sms-action="reject">거절</button></div>`;if(order.status==='store_accepted')return `<div class="order-actions" data-sms-order="${id}"><button data-sms-action="complete">완료</button><button class="danger" data-sms-action="cancel">취소</button></div>`;return '<span class="tag">대기</span>'}
@@ -899,7 +965,7 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
       +editorField('이전 고객 표시량','previous','input','number')
       +editorField('현재 고객 표시량','declared','input','number')
       +editorField('실제 계량 제공량','measured','input','number')
-      +'<label class="bbqcg-card-field">단위<select data-bbq-field="unit"><option value="g">g</option><option value="mL">mL</option><option value="개">개</option></select><span class="bbqcg-print-value" data-bbq-print-value="unit">미입력</span></label>'
+      +'<label class="bbqcg-card-field">단위<select data-bbq-field="unit"><option value="g">g</option><option value="mL">mL</option><option value="개">개</option><option value="호">호(원료육 중량범위)</option></select><span class="bbqcg-print-value" data-bbq-print-value="unit">미입력</span></label>'
       +'<label class="bbqcg-card-field">계량 기준<select data-bbq-field="stage"><option value="">단계 확인 필요</option><option value="조리 전">조리 전</option><option value="조리 후">조리 후</option><option value="포장 후">포장 후</option></select><span class="bbqcg-print-value" data-bbq-print-value="stage">미입력</span></label>'
       +editorField('메뉴판·배달앱 표시 문구(g/호수 등)','displayCopy')
       +editorField('표시 확인 위치(매장·배달앱·온라인)','displayScope')
@@ -946,14 +1012,17 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
           if(stage!=='조리 전')notes.push('치킨 중량표시: 조리 전 원료육 기준 확인 필요');
           if(unit==='mL')notes.push('치킨 중량표시 단위는 g 또는 호수 기준');
           if(unit==='개')notes.push('부분육 개수표시 예외 요건·본사 지침 확인 필요');
+          if(unit==='호')notes.push('호수별 원료육 g 중량범위·본사 승인 문구 확인 필요');
           if(!String(field('displayCopy').value||'').trim())notes.push('고객 표시 문구 미확인');
           if(!String(field('displayScope').value||'').trim())notes.push('매장·배달앱·온라인 표시 확인 필요');
         }else if(!kind)notes.push('치킨 중량표시 적용 대상 여부 확인 필요');
-        if(kind&&previous!==null&&declared!==null&&(kind!=='chicken'||stage==='조리 전')){
+        const comparable=Boolean(kind&&(kind!=='chicken'||(stage==='조리 전'&&unit==='g')));
+        if(kind==='chicken'&&!comparable)notes.push('치킨 중량의 증감률·실측 차이 계산은 조리 전 g 기준만 지원');
+        if(comparable&&previous!==null&&declared!==null){
           const rate=(100*(declared-previous)/previous).toFixed(1);
           notes.push('이전 표시량 대비 '+(declared<previous?'감소 · 승인·고지 확인 필요':declared>previous?'증가':'동일')+' ('+rate+'%)');
         }else notes.push('이전·현재 표시량 비교 미확인');
-        if(kind&&declared!==null&&measured!==null&&stage&&(kind!=='chicken'||stage==='조리 전')){
+        if(comparable&&declared!==null&&measured!==null&&stage){
           notes.push('현재 표시 대비 실제 계량 '+(measured-declared).toFixed(1)+unit+' · '+stage+' · '+(measured<declared?'차이 확인 필요':'계량 기록 확인'));
         }else notes.push('동일 기준의 실측·표시 대조 미확인');
         notes.push('법령 위반 자동 판정 아님');
@@ -995,8 +1064,8 @@ function clientMain(POLICY,CHANNEL_CATALOG,ORDER_MODEL,TERMINAL,OVERVIEW_MODEL,O
     $('syncOrders').onclick=async()=>{const b=$('syncOrders');b.disabled=true;b.textContent='동기화 중';try{await control('/api/marketing/connectors/supabase-orders/sync',{method:'POST',body:JSON.stringify({store:STORE_ID})});await loadData();setState('동기화 완료','live')}catch(e){$('pageCopy').textContent=e.message;setState('확인 필요','warn')}finally{b.disabled=false;b.textContent='EKODI Orders 다시 동기화'}};
   }
   async function siteChromeApi(options={}){const token=await accessToken();if(!token)throw Object.assign(new Error('AUTH_REQUIRED'),{status:401});const u=new URL(SITE_CHROME_API);u.searchParams.set('subject_key',SLUG);const x=await fetch(u,{...options,headers:{authorization:`Bearer ${token}`,'content-type':'application/json',...(options.headers||{})},cache:'no-store'});const d=await x.json().catch(()=>({}));if(!x.ok)throw Object.assign(new Error(d.error||`site_chrome_${x.status}`),{status:x.status});return d}
-  function siteChromeForm(d={}){const h=d.header||{},f=d.footer||{},o=f.operator||{},c=f.contact||{},links=Array.isArray(f.legalLinks)?f.legalLinks:[],link=k=>links.find(x=>x.i18n===k)?.href||'';return `<form id="siteChromeForm"><div class="site-grid"><label class="site-field"><strong>사이트명</strong><input name="siteName" value="${esc(h.siteName||STORE_NAME)}"></label><label class="site-field"><strong>헤더 한줄소개</strong><input name="tagline" value="${esc(h.tagline||'')}"></label><label class="site-field"><strong>홈 주소</strong><input name="homeUrl" value="${esc(h.homeUrl||STORE_BASE)}"></label><label class="site-field"><strong>푸터 브랜드</strong><input name="brand" value="${esc(f.brand||STORE_NAME)}"></label><label class="site-field"><strong>운영자명</strong><input name="operatorName" value="${esc(o.name||'에코디비즈')}"></label><label class="site-field"><strong>대표자</strong><input name="representative" value="${esc(o.representative||'')}"></label><label class="site-field site-wide"><strong>주소</strong><input name="address" value="${esc(c.address||'')}"></label><label class="site-field"><strong>이메일</strong><input name="email" type="email" value="${esc(c.email||'')}"></label><label class="site-field site-wide"><strong>저작권 문구</strong><input name="copyright" value="${esc(f.copyright||'')}"></label></div><div class="actions"><button class="button primary" type="submit">헤더 · 푸터 저장</button><a class="button" href="${STORE_BASE}" target="_blank" rel="noopener">사이트 확인</a></div></form>`}
-  async function siteChromePanel(){setState('헤더 · 푸터 확인 중');try{let current=await siteChromeApi();$('summaryCards').innerHTML=[card('사이트',current.siteName||STORE_NAME,current.abbreviation||'store'),card('설정',current.source==='site'?'개별설정':'기본값',`v${current.version||1}`),card('공개주소',current.canonicalPath||STORE_BASE,'ekodi.kr')].join('');$('mainPanel').innerHTML='<h2>헤더 · 푸터</h2><p class="panel-lead">이 설정은 이 매장 사이트에만 적용되며 최고관리자와 같은 원장을 사용합니다.</p>'+siteChromeForm(current);$('siteChromeForm').onsubmit=async e=>{e.preventDefault();const v=Object.fromEntries(new FormData(e.currentTarget).entries()),email=v.email||current.footer?.contact?.email||'';current=await siteChromeApi({method:'PUT',body:JSON.stringify({header:{...(current.header||{}),siteName:v.siteName,tagline:v.tagline,homeUrl:v.homeUrl},footer:{...(current.footer||{}),brand:v.brand,operator:{...(current.footer?.operator||{}),name:v.operatorName,representative:v.representative},contact:{...(current.footer?.contact||{}),address:v.address,email,emailHref:'mailto:'+email},copyright:v.copyright}})});await siteChromePanel()};setState('관리 가능','live')}catch(err){$('mainPanel').innerHTML=`<div class="empty"><strong>헤더 · 푸터 설정을 불러오지 못했습니다.</strong>${esc(err.message)}</div>`;setState('확인 필요','warn')}}
+  function siteChromeForm(d={}){const h=d.header||{},f=d.footer||{},o=f.operator||{},c=f.contact||{},links=Array.isArray(f.legalLinks)?f.legalLinks:[],link=k=>links.find(x=>x.i18n===k)?.href||'';return `<form id="siteChromeForm"><div class="site-grid"><label class="site-field"><strong>사이트명</strong><input name="siteName" value="${esc(h.siteName||STORE_NAME)}"></label><label class="site-field"><strong>헤더 한줄소개</strong><input name="tagline" value="${esc(h.tagline||'')}"></label><label class="site-field"><strong>홈 주소</strong><input name="homeUrl" value="${esc(h.homeUrl||STORE_BASE)}"></label><label class="site-field"><strong>회계공지 메뉴 노출</strong><select name="accountingNotice"><option value="true"${h.accountingNotice===false?'':' selected'}>공개</option><option value="false"${h.accountingNotice===false?' selected':''}>숨김</option></select></label><label class="site-field"><strong>푸터 브랜드</strong><input name="brand" value="${esc(f.brand||STORE_NAME)}"></label><label class="site-field"><strong>운영자명</strong><input name="operatorName" value="${esc(o.name||'에코디비즈')}"></label><label class="site-field"><strong>대표자</strong><input name="representative" value="${esc(o.representative||'')}"></label><label class="site-field site-wide"><strong>주소</strong><input name="address" value="${esc(c.address||'')}"></label><label class="site-field"><strong>이메일</strong><input name="email" type="email" value="${esc(c.email||'')}"></label><label class="site-field site-wide"><strong>저작권 문구</strong><input name="copyright" value="${esc(f.copyright||'')}"></label></div><div class="actions"><button class="button primary" type="submit">헤더 · 푸터 저장</button><a class="button" href="${STORE_BASE}" target="_blank" rel="noopener">사이트 확인</a></div></form>`}
+  async function siteChromePanel(){setState('헤더 · 푸터 확인 중');try{let current=await siteChromeApi();$('summaryCards').innerHTML=[card('사이트',current.siteName||STORE_NAME,current.abbreviation||'store'),card('설정',current.source==='site'?'개별설정':'기본값',`v${current.version||1}`),card('공개주소',current.canonicalPath||STORE_BASE,'ekodi.kr')].join('');$('mainPanel').innerHTML='<h2>헤더 · 푸터</h2><p class="panel-lead">이 설정은 이 매장 사이트에만 적용되며 최고관리자와 같은 원장을 사용합니다.</p>'+siteChromeForm(current);$('siteChromeForm').onsubmit=async e=>{e.preventDefault();const v=Object.fromEntries(new FormData(e.currentTarget).entries()),email=v.email||current.footer?.contact?.email||'';current=await siteChromeApi({method:'PUT',body:JSON.stringify({header:{...(current.header||{}),siteName:v.siteName,tagline:v.tagline,homeUrl:v.homeUrl,accountingNotice:v.accountingNotice!=='false'},footer:{...(current.footer||{}),brand:v.brand,operator:{...(current.footer?.operator||{}),name:v.operatorName,representative:v.representative},contact:{...(current.footer?.contact||{}),address:v.address,email,emailHref:'mailto:'+email},copyright:v.copyright}})});await siteChromePanel()};setState('관리 가능','live')}catch(err){$('mainPanel').innerHTML=`<div class="empty"><strong>헤더 · 푸터 설정을 불러오지 못했습니다.</strong>${esc(err.message)}</div>`;setState('확인 필요','warn')}}
   function sitePanel(){
     const d=state.site||{},aliases=Array.isArray(d.alias_slugs)?d.alias_slugs.join(', '):'';
     const sel=(v,c)=>v===c?'selected':'';

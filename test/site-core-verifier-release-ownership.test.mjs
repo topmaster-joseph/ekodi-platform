@@ -40,6 +40,18 @@ test('guarded Site Core workflow tracks verifier paths on main push as a fallbac
   assert.ok(push.includes("- '.github/workflows/deploy-site-core.yml'"));
 });
 
+test('route-ownership registration triggers protected Site Core dispatch in both recovery and convergence',()=>{
+  const path='scripts/ensure-church-route-ownership.mjs';
+  const merged=until(convergence,'const sharedSiteTouched=changedFiles.some','// Church public Pages');
+  const immediate=until(recovery,'const sharedSiteTouched=sourceFiles.some','// First-party Shell');
+  assert.ok(merged.includes("file==='"+path+"'"),'convergent protected merge must dispatch route registration edits');
+  assert.ok(immediate.includes("'"+path+"'"),'immediate protected recovery must dispatch route registration edits');
+  const push=until(siteWorkflow,'  push:\n','jobs:\n');
+  assert.ok(push.includes("- '"+path+"'"),'main-push fallback remains enabled');
+  assert.match(convergence,/release_branch_ref:branch,release_task_id:taskId/);
+  assert.match(recovery,/release_branch_ref:branchRef,release_task_id:taskId/);
+});
+
 test('production release after protected merge uses authentic orchestrator receipt',()=>{
   const merged=until(convergence,'async function dispatchPostMergeDeploys()','// update-branch with the Actions token');
   assert.match(merged,/if\(sharedSiteTouched\)/);

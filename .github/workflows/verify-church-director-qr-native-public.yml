@@ -17,7 +17,8 @@ concurrency:
 
 jobs:
   isolated-chromium:
-    runs-on: ubuntu-latest
+    # Playwright 1.55.x Chromium does not install on ubuntu-26.04 (ubuntu-latest); keep browser jobs on LTS.
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
@@ -30,7 +31,7 @@ jobs:
           node --test test/verify-church-director-qr-native-public.test.mjs
       - name: Install EKODI-owned isolated Chromium
         run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium
       - name: Check real Church studio in EKODI Chromium without sign-in or mutation
         run: node scripts/verify-church-director-qr-native-public.mjs

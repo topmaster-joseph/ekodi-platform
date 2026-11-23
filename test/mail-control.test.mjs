@@ -134,3 +134,30 @@ test('mail admin page offers an account switch that signs out and returns via ap
   assert.match(html, /id="switchAccount"[^>]*>계정 바꾸기</);
   assert.match(html, /\$\('switchAccount'\)\.onclick=async\(\)=>\{if\(!confirm\([^)]*\)\)return;try\{await sb\.auth\.signOut\(\)\}catch\{\}location\.replace\('https:\/\/ekodi\.kr\/auth\/\?site=mail&return_to='/);
 });
+
+test('mail admin shows Korean labels for pending account states instead of raw codes', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const src = await readFile(new URL('../mail-admin-page.js', import.meta.url), 'utf8');
+  assert.match(src, /pending_connection:\['연결 대기'/);
+  assert.match(src, /pending_service_connection:\['위임 연결 대기'/);
+  assert.doesNotMatch(src, /\|\|\[a\.connectionStatus,''\]/);
+});
+
+test('Google OAuth denial is explained and recorded instead of looking like an expired request', async () => {
+  const control = await read('mail-control.js');
+  const cb = control.slice(control.indexOf('/oauth/google/callback`)'));
+  const errorAt = cb.indexOf("searchParams.get('error')");
+  assert.ok(errorAt > 0 && errorAt < cb.indexOf('연결 요청이 만료되었거나'), 'error param must be handled before the generic expired message');
+  assert.match(cb, /'google_'\+googleError/);
+  assert.match(cb, /테스트 사용자/);
+  const page = await read('mail-admin-page.js');
+  assert.match(page, /a\.lastError==='google_access_denied'/);
+});
+
+test('Gmail connect shows the unverified-app click guide before leaving for Google', async () => {
+  const page = await read('mail-admin-page.js');
+  assert.match(page, /googleGuide\(a\.emailAddress,d\.authorizeUrl\)/);
+  assert.match(page, /「고급」/);
+  assert.match(page, /이동\(안전하지 않음\)/);
+  assert.doesNotMatch(page, /location\.href=d\.authorizeUrl/);
+});

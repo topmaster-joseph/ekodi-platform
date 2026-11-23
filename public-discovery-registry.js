@@ -18,17 +18,35 @@ function normalizePath(value='/'){
   return path==='/'?'/':path.replace(/\/$/,'');
 }
 
-// Public surfaces whose page deliberately ships `noindex` (partner login portal).
-// Listing them in the sitemap sends crawlers a contradictory signal.
+// Pages that deliberately ship `noindex` must not be offered for indexing.
+// Keep these page-level exclusions separate from tenant publication and permissions.
 export const PAGE_OWNED_NOINDEX_PATHS=Object.freeze(new Set(['/ekodibiz/trade',
   // Legacy Pages studio; the canonical church live entry is /live/church/.
-  '/ekodichurch/live']));
+  '/ekodichurch/live',
+  // Shared operator-space landing is intentionally noindex, not a tenant storefront.
+  // Its independent /mokdaehumun/live/ tenant route remains unchanged.
+  '/mokdaehumun']));
 
 // Sites whose live entry 308s from /<site> to /<site>/ (audit run 39241336747).
 // The sitemap lists the final URL so crawlers get no redirect hop.
+// /seonammedi is a public EKODI management/mount alias for a separately
+// verified, owner-approved Korean IDN canonical. Keep it navigable and in the
+// public administration registry, but never advertise the noncanonical mount
+// in EKODI's own sitemap or IndexNow submissions. The independent domain
+// continues to own its own sitemap and provider verification.
+export const APEX_EXTERNAL_CANONICAL_ALIASES=Object.freeze(new Set(['/seonammedi']));
+export function isApexSearchSubmissionUrl(value){
+  try{
+    const url=new URL(String(value||''));
+    return url.origin==='https://ekodi.kr' && !url.username && !url.password &&
+      !url.search && !url.hash && !url.port &&
+      !APEX_EXTERNAL_CANONICAL_ALIASES.has(normalizePath(url.pathname).toLowerCase());
+  }catch{return false;}
+}
+
 export const TRAILING_SLASH_CANONICAL_PATHS=Object.freeze(new Set([
-  '/bible','/books','/cafe','/community','/ekodichurch','/ekodilab','/ekodipay',
-  '/journal','/jubilee','/life','/live','/open','/publishing','/pyeonggongmok','/work',
+  '/bible','/books','/cafe','/community','/edu','/ekodichurch','/ekodilab','/ekodipay',
+  '/journal','/jubilee','/life','/live','/management','/open','/publishing','/pyeonggongmok','/work',
 ]));
 
 export function isPublicDiscoveryPath(pathname='/'){
@@ -40,7 +58,7 @@ export function isPublicDiscoveryPath(pathname='/'){
   return true;
 }
 
-function normalizeCanonical(value,pathFallback='/'){
+export function normalizeCanonical(value,pathFallback='/'){
   try{
     const url=new URL(String(value||canonicalUrl(pathFallback,DISCOVERY_ORIGIN)));
     if(url.protocol!=='https:'||url.hostname!=='ekodi.kr')return null;
@@ -157,7 +175,7 @@ function xmlEscape(value=''){
 
 export async function ekodiDynamicSitemapResponse(env,{head=false}={}){
   const registry=await buildEkodiPublicRegistry(env);
-  const urls=registry.resources.map(resource=>{
+  const urls=registry.resources.filter(resource=>isApexSearchSubmissionUrl(resource.url)).map(resource=>{
     const parts=['  <url>',`    <loc>${xmlEscape(resource.url)}</loc>`];
     if(resource.updatedAt||resource.publishedAt)parts.push(`    <lastmod>${xmlEscape(String(resource.updatedAt||resource.publishedAt).slice(0,10))}</lastmod>`);
     if(resource.changefreq)parts.push(`    <changefreq>${xmlEscape(resource.changefreq)}</changefreq>`);

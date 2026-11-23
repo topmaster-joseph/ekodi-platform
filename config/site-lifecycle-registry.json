@@ -37,7 +37,22 @@
         "https://jadam.ekodi.kr",
         "https://marketing.jadam.ekodi.kr",
         "https://jadam.ai.ekodi.kr"
-      ]
+      ],
+      "lifecycleState": "retired",
+      "visibility": "archive-only",
+      "retirementNote": "Historical tenant records retained; not an active customer site. No automatic data deletion or access grant."
+    },
+    {
+      "id": "bbqcg",
+      "name": "BBQ 무안청계점",
+      "ownerKind": "store",
+      "class": "workspace_user_site",
+      "canonicalUrl": "https://ekodi.kr/bbqcg",
+      "migrationState": "promoted",
+      "lifecycleState": "active",
+      "runtime": "store_user_sites",
+      "action": "retain_and_link",
+      "legacyAliases": []
     },
     {
       "id": "pizzamaru",

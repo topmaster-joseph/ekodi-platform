@@ -1,5 +1,5 @@
 {
-  "version": "1.3.0",
+  "version": "1.4.0",
   "policyId": "EKODI-CONCURRENT-TRAFFIC-10K-001",
   "status": "enforced",
   "appliesRecursivelyToAllServices": true,
@@ -37,8 +37,16 @@
     "adaptiveSignals": {
       "sampleWindowSeconds": 60,
       "minimumSamples": 10,
-      "p95LatencyMs": {"L2":1200,"L3":2200,"PROTECT":4000},
-      "errorRatePercent": {"L2":2,"L3":5,"PROTECT":12},
+      "p95LatencyMs": {
+        "L2": 1200,
+        "L3": 2200,
+        "PROTECT": 4000
+      },
+      "errorRatePercent": {
+        "L2": 2,
+        "L3": 5,
+        "PROTECT": 12
+      },
       "recoveryStableMinutes": 10,
       "stepDownOneTierAtATime": true,
       "scope": "worker_isolate_secondary_signal"
@@ -47,8 +55,18 @@
       "productionEnabled": true,
       "anonymousPublicGetOnly": true,
       "privateSurfacesExcluded": true,
-      "edgeTtlSeconds": {"L1":60,"L2":120,"L3":300,"PROTECT":600},
-      "staleWhileRevalidateSeconds": {"L1":300,"L2":600,"L3":1800,"PROTECT":3600},
+      "edgeTtlSeconds": {
+        "L1": 60,
+        "L2": 120,
+        "L3": 300,
+        "PROTECT": 600
+      },
+      "staleWhileRevalidateSeconds": {
+        "L1": 300,
+        "L2": 600,
+        "L3": 1800,
+        "PROTECT": 3600
+      },
       "staleIfErrorSeconds": 86400
     }
   },
@@ -216,5 +234,56 @@
       "payments",
       "admin_control"
     ]
+  },
+  "edgeTrafficShield": {
+    "policyId": "EKODI-EDGE-TRAFFIC-SHIELD-001",
+    "module": "edge-traffic-shield.js",
+    "clientIsolation": {
+      "enabled": true,
+      "runsBeforeSiteWideTier": true,
+      "readsFailOpen": true,
+      "rateLimiters": {
+        "client": "TRAFFIC_CLIENT_RATE_LIMITER",
+        "network": "TRAFFIC_NETWORK_RATE_LIMITER"
+      },
+      "clientRequestsPer10s": 600,
+      "networkRequestsPer10s": 2000,
+      "identity": "bearer or cookie digest, else IP+UA digest; IP-only ceiling; no cf-connecting-ip (service binding) is not bucketed",
+      "sizing": "client 600/10s stays below the L3 site-wide trigger (1000/10s) so one client cannot shed crawlers for everyone; network 2000/10s stays below PROTECT (3000/10s) and leaves room for a classroom behind one campus NAT"
+    },
+    "satelliteCoverage": {
+      "required": true,
+      "reason": "apex path routes matched before the Shared Site route never pass its guard",
+      "workers": {
+        "church-history-worker.js": "wrangler.church-history.toml",
+        "delivery-worker.js": "wrangler.delivery.toml",
+        "ekodibiz-pay-gateway-worker.js": "wrangler.ekodibiz-pay-gateway.toml",
+        "ekodipay-worker.js": "wrangler.ekodipay.toml",
+        "local-commerce-worker.js": "wrangler.local-commerce.toml",
+        "funding-worker.js": "wrangler.funding.toml",
+        "ministry-news-worker.js": "wrangler.ministry-news.toml",
+        "qtin-order-entry.js": "wrangler.qtin-order.toml",
+        "support-worker.js": "wrangler.support.toml",
+        "seonammedi-domain-gateway.js": "wrangler.seonammedi-redirect.toml",
+        "services/independent-board/worker.js": "wrangler.independent-board.toml"
+      },
+      "writeLimiterWithoutBindings": "method/query/body checks only (never 503 a payment callback)"
+    },
+    "selfGeneratedTraffic": {
+      "deviceAgentIdlePollSeconds": {
+        "min": 10,
+        "max": 20,
+        "afterCommand": 2,
+        "interactiveAuth": 5
+      },
+      "evidence": "2026-11-17 zone analytics: device-agent commands/next+heartbeat = 16,212 of 39,469 ekodi.kr requests (41%)"
+    },
+    "zoneEdge": {
+      "script": "scripts/cloudflare-zone-traffic-shield.mjs",
+      "defaultMode": "plan",
+      "ipRequestsPer10s": 3000,
+      "mitigationSeconds": 10,
+      "note": "Free plan: one rule, IP characteristic, 10s period, 10s block; counts cached assets too, so the threshold is a pure flood ceiling"
+    }
   }
 }

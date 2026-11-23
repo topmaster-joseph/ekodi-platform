@@ -10,6 +10,8 @@ PAYMENT_CORE_URL = "https://ekodi.kr/ekodipay"
 PAYMENT_GATEWAY_URL = "https://ekodi.kr/ekodibiz/pay"
 HIGH_IMPACT_APPROVAL = "required"
 AI_OPERATIONS_MODE = "rules-first"
+# Staging must never notify a real production administrator device.
+AGENCY_OPERATOR_NOTIFY_ENABLED = "false"
 
 [assets]
 directory = "./ekodibiz"

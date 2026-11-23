@@ -56,6 +56,11 @@
   });
   // EKODI-INTERACTIVE-AUTH-001 (shared contract: interactive-auth-session.js)
   const EXTERNAL_AUTH_SERVICES = Object.freeze({
+    'korail-ticket': Object.freeze({
+      id: 'korail-ticket', label: '코레일 · KTX 승차권 로그인',
+      host: 'www.korail.com',
+      guide: 'https://www.korail.com/ticket/reserve/guide/faq',
+    }),
     'factchat-mokpo': Object.freeze({
       id: 'factchat-mokpo', label: 'FactChat · 국립목포대학교 기관계정',
       host: 'mokpo.factchat.bot',
@@ -436,12 +441,19 @@
     box.open = Boolean(live) || (wanted && device.status === 'online');
     box.innerHTML = '<summary>외부 서비스 인증·검증 · '+service.label+'</summary>';
     const supported = capability(device, 'interactiveAuthSession') &&
-      (service.id !== 'domeggook-business' || capability(device, 'domeggookNativeAuth'));
+      (service.id !== 'domeggook-business' || capability(device, 'domeggookNativeAuth')) &&
+      (service.id !== 'korail-ticket' || capability(device, 'korailNativeAuth'));
 
     const intro = document.createElement('p');
     intro.className = 'device-remote-note';
     intro.textContent = '이 PC에 EKODI 전용 임시 브라우저로 '+service.label+' 공식 로그인 창을 엽니다. 로그인은 PC 앞의 본인이 공식 페이지에 직접 합니다. EKODI는 비밀번호·인증번호·쿠키를 받지 않고, 사용자 Opera/Chrome/Edge와 키보드·마우스·클립보드를 건드리지 않습니다.';
 
+    if (service.id === 'korail-ticket') {
+      const guard = document.createElement('p');
+      guard.className = 'device-remote-note';
+      guard.textContent = '로그인 상태만 확인합니다. 승객정보·좌석현황·운임·승차권·결제정보는 EKODI로 수집하지 않습니다. 좌석 선택·예매·결제는 이 인증 화면에서 자동으로 수행하지 않으며 코레일 공식 화면에서 직접 진행해야 합니다.';
+      box.append(guard);
+    }
     const status = document.createElement('div');
     status.className = 'device-remote-summary-card';
     const stateText = session ? (EXTERNAL_AUTH_STATE_LABELS[session.state] || '확인 필요') : '세션 없음';
@@ -479,7 +491,9 @@
       const wrap = document.createElement('div');
       wrap.className = 'device-remote-processes';
       wrap.innerHTML = '<div class="device-subhead"><h3>기능별 확인 결과</h3><span></span></div>';
-      wrap.querySelector('.device-subhead span').textContent = `${timeLabel(verification.checkedAt)} · ${verification.authenticated ? '로그인 상태' : '로그인 전'} · 메뉴 라벨 ${verification.menuLabelCount}개 확인`;
+      wrap.querySelector('.device-subhead span').textContent = service.id === 'korail-ticket'
+        ? `${timeLabel(verification.checkedAt)} · ${verification.authenticated ? '로그인 상태 확인' : '로그인 확인 안 됨'} · 예약·결제 미실행`
+        : `${timeLabel(verification.checkedAt)} · ${verification.authenticated ? '로그인 상태' : '로그인 전'} · 메뉴 라벨 ${verification.menuLabelCount}개 확인`;
       const list = document.createElement('div');
       list.className = 'device-remote-process-list';
       (verification.features || []).forEach(feature => {

@@ -12,7 +12,7 @@ async function api(path,options={}){
   const response=await fetch(apiUrl(path),{...options,headers,cache:'no-store'});const data=await response.json().catch(()=>({}));
   if(!response.ok)throw Object.assign(new Error(data.error||`http_${response.status}`),{status:response.status,data});return data;
 }
-function setSession(session){state.session=session||null;$('loginLink').hidden=Boolean(state.session);$('sessionState').textContent=state.session?'로그인됨':'로그인 없이 바로 사용';updateChatSession();void loadChatAvailability();if($('assistanceHistory'))void loadAssistanceHistory();if($('assistanceAdminPanel'))void loadAssistanceAdmin()}
+function setSession(session){state.session=session||null;$('loginLink').hidden=Boolean(state.session);$('sessionState').textContent=state.session?'로그인됨':'둘러보기 · 대화는 로그인 후';updateChatSession();void loadChatAvailability();if($('assistanceHistory'))void loadAssistanceHistory();if($('assistanceAdminPanel'))void loadAssistanceAdmin()}
 function serviceStatusMeta(service){return [service.categoryLabel,service.availabilityLabel,service.deliveryLabel].filter(Boolean).join(' · ')||'운영 · 바로 실행'}
 function serviceButton(service){
   const link=document.createElement('a');link.className='service-button';link.href=service.launchUrl;
@@ -101,48 +101,165 @@ async function boot(){
 $('wantForm').addEventListener('submit',async event=>{event.preventDefault();const value=$('wantInput').value.trim();if(!value)return;const button=event.submitter;button.disabled=true;try{await submitWanted(value)}catch(error){$('wantResult').textContent=`처리 실패: ${error.message}`}finally{button.disabled=false}});
 $('requestForm').addEventListener('submit',async event=>{event.preventDefault();const value=$('requestInput').value.trim();if(!value)return;$('wantInput').value=value;try{await submitWanted(value);$('requestInput').value=''}catch(error){$('wantResult').textContent=`요청 실패: ${error.message}`}});
 
+const CHAT_STORE_KEY='ekodi-ai-commons-chat-v2';
+const CHAT_FRESHNESS=/(최신|최근|오늘|어제|현재|지금|요즘|이번\s?(주|달|해)|올해|뉴스|속보|발표|공고|일정|가격|시세|환율|날씨|20[2-3]\d년)/;
 const chatState={history:[],busy:false,availability:null};
 const CHAT_ERRORS={
   authentication_required:'로그인 후 이용할 수 있습니다.',
   invalid_session:'로그인 세션이 만료되었습니다. 다시 로그인해 주세요.',
   identity_unavailable:'로그인 서비스에 연결할 수 없습니다.',
-  daily_chat_limit_reached:'오늘 사용 가능한 대화 횟수에 도달했습니다.',
-  provider_unavailable:'선택한 AI가 아직 연결되지 않았습니다.',
+  daily_chat_limit_reached:'오늘 사용 가능한 대화 횟수에 도달했습니다. 내일 다시 이용해 주세요.',
+  provider_unavailable:'선택한 AI가 아직 연결되지 않았습니다. "자동 · 무료 우선"으로 바꿔 보세요.',
   paid_provider_not_enabled:'GPT·Claude API는 관리자가 유료 사용을 허용한 후 사용할 수 있습니다.',
   all_providers_unavailable:'연결된 AI가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요.',
   local_queue_unavailable:'로컬 Ollama 실행 대기열을 이용할 수 없습니다.',
   chat_usage_store_unavailable:'사용량 관리 시스템을 확인할 수 없습니다.',
-  invalid_conversation:'대화가 너무 길어 새 질문으로 시작해야 합니다.',
+  invalid_conversation:'대화가 길어졌습니다. "새 대화"로 시작해 주세요.',
+  invalid_task:'대화 목적을 다시 선택해 주세요.',
 };
+const CHAT_PROVIDER_LABELS={'gemini-free':'무료 AI','openrouter-free':'무료 AI','groq-free':'무료 AI','huggingface-free-credit':'무료 AI','cloudflare-workers-ai':'무료 AI','openai-api':'GPT','anthropic-api':'Claude',ollama:'Ollama',auto:'자동',gpt:'GPT',claude:'Claude'};
+function chatProviderLabel(provider){return CHAT_PROVIDER_LABELS[provider]||'EKODI AI'}
 function chatStatus(message){$('chatStatus').textContent=message}
+const WEB_SOURCE_LABELS={google:'구글뉴스',bing:'Bing뉴스',gdelt:'GDELT뉴스',wiki:'위키'};
+function webStatusText(status){
+  if(!status||typeof status!=='object')return'';
+  const parts=Object.entries(status).filter(([key])=>WEB_SOURCE_LABELS[key]).map(([key,value])=>WEB_SOURCE_LABELS[key]+' '+(String(value).startsWith('ok:')?String(value).slice(3)+'건':value==='not_configured'?'미연결':String(value).slice(0,12)));
+  return parts.length?' ('+parts.join(' · ')+')':'';
+}
+function chatStore(){try{return window.sessionStorage}catch{return null}}
+function saveChat(){try{chatStore()?.setItem(CHAT_STORE_KEY,JSON.stringify({history:chatState.history.slice(-8),task:$('chatTask')?.value||'general'}))}catch{}}
+function clearChatStore(){try{chatStore()?.removeItem(CHAT_STORE_KEY)}catch{}}
 function updateChatSession(){
   if(!$('chatStatus'))return;
   if(!state.session&&!chatState.busy)chatStatus('로그인 후 AI 대화를 이용할 수 있습니다. 상단 로그인 버튼을 이용해 주세요.');
   else if(!chatState.busy)chatStatus('대화를 시작할 수 있습니다. 무료 모델을 우선 사용하며 GPT·Claude API 비용은 별도 승인 후 허용됩니다.');
 }
-function chatBubble(role,content,provider=''){
-  const log=$('chatMessages');if(log.querySelector('.chat-intro'))log.replaceChildren();
+// Safe Markdown subset rendered with DOM nodes and textContent only: model text is never parsed as HTML.
+function appendInline(parent,text){
+  const pattern=/(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(\[[^\]\n]{1,200}\]\(https:\/\/[^\s)]{1,500}\))|(https:\/\/[^\s<>()]{4,500})/g;
+  let index=0,match;
+  while((match=pattern.exec(text))){
+    if(match.index>index)parent.append(text.slice(index,match.index));
+    const token=match[0];
+    if(match[1]){const code=document.createElement('code');code.textContent=token.slice(1,-1);parent.append(code)}
+    else if(match[2]){const strong=document.createElement('strong');strong.textContent=token.slice(2,-2);parent.append(strong)}
+    else{
+      const label=match[3]?token.slice(1,token.indexOf('](')):token;const href=match[3]?token.slice(token.indexOf('](')+2,-1):token;
+      const link=document.createElement('a');link.textContent=label;link.target='_blank';link.rel='noopener noreferrer';
+      try{const url=new URL(href);if(url.protocol==='https:')link.href=url.toString()}catch{}
+      parent.append(link);
+    }
+    index=match.index+token.length;
+  }
+  if(index<text.length)parent.append(text.slice(index));
+}
+function renderMarkdown(source){
+  const root=document.createElement('div');root.className='chat-md';
+  const lines=String(source||'').replace(/\r\n?/g,'\n').split('\n');
+  let list=null,paragraph=null;
+  const closeBlocks=()=>{list=null;paragraph=null};
+  for(let i=0;i<lines.length;i++){
+    const line=lines[i];
+    if(/^```/.test(line.trim())){
+      closeBlocks();const lang=line.trim().slice(3).trim().slice(0,20);const body=[];
+      while(++i<lines.length&&!/^```/.test(lines[i].trim()))body.push(lines[i]);
+      const wrap=document.createElement('div');wrap.className='chat-code';
+      const bar=document.createElement('div');bar.className='chat-code-bar';const name=document.createElement('span');name.textContent=lang||'code';
+      const copy=document.createElement('button');copy.type='button';copy.className='chat-mini';copy.textContent='복사';
+      const pre=document.createElement('pre');const code=document.createElement('code');code.textContent=body.join('\n');pre.append(code);
+      copy.addEventListener('click',()=>copyText(code.textContent,copy));bar.append(name,copy);wrap.append(bar,pre);root.append(wrap);continue;
+    }
+    if(!line.trim()){closeBlocks();continue}
+    const heading=line.match(/^(#{1,4})\s+(.+)$/);
+    if(heading){closeBlocks();const h=document.createElement('p');h.className='chat-h chat-h'+heading[1].length;appendInline(h,heading[2]);root.append(h);continue}
+    if(/^\s*(?:---|\*\*\*)\s*$/.test(line)){closeBlocks();root.append(document.createElement('hr'));continue}
+    if(/^\|.*\|\s*$/.test(line)&&i+1<lines.length&&/^\|?\s*:?-{2,}/.test(lines[i+1].trim())){
+      closeBlocks();const cells=row=>row.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+      const scroll=document.createElement('div');scroll.className='chat-table';const table=document.createElement('table');
+      const head=document.createElement('tr');for(const cell of cells(line)){const th=document.createElement('th');appendInline(th,cell);head.append(th)}
+      const thead=document.createElement('thead');thead.append(head);table.append(thead);const tbody=document.createElement('tbody');i++;
+      while(i+1<lines.length&&/^\|.*\|\s*$/.test(lines[i+1])){i++;const tr=document.createElement('tr');for(const cell of cells(lines[i])){const td=document.createElement('td');appendInline(td,cell);tr.append(td)}tbody.append(tr)}
+      table.append(tbody);scroll.append(table);root.append(scroll);continue;
+    }
+    const quote=line.match(/^>\s?(.*)$/);
+    if(quote){closeBlocks();const q=document.createElement('blockquote');appendInline(q,quote[1]);root.append(q);continue}
+    const item=line.match(/^\s*(?:([-*•])|(\d{1,3})[.)])\s+(.+)$/);
+    if(item){
+      const ordered=Boolean(item[2]);
+      if(!list||list.tagName!==(ordered?'OL':'UL')){paragraph=null;list=document.createElement(ordered?'ol':'ul');if(ordered&&item[2]!=='1')list.start=Number(item[2]);root.append(list)}
+      const li=document.createElement('li');appendInline(li,item[3]);list.append(li);continue;
+    }
+    list=null;
+    if(paragraph){paragraph.append(document.createElement('br'));appendInline(paragraph,line)}
+    else{paragraph=document.createElement('p');appendInline(paragraph,line);root.append(paragraph)}
+  }
+  return root;
+}
+async function copyText(text,button){
+  const done=label=>{if(!button)return;const before=button.dataset.label||button.textContent;button.dataset.label=before;button.textContent=label;setTimeout(()=>{button.textContent=before},1600)};
+  try{await navigator.clipboard.writeText(text);done('복사됨')}
+  catch{const area=document.createElement('textarea');area.value=text;area.setAttribute('readonly','');area.style.position='fixed';area.style.opacity='0';document.body.append(area);area.select();
+    try{document.execCommand('copy');done('복사됨')}catch{done('복사 실패')}finally{area.remove()}}
+}
+function chatLog(){const log=$('chatMessages');if(log.querySelector('.chat-intro'))log.replaceChildren();return log}
+function chatSources(bubble,sources,status=null){
+  const list=(Array.isArray(sources)?sources:[]).filter(item=>item&&item.title&&/^https:\/\//.test(String(item.url||''))).slice(0,6);
+  if(!list.length)return;
+  const box=document.createElement('div');box.className='chat-sources';
+  const head=document.createElement('p');head.className='chat-sources-title';head.textContent='출처 · 웹 검색 '+list.length+'건';box.append(head);
+  const ol=document.createElement('ol');
+  for(const item of list){
+    const li=document.createElement('li');const link=document.createElement('a');link.textContent=String(item.title).slice(0,140);
+    try{const url=new URL(item.url);if(url.protocol==='https:')link.href=url.toString()}catch{}
+    link.target='_blank';link.rel='noopener noreferrer';
+    const meta=document.createElement('span');meta.textContent=' '+[item.source,item.date].filter(Boolean).join(' · ');li.append(link,meta);ol.append(li);
+  }
+  box.append(ol);
+  const detail=webStatusText(status);
+  if(detail){const note=document.createElement('p');note.className='chat-sources-status';note.textContent='검색원'+detail;box.append(note)}
+  bubble.insertBefore(box,bubble.querySelector('.chat-tools'));
+}
+function chatBubble(role,content,provider='',sources=null,webStatus=null){
+  const log=chatLog();
   const bubble=document.createElement('div');bubble.className='chat-bubble '+role;
-  const caption=document.createElement('small');caption.textContent=role==='user'?'나':provider?'EKODI AI · '+provider:'EKODI AI';
-  const message=document.createElement('div');message.textContent=String(content||'');
-  bubble.append(caption,message);log.append(bubble);log.scrollTop=log.scrollHeight;return bubble;
+  const caption=document.createElement('small');caption.textContent=role==='user'?'나':'EKODI AI'+(provider?' · '+chatProviderLabel(provider):'');
+  bubble.append(caption);
+  if(role==='assistant'){
+    bubble.append(renderMarkdown(content));
+    const tools=document.createElement('div');tools.className='chat-tools';
+    const copy=document.createElement('button');copy.type='button';copy.className='chat-mini';copy.textContent='답변 복사';
+    copy.addEventListener('click',()=>copyText(String(content||''),copy));tools.append(copy);bubble.append(tools);
+    chatSources(bubble,sources,webStatus);
+  }else{const message=document.createElement('div');message.textContent=String(content||'');bubble.append(message)}
+  log.append(bubble);log.scrollTop=log.scrollHeight;return bubble;
+}
+function chatTyping(){
+  const log=chatLog();const bubble=document.createElement('div');bubble.className='chat-bubble assistant chat-typing';bubble.setAttribute('aria-label','AI가 답변을 작성하고 있습니다');
+  const caption=document.createElement('small');caption.textContent='EKODI AI';const dots=document.createElement('span');dots.className='chat-dots';
+  for(let i=0;i<3;i++)dots.append(document.createElement('i'));bubble.append(caption,dots);log.append(bubble);log.scrollTop=log.scrollHeight;return bubble;
+}
+function chatFailure(bubble,message,text){
+  bubble.classList.add('failed');const row=document.createElement('div');row.className='chat-tools';
+  const note=document.createElement('span');note.textContent=message;const retry=document.createElement('button');retry.type='button';retry.className='chat-mini';retry.textContent='다시 보내기';
+  retry.addEventListener('click',()=>{row.remove();bubble.classList.remove('failed');void sendChat(text,bubble)});row.append(note,retry);bubble.append(row);
 }
 function chatPayload(userMessage){
-  const last=[...chatState.history,{role:'user',content:userMessage.slice(0,1200)}].slice(-8);
-  while(last.length>1&&last.reduce((sum,m)=>sum+m.content.length,0)>2000)last.shift();
+  const last=[...chatState.history.map(({role,content})=>({role,content})),{role:'user',content:userMessage.slice(0,1200)}].slice(-8);
+  while(last.length>1&&(last.reduce((sum,m)=>sum+m.content.length,0)>2000||last[0].role!=='user'))last.shift();
   return last;
 }
-function rememberChat(userMessage,answer){
-  chatState.history.push({role:'user',content:userMessage.slice(0,1200)},{role:'assistant',content:answer.slice(0,900)});
-  chatState.history=chatState.history.slice(-8);
+function rememberChat(userMessage,answer,sources){
+  chatState.history.push({role:'user',content:userMessage.slice(0,1200)},{role:'assistant',content:answer.slice(0,900),...(sources?.length?{sources:sources.slice(0,6)}:{})});
+  chatState.history=chatState.history.slice(-8);saveChat();
 }
 async function chatPoll(jobId){
+  const started=Date.now();
   for(let i=0;i<180;i++){
     await new Promise(resolve=>setTimeout(resolve,3000));
     const item=await api('/api/commons/chat/jobs/'+encodeURIComponent(jobId));
     if(item.state==='completed')return{reply:item.reply||'',provider:item.provider||'ollama'};
     if(item.state==='expired'||item.state==='failed')throw new Error('local_model_failed');
-    chatStatus('Ollama 로컬 컴퓨터의 응답을 기다리고 있습니다. 대기열 상태: '+(item.state||'대기 중'));
+    chatStatus('Ollama 로컬 컴퓨터의 응답을 기다리고 있습니다 · '+Math.round((Date.now()-started)/1000)+'초 경과');
   }
   throw new Error('local_queue_timeout');
 }
@@ -151,37 +268,74 @@ async function loadChatAvailability(){
     const data=await api('/api/commons/chat/status');
     chatState.availability=data.providers||{};
     const names=[['auto','무료 AI'],['ollama','Ollama'],['gpt','GPT'],['claude','Claude']];
-    $('chatAvailability').textContent=names.map(([id,label])=>label+' '+(chatState.availability[id]?'연결됨':'대기')).join(' · ');
+    const host=$('chatAvailability');host.replaceChildren();
+    for(const [id,label] of names){const pill=document.createElement('span');pill.className='chat-pill '+(chatState.availability[id]?'on':'off');pill.textContent=label+' '+(chatState.availability[id]?'연결됨':'대기');host.append(pill)}
     for(const option of $('chatProvider').options){
       if(option.value!=='auto')option.textContent=option.textContent.replace(/ · (연결됨|연결 대기)$/,'')+' · '+(chatState.availability[option.value]?'연결됨':'연결 대기');
     }
   }catch{$('chatAvailability').textContent='AI 연결 상태를 확인할 수 없습니다.';}
 }
+function updateChatCounter(){const input=$('chatInput'),counter=$('chatCounter');if(counter)counter.textContent=input.value.length+' / 1200'}
+async function sendChat(message,existingBubble=null){
+  if(chatState.busy)return;
+  if(!state.session){chatStatus('AI 대화를 사용하려면 로그인이 필요합니다.');$('loginLink').hidden=false;$('loginLink').focus();return}
+  chatState.busy=true;$('chatSubmit').disabled=true;chatStatus('AI가 응답을 생성하고 있습니다.');
+  const userBubble=existingBubble||chatBubble('user',message);
+  if(!existingBubble){$('chatInput').value='';updateChatCounter()}
+  const typing=chatTyping();
+  try{
+    const mode=$('chatProvider').value,task=$('chatTask')?.value||'general';
+    const web=Boolean($('chatWeb')?.checked);
+    if(web)chatStatus('웹에서 최신 자료를 찾은 뒤 답변을 만들고 있습니다.');
+    const response=await api('/api/commons/chat',{method:'POST',body:JSON.stringify({mode,task,web,messages:chatPayload(message)})});
+    const result=response.jobId?await chatPoll(response.jobId):response;
+    if(!result.reply)throw new Error('empty_model_answer');
+    const sources=(Array.isArray(response.sources)?response.sources:[]).filter(item=>item&&item.title&&/^https:\/\//.test(String(item.url||''))).slice(0,6);
+    typing.remove();chatBubble('assistant',result.reply,result.provider||mode,sources,response.webStatus);
+    rememberChat(message,result.reply,sources);
+    if(response.webFallback){chatStatus('응답 완료 · 웹 근거를 붙이면 AI가 응답하지 않아 웹 근거 없이 답했습니다.');return}
+    chatStatus('응답 완료 · '+chatProviderLabel(result.provider||mode)+(web?(sources.length?' · 웹 출처 '+sources.length+'건':' · 웹 검색 결과 없음'+webStatusText(response.webStatus)):''));
+  }catch(error){
+    typing.remove();
+    const detail=Array.isArray(error.data?.failures)&&error.data.failures.length?' ('+error.data.failures.slice(0,5).map(v=>String(v).slice(0,40)).join(' · ')+')':'';
+    const text=(CHAT_ERRORS[error.message]?CHAT_ERRORS[error.message]+detail:'')||(
+      error.message==='local_model_failed'||error.message==='local_queue_timeout'
+        ?'로컬 모델이 아직 응답하지 않았습니다. 나중에 다시 시도해 주세요.'
+        :'AI 처리 실패: '+String(error.message).slice(0,100));
+    chatStatus(text);chatFailure(userBubble,'전송 실패',message);
+  }finally{chatState.busy=false;$('chatSubmit').disabled=false}
+}
+function resetChat(){
+  chatState.history=[];clearChatStore();
+  const log=$('chatMessages');const intro=document.createElement('p');intro.className='chat-intro';
+  intro.textContent='새 대화를 시작합니다. 아래 예시를 누르거나 원하는 작업을 입력해 보세요.';log.replaceChildren(intro);
+  updateChatSession();$('chatInput').focus();
+}
+function restoreChat(){
+  try{
+    const saved=JSON.parse(chatStore()?.getItem(CHAT_STORE_KEY)||'null');
+    if(!saved||!Array.isArray(saved.history))return;
+    if(saved.task&&$('chatTask')&&[...$('chatTask').options].some(o=>o.value===saved.task))$('chatTask').value=saved.task;
+    chatState.history=saved.history.filter(m=>m&&['user','assistant'].includes(m.role)&&typeof m.content==='string').slice(-8);
+    for(const item of chatState.history)chatBubble(item.role,item.content,'',item.sources);
+  }catch{chatState.history=[]}
+}
 function initChat(){
-  $('chatForm').addEventListener('submit',async event=>{
-    event.preventDefault();
-    if(chatState.busy)return;
-    const message=$('chatInput').value.trim();if(!message)return;
-    if(!state.session){chatStatus('AI 대화를 사용하려면 로그인이 필요합니다.');$('loginLink').hidden=false;return}
-    chatState.busy=true;$('chatSubmit').disabled=true;chatStatus('AI가 응답을 생성하고 있습니다.');
-    try{
-      const payload=chatPayload(message),mode=$('chatProvider').value;
-      const response=await api('/api/commons/chat',{method:'POST',body:JSON.stringify({mode,messages:payload})});
-      $('chatInput').value='';
-      chatBubble('user',message);
-      const result=response.jobId?await chatPoll(response.jobId):response;
-      if(!result.reply)throw new Error('empty_model_answer');
-      chatBubble('assistant',result.reply,result.provider||mode);
-      rememberChat(message,result.reply);
-      chatStatus('응답 완료 · '+(result.provider||mode));
-    }catch(error){
-      chatStatus(CHAT_ERRORS[error.message]||(
-        error.message==='local_model_failed'||error.message==='local_queue_timeout'
-          ?'로컬 모델이 아직 응답하지 않았습니다. 나중에 다시 시도해 주세요.'
-          :'AI 처리 실패: '+String(error.message).slice(0,100)
-      ));
-    }finally{chatState.busy=false;$('chatSubmit').disabled=false}
+  const input=$('chatInput');
+  $('chatForm').addEventListener('submit',event=>{event.preventDefault();const message=input.value.trim();if(message)void sendChat(message)});
+  input.addEventListener('keydown',event=>{
+    if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing&&event.keyCode!==229){event.preventDefault();$('chatForm').requestSubmit()}
   });
+  input.addEventListener('input',()=>{updateChatCounter();const web=$('chatWeb');if(web&&!web.dataset.userSet&&CHAT_FRESHNESS.test(input.value))web.checked=true});
+  $('chatWeb')?.addEventListener('change',event=>{event.target.dataset.userSet='1'});
+  $('chatReset')?.addEventListener('click',resetChat);
+  $('chatTask')?.addEventListener('change',saveChat);
+  document.querySelectorAll('[data-chat-prompt]').forEach(button=>button.addEventListener('click',()=>{
+    if(button.dataset.chatTask&&$('chatTask'))$('chatTask').value=button.dataset.chatTask;
+    input.value=button.dataset.chatPrompt;updateChatCounter();
+    document.getElementById('chat').scrollIntoView({block:'start'});input.focus();input.setSelectionRange(input.value.length,input.value.length);
+  }));
+  restoreChat();updateChatCounter();
   void loadChatAvailability();
 }
 

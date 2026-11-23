@@ -31,6 +31,7 @@ test('Shared Site candidate smoke excludes the independently routed CGMA public 
     'https://ekodi.kr/cgma',
     'https://ekodi.kr/cgma/',
     'https://ekodi.kr/cgma/marketing',
+    'https://ekodi.kr/cgma/accounting',
   ]) assert.ok(!urls.includes(url), `independently routed CGMA URL leaked into Shared Site candidate smoke: ${url}`);
 });
 

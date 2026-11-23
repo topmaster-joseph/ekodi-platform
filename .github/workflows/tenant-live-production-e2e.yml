@@ -1,20 +1,18 @@
 name: Verify Tenant Live Production E2E
 
+# This job creates short-lived PUBLIC synthetic broadcasts across multiple tenants.
+# Never run on push/merge. Only an explicit owner-initiated, acknowledged dispatch.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/tenant-live-production-e2e.yml'
-      - 'scripts/tenant-live-production-e2e.mjs'
-      - 'scripts/church-live-production-e2e.mjs'
-      - 'realtime-control.js'
-      - 'realtime-tenant-registry.js'
-      - 'tenant-live-page.js'
-      - 'tenant-live.js'
-      - 'live-interpretation.js'
-      - 'live-interpretation-control.js'
-      - 'tenant-live.css'
+    inputs:
+      acknowledge_public_synthetic_broadcast:
+        description: 'Confirm test streams may be publicly visible for a short period'
+        required: true
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
+        default: 'no'
 
 permissions:
   contents: read
@@ -25,7 +23,9 @@ concurrency:
 
 jobs:
   tenant-live-e2e:
-    runs-on: ubuntu-latest
+    if: github.actor == 'topmaster-joseph' && inputs.acknowledge_public_synthetic_broadcast == 'yes'
+    # Playwright 1.55.x Chromium does not install on ubuntu-26.04 (ubuntu-latest); keep browser jobs on LTS.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -75,7 +75,7 @@ jobs:
 
       - name: Install Chromium harness
         run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium
 
       - name: Run every common Tenant Live publish and anonymous viewer pull

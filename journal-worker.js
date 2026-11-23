@@ -113,6 +113,7 @@ function jsonFeed(posts) {
 function sitemap(posts) {
   const urls = [
     `<url><loc>${JOURNAL_META.canonicalOrigin}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>`,
+    `<url><loc>${JOURNAL_META.canonicalOrigin}/submit</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>`,
     ...posts.map((post) =>
       `<url><loc>${JOURNAL_META.canonicalOrigin}/p/${encodeURIComponent(post.slug)}</loc><lastmod>${new Date(post.updatedAt).toISOString()}</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>`
     ),
@@ -128,6 +129,11 @@ function jsonLd(data) { return JSON.stringify(data).replaceAll('<', '\\u003c'); 
 
 export function seoFor(post, posts = []) {
   const origin = JOURNAL_META.canonicalOrigin;
+  if (post === 'submit') {
+    return { title: '투고 안내 | EKODI Journal', description: '에코디저널 투고 안내 — 원고 분야, 분량과 형식, 진행 순서, 편집 원칙과 원고 접수.', url: `${origin}/submit`, type: 'website',
+      ld: { '@context': 'https://schema.org', '@type': 'WebPage', name: '에코디저널 투고 안내', url: `${origin}/submit`, isPartOf: { '@type': 'Periodical', name: 'EKODI Journal', url: `${origin}/` } },
+      body: '<h1>에코디저널 투고 안내</h1><p>에세이, 현장 기록, 기술과 AI, 서평 원고를 받습니다. 한글·워드·PDF·텍스트 파일(5MB 이하)을 첨부해 투고하면 편집부가 2주 안에 회신합니다.</p>' };
+  }
   if (!post) {
     return {
       title: 'EKODI Journal — 에코디 저널', description: JOURNAL_META.description, url: `${origin}/`, type: 'website',
@@ -187,10 +193,14 @@ async function shellHtml(env, request, path) {
   let body = await response.text();
   try {
     const posts = await allPosts(env);
-    const slugMatch = path.match(/^\/p\/([^/]+)$/);
-    const post = slugMatch ? posts.find((p) => p.slug === decodeURIComponent(slugMatch[1])) || null : null;
-    if (slugMatch && !post) status = 404;
-    body = applySeo(body, seoFor(post, posts), { noindex: status === 404 });
+    if (path === '/submit') {
+      body = applySeo(body, seoFor('submit', posts));
+    } else {
+      const slugMatch = path.match(/^\/p\/([^/]+)$/);
+      const post = slugMatch ? posts.find((p) => p.slug === decodeURIComponent(slugMatch[1])) || null : null;
+      if (slugMatch && !post) status = 404;
+      body = applySeo(body, seoFor(post, posts), { noindex: status === 404 });
+    }
   } catch { /* SEO 보강 실패 시에도 기존 화면은 그대로 제공 */ }
   const headers = new Headers(response.headers);
   headers.delete('content-length');
@@ -247,7 +257,7 @@ export default {
       return Response.redirect('https://ekodi.kr/admin/journal', 307);
     }
 
-    if (path === '/' || /^\/p\/[^/]+$/.test(path)) return shellHtml(env, request, path);
+    if (path === '/' || path === '/submit' || /^\/p\/[^/]+$/.test(path)) return shellHtml(env, request, path);
 
     const response = await env.ASSETS.fetch(request);
     const contentType = response.headers.get('content-type') || '';

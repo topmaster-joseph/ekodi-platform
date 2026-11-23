@@ -9,7 +9,7 @@ const entry = readFileSync(new URL('../auth-site/auth-entry.js', import.meta.url
 
 test('login screen paints immediately with a skeleton and a loading notice', () => {
   assert.match(html, /id="googleButtonHost"[^>]*><div class="login-skeleton" data-login-skeleton/);
-  assert.match(html, /id="authStatus" class="notice loading" role="status" aria-live="polite">로그인 화면을 불러오는 중입니다/);
+  assert.match(html, /id="authStatus" class="notice loading" role="status" aria-live="polite"><span>로그인 화면을 불러오는 중입니다…<br>잠시만 기다려 주세요\.<\/span>/);
   assert.match(css, /\.notice\.loading::before\{[^}]*animation:ekodi-spin/);
   assert.match(css, /\.login-skeleton span\{[^}]*animation:ekodi-shimmer/);
   assert.match(css, /prefers-reduced-motion:reduce/);

@@ -1,3 +1,4 @@
+import {searchCommonsWeb,commonsWebContext} from './ai-commons-web-search.js';
 import {approveAssistancePricebook,catalogFromApprovedPricebook,loadApprovedAssistancePricebook} from './support/assistance-pricebook.js';
 import {merchantContractReadiness,normalizeMerchantQuote,quoteDigest,normalizeQuoteAcknowledgment,paymentReadiness} from './support/assistance-contract.js';
 import {assistanceCatalogue,normalizeAssistanceRequest} from './support/assistance-catalog.js';
@@ -411,7 +412,14 @@ async function handleCommonsChat(request,env,url){
     if(!providers.length)return json({error:input.mode==='gpt'||input.mode==='claude'?'paid_provider_not_enabled':'provider_unavailable'},503);
     const tier=input.mode==='ollama'?'local':(input.mode==='gpt'||input.mode==='claude'?'paid':'free');
     const usage=await reserveCommonsChatUsage(env,auth.user.id,tier);if(!usage.ok)return json({error:usage.error},usage.status);
-    const prompt=buildCommonsChatPrompt(input.messages);
+    let sources=[],webStatus=null;
+    if(input.web){
+      try{const found=await searchCommonsWeb(input.messages.at(-1).content,env);sources=found.sources;webStatus=found.status;
+        console.log('AI Commons web search',JSON.stringify({sources:sources.length,status:webStatus}))}
+      catch(error){webStatus={error:'unavailable'};console.warn('AI Commons web search unavailable',clean(error?.message||error).slice(0,100))}
+    }
+    const webMeta={web:input.web,sources,webStatus};
+    const prompt=buildCommonsChatPrompt(input.messages,{task:input.task,webContext:commonsWebContext(sources)});
     if(input.mode==='ollama'){
       const stamp=now(),id=crypto.randomUUID();
       const task={id,title:'EKODI Commons Chat',prompt,requestedProviders:['node:ollama-local'],needsCodeBranch:false,branch:'',
@@ -420,22 +428,28 @@ async function handleCommonsChat(request,env,url){
       try{
         await insertTask(env,task);
         await enqueueNodeRun(env,task,{providerId:'node:ollama-local',role:'commons-chat'},prompt);
-        return json({ok:true,jobId:id,state:'queued',provider:'ollama'},202);
+        return json({ok:true,jobId:id,state:'queued',provider:'ollama',...webMeta},202);
       }catch(error){console.error('AI Commons local queue unavailable',clean(error?.message||error).slice(0,100));return json({error:'local_queue_unavailable'},503)}
     }
     const task={id:crypto.randomUUID(),title:'EKODI Commons Chat',origin:{provider:'ekodi',channel:'commons-chat'}};
-    for(const providerId of providers){
-      try{
-        const result=await invokeProviderWithMeta(env,providerId,prompt,task,'commons-chat');
-        const answer=clean(result.text).slice(0,12000);if(!answer)throw new Error('empty_model_answer');
-        await recordFreeProviderOutcome(env,providerId,{ok:true,quota:result.quota||null}).catch(()=>{});
-        return json({ok:true,reply:answer,provider:providerId});
-      }catch(error){
-        await recordFreeProviderOutcome(env,providerId,{ok:false,error}).catch(()=>{});
-        console.warn('AI Commons provider failed',providerId,clean(error?.message||error).slice(0,100));
+    const failures=[];
+    // With web evidence attached, a failed round is retried once with the plain conversation prompt.
+    const prompts=sources.length?[[prompt,true],[buildCommonsChatPrompt(input.messages,{task:input.task}),false]]:[[prompt,false]];
+    for(const [attemptPrompt,withWeb] of prompts){
+      for(const providerId of providers){
+        try{
+          const result=await invokeProviderWithMeta(env,providerId,attemptPrompt,task,'commons-chat');
+          const answer=clean(result.text).slice(0,12000);if(!answer)throw new Error('empty_model_answer');
+          await recordFreeProviderOutcome(env,providerId,{ok:true,quota:result.quota||null}).catch(()=>{});
+          return json({ok:true,reply:answer,provider:providerId,...webMeta,...(withWeb||!sources.length?{}:{sources:[],webFallback:true})});
+        }catch(error){
+          await recordFreeProviderOutcome(env,providerId,{ok:false,error}).catch(()=>{});
+          failures.push(commonsProviderFailure(providerId,error));
+          console.warn('AI Commons provider failed',providerId,withWeb?'web':'plain',clean(error?.message||error).slice(0,160));
+        }
       }
     }
-    return json({error:'all_providers_unavailable'},503);
+    return json({error:'all_providers_unavailable',failures:failures.slice(0,10)},503);
   }
   const match=url.pathname.match(/^\/api\/commons\/chat\/jobs\/([a-f0-9-]{36})$/);
   if(request.method==='GET'&&match){
@@ -447,6 +461,15 @@ async function handleCommonsChat(request,env,url){
       ...(task.state==='failed'?{error:'local_model_failed'}:{})});
   }
   return null;
+}
+// Short, secret-free failure codes so the operator can see why every free engine refused.
+function commonsProviderFailure(providerId,error){
+  const name={'gemini-free':'gemini','openrouter-free':'openrouter','groq-free':'groq','huggingface-free-credit':'hf','cloudflare-workers-ai':'workers-ai'}[providerId]||'ai';
+  const status=Number(error?.status||0);
+  const message=clean(error?.message||error);
+  const code=status?'http_'+status:error?.name==='TimeoutError'||/timeout|timed out/i.test(message)?'timeout':
+    (message.match(/^[A-Za-z0-9_.-]{3,40}/)?.[0]||'error');
+  return name+':'+code.toLowerCase().slice(0,40);
 }
 async function requireCommonsMember(request,env){
   const token=bearer(request);if(!token)return{error:json({error:'authentication_required'},401)};

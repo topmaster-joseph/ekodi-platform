@@ -49,4 +49,35 @@ for(const marker of ['recordTrafficOutcome','trafficRuntimeSnapshot','recovery_h
 if(p.quotaProtection?.warningPercent!==70||p.quotaProtection?.protectPercent!==90||p.quotaProtection?.circuitBreakerPercent!==100)fail('70/90/100 quota protection thresholds required');
 if(!Array.isArray(p.quotaProtection?.stopRetryStatuses)||!p.quotaProtection.stopRetryStatuses.includes(429)||!p.quotaProtection.stopRetryStatuses.includes(1027))fail('429/1027 circuit-breaker signals required');
 if(p.failurePolicy?.circuitBreaker!==true)fail('circuit breaker required');
+
+// EKODI-EDGE-TRAFFIC-SHIELD-001: client isolation + satellite coverage.
+{
+  const shield=p.edgeTrafficShield||{};
+  const shieldSource=fs.readFileSync(new URL('../edge-traffic-shield.js',import.meta.url),'utf8');
+  const router=fs.readFileSync(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
+  if(shield.policyId!=='EKODI-EDGE-TRAFFIC-SHIELD-001'||!shieldSource.includes(shield.policyId))fail('edge traffic shield policy missing');
+  if(shield.clientIsolation?.readsFailOpen!==true)fail('client isolation must fail open for reads');
+  for(const binding of Object.values(shield.clientIsolation?.rateLimiters||{})){
+    if(!siteConfig.includes(`name = "${binding}"`))fail('shared site missing '+binding);
+    if(!shieldSource.includes(binding))fail('shield runtime missing '+binding);
+  }
+  const start=router.indexOf('async fetch(request,env,ctx){');
+  const clientAt=router.indexOf('enforceClientTrafficBudget(',start),tierAt=router.indexOf('assessTrafficTier(',start);
+  if(start<0||clientAt<0||clientAt>tierAt)fail('client isolation must run before the site-wide tier');
+  const workers=shield.satelliteCoverage?.workers||{};
+  if(Object.keys(workers).length<10)fail('satellite coverage list shrank');
+  for(const [file,toml] of Object.entries(workers)){
+    const source=fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
+    if(!/export default withEdgeTrafficShield\(/.test(source))fail(file+' is not wrapped by the edge traffic shield');
+    const config=fs.readFileSync(new URL('../'+toml,import.meta.url),'utf8');
+    for(const name of ['PLATFORM_PUBLIC_WRITE_RATE_LIMITER','PLATFORM_SENSITIVE_RATE_LIMITER','TRAFFIC_CLIENT_RATE_LIMITER','TRAFFIC_NETWORK_RATE_LIMITER'])
+      if(!config.includes(`name = "${name}"`))fail(toml+' missing '+name);
+  }
+  // New apex path routes must not appear without the shield.
+  for(const name of fs.readdirSync(new URL('..',import.meta.url)).filter(n=>/^wrangler\..+\.toml$/.test(n)&&!/staging|development/.test(n))){
+    const config=fs.readFileSync(new URL('../'+name,import.meta.url),'utf8');
+    if(name==='wrangler.site.toml'||!/pattern\s*=\s*"ekodi\.kr\/[^"*]/.test(config))continue;
+    if(!Object.values(workers).includes(name))fail(name+' routes an ekodi.kr path around the Shared Site without the edge traffic shield');
+  }
+}
 if(!process.exitCode)console.log('EKODI-CONCURRENT-TRAFFIC-10K-001 validated.');

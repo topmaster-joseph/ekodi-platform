@@ -43,3 +43,33 @@ test('status is concise and never exposes the actor email, and login is canonica
   assert.match(css,/\.connector-page \.connector-actions button\[hidden\]\{display:none!important\}/);
   assert.match(js,/login\.hidden=signed;logout\.hidden=!signed/);
 });
+
+test('supplier console separates private operator lookup from public display rights',()=>{
+  assert.match(html, /id="publicCatalogGate"[^>]*>권한 확인 전/);
+  assert.match(html, /id="publicCatalogGateDetail"/);
+  assert.match(html, /운영자 전용 상품조회/);
+  assert.match(html, /에코디몰 공개 카탈로그/);
+  assert.match(html, /방문자 공개권한과 별개/);
+  assert.match(html, /출처·이미지 사용권/);
+  assert.match(js, /async function refreshPublicCatalog\(\)/);
+  assert.match(js, /\/api\/public\/supplier\/status/);
+  assert.match(js, /state\?\.checkoutReady===false&&state\?\.autoOrderReady===false/);
+  assert.match(js, /credentials:'omit'/);
+  assert.doesNotMatch(html, /name="aid"|name="sId"|name="supplierPassword"/);
+  assert.match(css, /\.connector-overview-strip\{display:grid;grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
+});
+
+
+test('connector dashboard labels administrator-only scope and gates remain truthful',()=>{
+  assert.match(html, /<nav class="mall-admin-breadcrumb" aria-label="현재 위치">/);
+  assert.match(html, /href="\/ekodimall\/">에코디몰 사용자 화면<\/a>/);
+  assert.match(html, /<span class="mall-role-chip">관리자 전용<\/span>/);
+  assert.match(html, /API 조회 권한과 일반 사용자 공개 권한은 별도로 검증합니다/);
+  assert.match(css, /\.connector-page \.connector-overview-strip article\{/);
+  assert.match(css, /\.connector-page \.connector-overview-strip strong\.connector-off\{/);
+  assert.match(css, /\.connector-page \.connector-overview-strip article:nth-child\(4\) strong\.connector-off/);
+  assert.match(css, /@media\(max-width:520px\)/);
+  assert.match(html,/id="publicCatalogGate" class="connector-off">권한 확인 전/);
+  assert.match(html,/class="connector-off">차단/);
+  assert.doesNotMatch(html, /관리자 인증 성공|공개 카탈로그 승인 완료/);
+});

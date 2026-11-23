@@ -50,9 +50,9 @@ export function trafficSiteIdForHost(value) {
 // Cloudflare zone request aggregates remain host-scoped and are not split here.
 export const ROOT_PATH_SITE_IDS = Object.freeze({
   ai:'ai', bible:'bible', books:'books', ekodibooks:'books', community:'community',
-  ekodichurch:'church', ekodimission:'mission', ekodibiz:'biz',
+  ekodichurch:'church', ekodimission:'mission', mission:'mission', ekodibiz:'biz',
   ekodimall:'mall', ekodilab:'lab', cgma:'cgma', cheonggye:'cheonggye',
-  seonammedi:'seonammedi', pgm:'pgm', jadam:'jadam',
+  seonammedi:'seonammedi', pgm:'pgm', jadam:'jadam', bbqcg:'bbqcg',
   pizzamaru:'pizzamaru', yogurt:'yogurt', cmpmyi:'cmpmyi',
   joseph:'joseph', live:'live', trade:'trade', journal:'journal',
   publishing:'publishing', invest:'invest', money:'money', social:'social',
@@ -67,9 +67,9 @@ export const ROOT_PATH_SITE_IDS = Object.freeze({
   ekodipay:'pay', mall:'mall', 'ekodi-church':'church', cgmurrc:'cgmurrc',
   jubilee:'jubilee', open:'open', 'business-coop':'business-coop',
   sosik:'sosik', qtin:'qtin', pyeonggongmok:'pyeonggongmok',
-  'mokpo-presbytery':'mokpo-presbytery', proposal:'proposal', promotion:'promotion',
+  'mokpo-presbytery':'mokpo-presbytery', proposal:'proposal', office:'office', promotion:'promotion',
   notifications:'notifications', singles:'singles', learn:'learn', history:'history',
-  'local-commerce':'local-commerce', org:'org', hub:'hub',
+  'local-commerce':'local-commerce', org:'org', hub:'hub', funding:'funding',
   'ekodibiz/trade':'trade', 'ekodibiz/marketing-ai':'marketing',
   'ekodibiz/mall':'mall'
 });

@@ -65,6 +65,10 @@ test('both EKODI voices are real approved audio tracks, not browser pitch shifts
  assert.equal(await player.play('female',.94),true);
  assert.equal(FakeAudio.instances.at(-1).src,'/bible/narration/2026-11-02/female.mp3');
  assert.equal(FakeAudio.instances.at(-1).playbackRate,.94);
+ player.setLoop(true);
+ assert.equal(FakeAudio.instances.at(-1).loop,true,'approved audio supports looping without repeated downloads');
+ player.setLoop(false);
+ assert.equal(FakeAudio.instances.at(-1).loop,false,'turning off looping updates playing audio');
  player.pause();assert.equal(FakeAudio.instances.at(-1).paused,true);
  await player.resume();
  assert.equal(FakeAudio.instances.at(-1).playCount,2);
@@ -101,13 +105,14 @@ test('shared UI exposes separate EKODI engine and safe OS fallback without synth
  };
  const ui=createDevotionSpeechUI(win,{createElement:t=>new FakeElement(t)});
  const row=ui.element;
- const engine=row.children.at(-2).children[0];
- const gender=row.children.at(-4).children[0];
+ const engine=row.children.find(el=>el.className==='dv-speech-engine').children[0];
+ const gender=row.children.find(el=>el.className==='dv-speech-gender').children[0];
  assert.equal(engine.value,'device');
  ui.setData(sample);
  await new Promise(resolve=>setTimeout(resolve,0));
  assert.equal(engine.children[0].disabled,false);
- assert.equal(engine.value,'ekodi');
+ assert.equal(engine.value,'device','approved EKODI audio must not silently override device voice');
+ engine.change('ekodi');
  gender.change('female');
  row.children[0].click();
  await new Promise(resolve=>setTimeout(resolve,0));
@@ -118,6 +123,39 @@ test('shared UI exposes separate EKODI engine and safe OS fallback without synth
  assert.equal(spoken.length,1);
  assert.equal(spoken[0].voice?.name,'Google 한국어');
 });
+test('approved audio still supports user-initiated looping without Web Speech synthesis',async()=>{
+ FakeAudio.instances.length=0;
+ const win={
+  Audio:FakeAudio,
+  fetch:async (path,opts)=>opts?.method==='HEAD'
+    ?{ok:true,headers:{get:()=> 'audio/mpeg'}}
+    :{ok:true,json:async()=>good},
+  addEventListener:()=>{},
+  localStorage:{getItem:()=>null,setItem:()=>{}},
+ };
+ const ui=createDevotionSpeechUI(win,{createElement:t=>new FakeElement(t)});
+ const row=ui.element;
+ const engine=row.children.find(el=>el.className==='dv-speech-engine').children[0];
+ const loop=row.children.find(el=>el.dataset?.speechAction==='loop');
+ const play=row.children[0],stop=row.children[3];
+ ui.setData(sample);
+ await new Promise(resolve=>setTimeout(resolve,0));
+ assert.equal(engine.value,'device');
+ assert.equal(play.disabled,true,'unavailable device voice cannot fake readiness');
+ engine.change('ekodi');
+ assert.equal(play.disabled,false);
+ assert.equal(loop.disabled,false);
+ loop.click();
+ assert.equal(loop.attrs['aria-pressed'],'true');
+ assert.equal(FakeAudio.instances.length,0,'loop toggle never starts playback');
+ play.click();
+ await new Promise(resolve=>setTimeout(resolve,0));
+ assert.equal(FakeAudio.instances.at(-1).loop,true);
+ stop.click();
+ assert.equal(loop.attrs['aria-pressed'],'false');
+ assert.equal(FakeAudio.instances.at(-1).paused,true);
+});
+
 test('narration publisher never ships sample files without explicit two-speaker approval',()=>{
  const script=readFileSync(new URL('../scripts/ekodi-voice/approve-devotion-narration.mjs',import.meta.url),'utf8');
  assert.match(script,/review\.maleSpeakerConsent/);

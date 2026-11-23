@@ -1,4 +1,5 @@
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
+import { syncApprovedChurchWeeklyNotices } from './church-monthly-official-news.js';
 
 const CENTRAL_SUPABASE_URL='https://renzehysxirjilvdxacv.supabase.co';
 const CENTRAL_PUBLISHABLE_KEY='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
@@ -12,6 +13,7 @@ export function churchOfficialCategoryRequiresManager(siteId,categoryId){
   return siteId==='ekodichurch'&&['notice','schedule'].includes(safeCategoryId(categoryId));
 }
 const MISSION_OFFICIAL_CATEGORIES=Object.freeze(['mission-notice','mission-schedule']);
+const ALL_OFFICIAL_CATEGORY_IDS=new Set(['mission-notice','mission-schedule','notice','schedule']);
 const isMissionOfficialCategory=(instance,categoryId)=>instance.site_id==='ekodimission'&&MISSION_OFFICIAL_CATEGORIES.includes(categoryId);
 const isChurchOfficialCategory=(instance,categoryId)=>churchOfficialCategoryRequiresManager(instance.site_id,categoryId);
 const isPublicOfficialCategory=(instance,categoryId)=>isMissionOfficialCategory(instance,categoryId)||isChurchOfficialCategory(instance,categoryId);
@@ -50,9 +52,11 @@ export function resolveSiteBoardRoute(input){
   if(host==='ekodi.kr'||host===INTERNAL_BOARD_SERVICE_HOST){
     const match=url.pathname.match(/^\/([a-z0-9-]+)\/board(?:\/(.*))?\/?$/i);
     if(match){
-      const siteId=safeSiteId(match[1]);
+      const publicSlug=safeSiteId(match[1]);
+      // The short Mission URL must resolve the existing board, not create a new tenant.
+      const siteId=publicSlug==='mission'?'ekodimission':publicSlug;
       const rest=match[2]?'/'+match[2]:'/';
-      return Object.freeze({siteId,tenantSlug:tenantSlugFor(siteId),basePath:`/${siteId}/board`,subPath:rest});
+      return Object.freeze({siteId,tenantSlug:tenantSlugFor(siteId),basePath:`/${publicSlug}/board`,subPath:rest});
     }
   }
   return null;
@@ -304,6 +308,9 @@ const boardJson=(instance,data,status=200)=>json(data,status,{'x-ekodi-board-id'
 async function parseBody(request){try{return await request.json()}catch{return null}}
 
 async function listPosts(env,instance,categoryId=''){
+  // An official category from another tenant must never fall back to that
+  // board's unrelated public posts, even after this board acquires news.
+  if(ALL_OFFICIAL_CATEGORY_IDS.has(categoryId)&&!isPublicOfficialCategory(instance,categoryId))return [];
   const selected=isPublicOfficialCategory(instance,categoryId)?categoryId:'';
   const rows=selected
     ?await env.DB.prepare(`SELECT p.id,p.title,p.body,p.created_at,p.updated_at,pc.category_id
@@ -327,14 +334,46 @@ async function readPost(env,instance,id){
 }
 
 function htmlEscape(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
-function page(route,posts,categoryId=''){
-  const items=posts.length?posts.map(post=>`<article><a href="${route.basePath}/post/${post.id}"><h2>${htmlEscape(post.title)}</h2></a><p>${htmlEscape(post.body).slice(0,220)}</p><time>${htmlEscape(post.createdAt)}</time></article>`).join(''):'<p class="empty">등록된 글이 없습니다.</p>';
-  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${['mission-notice','notice'].includes(categoryId)?'공지사항':['mission-schedule','schedule'].includes(categoryId)?'주요일정':'게시판'}</title><style>body{margin:0;background:#fff;color:#111;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}main{width:min(920px,calc(100% - 28px));margin:0 auto;padding:18px 0}header{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:12px 0}h1{font-size:22px;margin:0}article{padding:15px 0;border-bottom:1px solid #e6e6e6}h2{font-size:18px;margin:0 0 7px}a{color:#111;text-decoration:none}p{white-space:pre-wrap;line-height:1.5;margin:0 0 7px}time{font-size:12px;color:#666}.empty{padding:30px 0}</style></head><body><main><header><h1>${['mission-notice','notice'].includes(categoryId)?'공지사항':['mission-schedule','schedule'].includes(categoryId)?'주요일정':'게시판'}</h1>${categoryId?`<p><a href="${route.siteId==='ekodichurch'?'/ekodichurch':'/ekodimission'}">${route.siteId==='ekodichurch'?'에코디교회':'에코디선교회'} 홈으로</a></p>`:''}</header>${items}</main></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-id':boardId(route.siteId),'x-ekodi-board-independent':'true'}});
+
+/**
+ * Church/Mission independent board routes keep their own CRUD and tenant
+ * isolation, while sharing the public site's identity, navigation and footer.
+ * No redirects or data migrations are needed.
+ */
+export function boardIdentityShell(route,html){
+  if(!['ekodichurch','ekodimission'].includes(route?.siteId))return html;
+  const church=route.siteId==='ekodichurch';
+  const root=church?'/ekodichurch/':'/ekodimission';
+  const head=church
+    ? '<link rel="stylesheet" href="/ekodichurch/styles.css"><link rel="stylesheet" href="/ekodichurch/church-refresh.css"><link rel="stylesheet" href="/ekodichurch/responsive.css"><link rel="stylesheet" href="/ekodichurch/church-footer.css"><link rel="stylesheet" href="/ekodichurch/church-account-header.css"><link rel="stylesheet" href="/ekodichurch/church-public-updates.css">'
+    : '<link rel="stylesheet" href="/ekodimission/assets/site.css"><link rel="stylesheet" href="/ekodimission/assets/shell.css">';
+  const header=church
+    ? '<header class="site-header" id="top"><a class="brand" href="/ekodichurch/" aria-label="에코디교회 홈"><span class="brand-mark" aria-hidden="true">E</span><span><strong>에코디교회</strong><small>EKODI CHURCH</small></span></a><button class="menu-button" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="메뉴 열기"><span></span><span></span></button><nav id="main-nav" aria-label="주요 메뉴"><a href="/ekodichurch/devotion/">매일묵상</a><a href="/ekodichurch/#worship">예배·방송</a><a href="/ekodichurch/notices/">공지사항</a><a href="/ekodichurch/schedule/">주요일정</a><a href="/ekodichurch/#together">함께하기</a><a href="/qtin/church">큐티인 신청</a></nav></header>'
+    : '<header class="mission-site-header" id="top"><a class="mission-brand" href="/ekodimission"><span class="mission-brand-mark" aria-hidden="true">E</span><span><strong>에코디선교회</strong><small>EKODI MISSION</small></span></a><nav data-mission-nav aria-label="주요 메뉴"><a href="/ekodimission">홈</a><a href="/ekodimission#notices">공지</a><a href="/ekodimission#schedule">일정</a><a href="/ekodimission/activities">활동</a></nav></header>';
+  const footer=church
+    ? '<footer class="site-footer church-footer" data-ekodi-service-footer><div class="church-footer-inner"><strong class="church-footer-brand">EKODI CHURCH</strong><div class="church-footer-info" aria-label="에코디교회 운영 정보"><span class="church-footer-identity">에코디교회 정찬균</span><span>전남 무안군 청계면 백련동1길 17-4, 1층</span><span>고유번호 307-82-82097</span><a href="mailto:ekodichurch@gmail.com">ekodichurch@gmail.com</a></div><nav class="church-footer-legal" aria-label="법적 고지"><a href="/privacy">개인정보처리방침</a><a href="/terms">이용약관</a><a href="mailto:ekodibiz@gmail.com">문의</a></nav><div class="church-footer-bottom"><span>© 2026 EKODI CHURCH</span><a href="#top">맨 위로 ↑</a></div></div></footer>'
+    : '<footer class="site-footer" data-ekodi-service-footer><div><strong>에코디선교회</strong><p>말씀대로 살아내고, 곁을 내어주며, 사람과 공동체를 살려내는 선교.</p></div><p class="footnote">EKODI MISSION · ekodi.kr/ekodimission</p></footer>';
+  const scripts=church
+    ? '<script src="/ekodichurch/devotion/devotion-page.js" defer></script><script src="/ekodichurch/church-shell.js?v=20261122" defer></script><script src="/ekodichurch/church-account-header.js" defer></script>'
+    : '<script src="/ekodimission/assets/shell.js" defer></script>';
+  const styles='<style>body.ekodi-board-shell{margin:0;min-height:100vh;display:flex;flex-direction:column;background:#f8f7f1;color:#173b2c}main.ekodi-board-content{box-sizing:border-box;flex:1 0 auto;width:min(920px,calc(100% - 32px));margin:0 auto;padding:clamp(24px,4vw,48px) 0 80px}main.ekodi-board-content .ekodi-board-heading{padding-bottom:16px;border-bottom:1px solid #d9e1d7;margin-bottom:14px}main.ekodi-board-content h1{font-size:clamp(24px,4vw,34px);line-height:1.25;color:#183f30;margin:0 0 9px}main.ekodi-board-content article{padding:18px 4px;border-bottom:1px solid #e0e8df}main.ekodi-board-content article h2{font-size:clamp(16px,2.5vw,19px);margin:0 0 7px;overflow-wrap:anywhere}main.ekodi-board-content a{color:#1e5840}main.ekodi-board-content p{overflow-wrap:anywhere;white-space:pre-wrap;line-height:1.7}main.ekodi-board-content time{display:block;font-size:12px;color:#64776c}main.ekodi-board-content .empty{padding:24px 0;color:#68756b}body.ekodi-board-shell .site-footer{flex-shrink:0}body.ekodi-board-shell .site-header{z-index:60}body.ekodi-board-shell .mission-site-header{position:sticky;top:0;z-index:60}body.ekodi-board-shell main .ekodi-board-heading>a{font-size:13px}main.ekodi-board-content article>p:empty{display:none}@media(max-width:480px){main.ekodi-board-content{width:calc(100% - 24px);padding:22px 0 48px}}</style>';
+  // Keep the existing board data/read APIs; only augment the rendered HTML.
+  const content=String(html).replace('<main><header>','<main class="ekodi-board-content"><div class="ekodi-board-heading">')
+    .replace('</header>','</div>').replace('<main>','<main class="ekodi-board-content">');
+  return content.replace('</head>',head+styles+'</head>')
+    .replace('<body>','<body class="ekodi-board-shell" data-ekodi-footer-mode="service">'+header)
+    .replace('</body>',footer+scripts+'</body>');
 }
-function postPage(route,post){
+
+export function page(route,posts,categoryId=''){
+  const official=['notice','schedule','mission-notice','mission-schedule'].includes(categoryId);
+  const items=posts.length?posts.map(post=>`<article><a href="${route.basePath}/post/${post.id}"><h2>${htmlEscape(post.title)}</h2></a>${official?'':`<p>${htmlEscape(post.body).slice(0,220)}</p>`}<time>${htmlEscape(String(post.createdAt||'').slice(0,10))}</time></article>`).join(''):'<p class="empty">등록된 글이 없습니다.</p>';
+  return new Response(boardIdentityShell(route,`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${['mission-notice','notice'].includes(categoryId)?'공지사항':['mission-schedule','schedule'].includes(categoryId)?'주요일정':'게시판'}</title><style>body{margin:0;background:#fff;color:#111;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}main{width:min(920px,calc(100% - 28px));margin:0 auto;padding:18px 0}header{position:sticky;top:0;background:#fff;border-bottom:1px solid #ddd;padding:12px 0}h1{font-size:22px;margin:0}article{padding:15px 0;border-bottom:1px solid #e6e6e6}h2{font-size:18px;margin:0 0 7px}a{color:#111;text-decoration:none}p{white-space:pre-wrap;line-height:1.5;margin:0 0 7px}time{font-size:12px;color:#666}.empty{padding:30px 0}</style></head><body><main><header><h1>${['mission-notice','notice'].includes(categoryId)?'공지사항':['mission-schedule','schedule'].includes(categoryId)?'주요일정':'게시판'}</h1>${categoryId?`<p><a href="${route.siteId==='ekodichurch'?'/ekodichurch':'/ekodimission'}">${route.siteId==='ekodichurch'?'에코디교회':'에코디선교회'} 홈으로</a></p>`:''}</header>${items}</main></body></html>`),{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-id':boardId(route.siteId),'x-ekodi-board-independent':'true'}});
+}
+export function postPage(route,post){
   if(!post)return new Response('Not Found',{status:404});
   const comments=post.comments.map(c=>`<li>${htmlEscape(c.body)} <small>${htmlEscape(c.createdAt)}</small></li>`).join('');
-  return new Response(`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${htmlEscape(post.title)}</title></head><body><main><p><a href="${route.basePath}">← 게시판</a></p><h1>${htmlEscape(post.title)}</h1><p style="white-space:pre-wrap">${htmlEscape(post.body)}</p><hr><ul>${comments}</ul></main></body></html>`,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-id':boardId(route.siteId),'x-ekodi-board-independent':'true'}});
+  return new Response(boardIdentityShell(route,`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${htmlEscape(post.title)}</title></head><body><main><p><a href="${route.basePath}">← 게시판</a></p><h1>${htmlEscape(post.title)}</h1><p style="white-space:pre-wrap">${htmlEscape(post.body)}</p><hr><ul>${comments}</ul></main></body></html>`),{headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-ekodi-board-id':boardId(route.siteId),'x-ekodi-board-independent':'true'}});
 }
 
 
@@ -812,6 +851,23 @@ export async function handleSiteBoardRequest(request,env){
     return boardJson(instance,{ok:true});
   }
 
+  // The Church's reviewed, dated Sunday public-news source is an internal publisher:
+  // first-party GET refreshes only the Church notice category, idempotently, with
+  // an audit-friendly system identity. HTTP write authorization is unchanged.
+  const requestedOfficialCategory=method==='GET'&&(sub==='/'||sub==='/api/posts')
+    ?safeCategoryId(new URL(request.url).searchParams.get('category')):'';
+  // Explicit foreign official categories must never expose another tenant's notices:
+  // /ekodichurch/board/api/posts?category=mission-notice is an empty scoped result.
+  if(requestedOfficialCategory&&ALL_OFFICIAL_CATEGORY_IDS.has(requestedOfficialCategory)&&
+     !isPublicOfficialCategory(instance,requestedOfficialCategory)){
+    return sub==='/api/posts'
+      ?boardJson(instance,{boardId:instance.board_id,categoryId:null,items:[]})
+      :page(route,[],'');
+  }
+  if(method==='GET'&&route.siteId==='ekodichurch'&&(sub==='/'||sub==='/api/posts')&&
+     (!requestedOfficialCategory||requestedOfficialCategory==='notice')){
+    await syncApprovedChurchWeeklyNotices(env,instance);
+  }
   if(method==='GET'&&sub==='/'){
     const categoryId=safeCategoryId(new URL(request.url).searchParams.get('category'));
     const selected=isPublicOfficialCategory(instance,categoryId)?categoryId:'';

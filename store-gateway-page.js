@@ -1,9 +1,78 @@
-const STORES=Object.freeze([
-  {slug:'jadam',name:'자담치킨',branch:'목포대점',kicker:'WELL-BEING CHICKEN',emoji:'🍗',summary:'바삭하고 든든한 오늘의 치킨',accent:'#f25a1d',dark:'#b73512',soft:'#fff1e7'},
-  {slug:'pizzamaru',name:'피자마루',branch:'목포대점',kicker:'FRESH PIZZA',emoji:'🍕',summary:'좋은 재료로 채운 따뜻한 피자',accent:'#158547',dark:'#0c5f32',soft:'#eaf7ef'},
-  {slug:'yogurt',name:'요거트퍼플',branch:'목포대점',kicker:'YOGURT DESSERT',emoji:'🍨',summary:'산뜻하고 달콤한 한 컵의 휴식',accent:'#7f38b8',dark:'#5e278f',soft:'#f5ebfb'}
+// Public, read-only guide only. Each linked store keeps separate authority, orders and accounting.
+// /cmpmyi/admin/** and POS downloads remain in their existing protected routes.
+export const STORE_GUIDE_PATH = '/cmpmyi';
+export const STORE_GUIDE_ENTRIES = Object.freeze([
+  Object.freeze({ name: 'BBQ 무안청계점', path: '/bbqcg', kind: '치킨', label: 'BBQ', feature: true,
+    description: '바삭한 치킨과 따뜻한 한 끼를 만나는 우리 동네 BBQ' }),
+  Object.freeze({ name: '피자마루 목포대점', path: '/pizzamaru', kind: '피자', label: 'PIZZA MARU',
+    description: '취향에 맞는 피자를 골라 즐기는 목포대 후문 매장' }),
+  Object.freeze({ name: '요거트퍼플 목포대점', path: '/yogurt', kind: '디저트', label: 'YOGURT PURPLE',
+    description: '가볍고 산뜻한 디저트를 만나는 목포대 후문 매장' }),
 ]);
-function card(store,index){return `<article class="gate-card" style="--accent:${store.accent};--dark:${store.dark};--soft:${store.soft}"><div class="gate-top"><div><small>${store.kicker}</small><h2>${store.name}</h2></div><span>0${index+1}</span></div><div class="gate-identity"><b aria-hidden="true">${store.emoji}</b><div><strong>${store.branch}</strong><p>${store.summary}</p></div></div><div class="gate-actions"><a class="enter" href="/${store.slug}">매장 보기 <span>→</span></a><a href="/${store.slug}#menu">메뉴 · 가격 바로가기</a></div></article>`}
-const STYLE=`:root{--ink:#171612;--muted:#6f6a61;--line:#e8e1d7;--paper:#fbf8f2}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 8% 0,#fff7e8 0,transparent 29%),radial-gradient(circle at 92% 12%,#eef8ed 0,transparent 29%),var(--paper);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}a{color:inherit;text-decoration:none}.gate-main{width:min(1460px,100%);min-height:100svh;margin:auto;padding:clamp(34px,6vw,82px) max(18px,4vw);display:flex;flex-direction:column;justify-content:center}.gate-intro{text-align:center;max-width:850px;margin:0 auto clamp(28px,4vw,44px)}.gate-intro small{color:#16814c;font-weight:900;letter-spacing:.16em}.gate-intro h1{margin:12px 0 14px;font-size:clamp(38px,5vw,68px);line-height:1.02;letter-spacing:-.065em}.gate-intro h1 em{font-style:normal;color:#16814c}.gate-intro p{margin:0;color:var(--muted);line-height:1.75}.gate-note{display:inline-flex;margin-top:14px;padding:7px 11px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:11px;font-weight:800}.gate-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.gate-card{min-height:390px;padding:28px;border:1px solid color-mix(in srgb,var(--accent) 18%,#ddd);border-radius:30px;background:linear-gradient(180deg,#fff 0,var(--soft) 100%);box-shadow:0 22px 60px rgba(55,44,30,.09);display:flex;flex-direction:column}.gate-admin{display:flex;align-items:center;justify-content:center;gap:8px;width:max-content;margin:18px auto 0;padding:12px 22px;border-radius:999px;background:#17492b;color:#fff;text-decoration:none;font-size:15px;font-weight:850;box-shadow:0 6px 18px rgba(23,73,43,.22)}.gate-admin:hover{background:#1f5b36}.gate-admin:focus-visible{outline:3px solid #9fd4b0;outline-offset:3px}.gate-top{display:flex;justify-content:space-between;gap:16px}.gate-top small{color:var(--dark);font-size:9px;font-weight:900;letter-spacing:.14em}.gate-top h2{margin:8px 0 0;font-size:clamp(28px,2.4vw,38px);letter-spacing:-.055em}.gate-top>span{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;background:#fff;border:1px solid color-mix(in srgb,var(--accent) 15%,#eee);color:var(--dark);font-size:11px;font-weight:900}.gate-identity{display:flex;align-items:center;gap:16px;margin:34px 0}.gate-identity>b{display:grid;place-items:center;width:86px;height:86px;border-radius:24px;background:#fff;font-size:48px;box-shadow:0 12px 30px rgba(40,30,20,.08)}.gate-identity strong{display:block;color:var(--dark);font-size:18px}.gate-identity p{margin:6px 0 0;color:var(--muted);font-size:13px}.gate-actions{margin-top:auto;display:grid;gap:8px}.gate-actions a{display:flex;align-items:center;justify-content:center;padding:12px 14px;border:1px solid rgba(80,60,40,.1);border-radius:14px;background:#fff;font-size:12px;font-weight:850}.gate-actions .enter{justify-content:space-between;padding:15px 17px;background:linear-gradient(135deg,var(--accent),var(--dark));color:#fff;border:0;font-size:14px}.gate-actions .enter span{font-size:20px}.gate-foot{text-align:center;margin-top:22px;color:#766f65;font-size:11px}.gate-foot a{font-weight:850;color:#16462e}@media(max-width:900px){.gate-main{justify-content:flex-start}.gate-grid{grid-template-columns:1fr}.gate-card{min-height:330px}}@media(max-width:560px){.gate-main{padding:30px 13px}.gate-intro h1{font-size:38px}.gate-card{padding:22px;border-radius:24px}.gate-identity>b{width:72px;height:72px;font-size:40px}}`;
-export function storeGatewayPage(){const html=`<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>목포대점 통합 게이트 · EKODI</title><meta name="description" content="자담치킨, 피자마루, 요거트퍼플 목포대점을 한 화면에서 선택하는 EKODI 통합 게이트"><meta name="robots" content="index,follow"><link rel="canonical" href="https://ekodi.kr/cmpmyi"><style>${STYLE}</style></head><body><main class="gate-main"><section class="gate-intro"><small>THREE STORES · ONE GATE</small><h1>오늘은 어떤 맛으로<br><em>들어가 볼까요?</em></h1><p>자담치킨, 피자마루, 요거트퍼플. 원하는 매장을 고르면 메뉴·가격, 매장정보, 주문까지 필요한 정보부터 바로 확인할 수 있습니다.</p><span class="gate-note">각 매장은 별도의 가게와 메뉴로 독립 운영됩니다.</span><a class="gate-admin" href="/cmpmyi/admin" data-cmpmyi-admin-login>통합관리자 로그인</a></section><section class="gate-grid" aria-label="목포대점 매장 선택">${STORES.map(card).join('')}</section><p class="gate-foot">공통 운영문의 <a href="tel:0614538295">061-453-8295</a> · <a href="/cmpmyi/admin">통합관리자</a> · EKODI</p></main></body></html>`;return new Response(html,{status:200,headers:{'content-type':'text/html; charset=utf-8','cache-control':'public, max-age=60, stale-while-revalidate=300','x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",'x-ekodi-route':'store-gateway','x-robots-tag':'index, follow'}})}
-export { STORES };
+
+const css = `
+:root{color-scheme:light;--ink:#20202b;--muted:#666773;--line:#ece7e2;--paper:#faf9f6}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;word-break:keep-all}
+a{color:inherit;text-decoration:none}a:focus-visible{outline:3px solid #bc7a13;outline-offset:4px}
+.wrap{width:min(1110px,calc(100% - 40px));margin:0 auto}
+header{border-bottom:1px solid var(--line);background:#fff}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:68px}
+.wordmark{font-size:20px;font-weight:900;letter-spacing:-.06em}.top-note{color:var(--muted);font-size:13px}
+.hero{padding:52px 0 24px}.kicker{color:#ad6d24;font-size:12px;font-weight:850;letter-spacing:.12em}.hero h1{font-size:clamp(27px,4.3vw,46px);line-height:1.24;letter-spacing:-.055em;margin:12px 0}
+.hero p{color:var(--muted);font-size:clamp(14px,1.8vw,17px);margin:0}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;padding:18px 0 38px}
+.card{display:flex;flex-direction:column;min-width:0;overflow:hidden;background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 12px 36px #21202a0a}
+.card .art{min-height:165px;padding:22px;display:flex;flex-direction:column;justify-content:space-between;background:#f9edea}
+.art strong{font-weight:950;font-size:clamp(20px,2.2vw,27px);letter-spacing:-.045em}
+.art span{font-size:11px;font-weight:850;letter-spacing:.16em;opacity:.75}
+.card.bbq{border-color:#e3c5ba}.card.bbq .art{background:linear-gradient(135deg,#9a112b,#d42e43);color:#fff}
+.card.pizza .art{background:linear-gradient(135deg,#e8f4e4,#c9e9c6);color:#25552d}
+.card.yogurt .art{background:linear-gradient(135deg,#f0e4f6,#dac5ef);color:#563477}
+.details{padding:23px;display:flex;flex:1;flex-direction:column}
+.details small{font-size:12px;color:#a36a32;font-weight:800}.details h2{font-size:21px;line-height:1.35;letter-spacing:-.04em;margin:7px 0}.details p{color:var(--muted);font-size:14px;margin:0 0 22px}
+.go{display:flex;align-items:center;justify-content:center;min-height:47px;margin-top:auto;border-radius:11px;color:#fff;background:#252433;font-size:14px;font-weight:850}
+.card.bbq .go{background:#b71835}.go:hover{filter:brightness(1.12)}
+.notice{border-top:1px solid var(--line);padding:21px 0 37px;color:var(--muted);font-size:13px}
+.notice strong{color:var(--ink)}.notice a{text-decoration:underline;text-underline-offset:3px}
+footer{border-top:1px solid var(--line);background:#fff;padding:20px 0;color:var(--muted);font-size:12px}
+@media(max-width:820px){.cards{grid-template-columns:1fr 1fr}.card .art{min-height:144px}}
+@media(max-width:580px){.wrap{width:calc(100% - 28px)}.top{min-height:59px}.wordmark{font-size:17px}.top-note{font-size:11px}.hero{padding:30px 0 14px}.cards{grid-template-columns:1fr;gap:12px;padding:10px 0 24px}.card{display:grid;grid-template-columns:34% 1fr;border-radius:15px}.card .art{min-height:178px;padding:15px}.art strong{font-size:20px;overflow-wrap:anywhere}.art span{font-size:9px}.details{padding:16px}.details h2{font-size:17px}.details p{font-size:12px;margin-bottom:13px}.go{min-height:44px;font-size:12px}.notice{padding:15px 0 22px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+`;
+
+function card(store, index) {
+  const tone = index === 0 ? 'bbq' : index === 1 ? 'pizza' : 'yogurt';
+  return '<article class="card ' + tone + '">' +
+    '<div class="art"><span>' + (store.feature ? '대표 매장 · CHICKEN' : store.kind.toUpperCase()) + '</span><strong>' + store.label + '</strong></div>' +
+    '<div class="details"><small>' + store.kind + ' · 독립 매장 안내</small><h2>' + store.name + '</h2>' +
+    '<p>' + store.description + '</p><a class="go" href="' + store.path + '" aria-label="' + store.name + ' 전용 홈페이지로 이동">매장 홈페이지 보기 →</a></div>' +
+    '</article>';
+}
+
+export function storeGatewayPage(request = new Request('https://ekodi.kr/cmpmyi')) {
+  const html = '<!doctype html><html lang="ko" data-store-guide="three-independent-stores">' +
+    '<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<meta name="robots" content="index,follow"><meta name="theme-color" content="#faf9f6">' +
+    '<meta name="description" content="목포대 후문 BBQ 무안청계점, 피자마루 목포대점, 요거트퍼플 목포대점의 독립 매장 홈페이지 안내">' +
+    '<link rel="canonical" href="https://ekodi.kr/cmpmyi"><title>목포대 후문 3개 매장 안내</title><style>' + css + '</style></head>' +
+    '<body><header><div class="wrap top"><a class="wordmark" href="/cmpmyi">목포대 후문 · 매장 안내</a><span class="top-note">3개 매장 · 각각 독립 운영</span></div></header>' +
+    '<main class="wrap"><section class="hero"><div class="kicker">CHEONGGYE STORE GUIDE</div>' +
+    '<h1>가까운 우리 동네,<br>세 곳의 맛있는 선택</h1>' +
+    '<p>매장을 선택하면 각 매장의 메뉴·주문·방문 정보를 확인할 수 있습니다.</p></section>' +
+    '<section class="cards" aria-label="운영 중인 세 개 매장">' + STORE_GUIDE_ENTRIES.map(card).join('') + '</section>' +
+    '<aside class="notice"><strong>안내</strong> · 세 매장은 각각 별도로 운영됩니다. 메뉴·가격·주문 가능 여부는 해당 매장 홈페이지에서 확인해 주세요. ' +
+    '문의 전화 <a href="tel:0614538295">061-453-8295</a>.</aside></main>' +
+    '<footer><div class="wrap">3개 매장 통합 안내 · 매장별 독립 운영</div></footer></body></html>';
+  return new Response(request.method === 'HEAD' ? null : html, {
+    status: 200,
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'no-store',
+      'x-content-type-options': 'nosniff',
+      'referrer-policy': 'strict-origin-when-cross-origin',
+      'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+      'x-robots-tag': 'index,follow',
+      'x-ekodi-route': 'cmpmyi-three-store-guide',
+    },
+  });
+}

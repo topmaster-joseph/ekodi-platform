@@ -108,11 +108,23 @@ test('full paper loop: policy, start, risk-checked fills, duplicates, blocks, re
 
  const dup=await call('POST','/v1/invest/autopilot/paper/orders',order());
  assert.equal(dup.body.duplicate,true);
+ assert.equal(dup.body.ok,true);
+ assert.equal(dup.body.allowed,true);
+ assert.equal(dup.body.executionPerformed,false);
  assert.equal(env.DB.sqlite.prepare("SELECT COUNT(*) AS n FROM investment_autopilot_orders WHERE status='FILLED'").get().n,1);
 
  const tooBig=await call('POST','/v1/invest/autopilot/paper/orders',order({idempotencyKey:'paper-20261026-0002',qty:100}));
  assert.equal(tooBig.status,422);
  assert.ok(tooBig.body.reasons.includes('order_amount_limit'));
+ const blockedReplay=await call('POST','/v1/invest/autopilot/paper/orders',order({idempotencyKey:'paper-20261026-0002',qty:100}));
+ assert.equal(blockedReplay.status,422,'risk-blocked replay must not produce HTTP 200');
+ assert.equal(blockedReplay.body.ok,false);
+ assert.equal(blockedReplay.body.allowed,false);
+ assert.equal(blockedReplay.body.duplicate,true);
+ assert.equal(blockedReplay.body.executionPerformed,false);
+ assert.equal(blockedReplay.body.order.status,'RISK_BLOCKED');
+ assert.ok(blockedReplay.body.reasons.includes('order_amount_limit'));
+ assert.equal(env.DB.sqlite.prepare("SELECT COUNT(*) AS n FROM investment_autopilot_orders WHERE idempotency_key='paper-20261026-0002'").get().n,1,'risk-blocked replays never insert a new order');
  const stale=await call('POST','/v1/invest/autopilot/paper/orders',order({idempotencyKey:'paper-20261026-0003',quote:{price:35000,at:new Date(MONDAY-600_000).toISOString()}}));
  assert.ok(stale.body.reasons.includes('market_data_stale'));
  const lev=await call('POST','/v1/invest/autopilot/paper/orders',order({idempotencyKey:'paper-20261026-0004',leverage:2}));

@@ -78,7 +78,9 @@ test('independent PR workflow publishes evidence and does not trigger release',(
  assert.equal(pushPaths.includes("'seasonal-workforce/**'"),false,'do not race a protected shared-site production deployment');
 
  assert.match(workflow,/contents: read/);
- assert.match(workflow,/playwright@1\.55\.0/);
+ assert.match(workflow,/runs-on: ubuntu-24\.04/);
+ assert.doesNotMatch(workflow,/runs-on: ubuntu-latest/);
+ assert.match(workflow,/playwright@1\.55\.1/);
  assert.match(workflow,/npx playwright install --with-deps chromium/);
  assert.match(workflow,/node scripts\/verify-seasonal-workforce-native\.mjs/);
  assert.match(workflow,/actions\/upload-artifact@v4/);

@@ -15,11 +15,20 @@ PAYMENT_CORE_URL = "https://ekodi.kr/ekodipay"
 PAYMENT_GATEWAY_URL = "https://ekodi.kr/ekodibiz/pay"
 HIGH_IMPACT_APPROVAL = "required"
 AI_OPERATIONS_MODE = "rules-first-event-driven"
+# Operator's private phone push follows a successfully persisted agency application.
+AGENCY_OPERATOR_NOTIFY_ENABLED = "true"
 
 [assets]
 directory = "./ekodibiz"
 binding = "ASSETS"
 run_worker_first = true
+
+
+# EKODI internal operator-only notification RPC; no public sender URL.
+[[services]]
+binding = "OPERATOR_NOTIFY"
+service = "ekodi-auth-api"
+entrypoint = "OperatorNotifier"
 
 [[durable_objects.bindings]]
 name = "REVENUE_STORE"

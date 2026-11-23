@@ -1,6 +1,7 @@
 import { ensureSiteDiscoveryHead } from './site-discovery-head.js';
 import { PREVIEW_HTML } from './ekodipay-preview.js';
 import { withFooterTraffic } from './footer-traffic-guarantee.js';
+import { withEdgeTrafficShield } from './edge-traffic-shield.js';
 // EKODI Pay public entry and non-financial experience demo.
 // This Worker NEVER makes PG requests, stores transactions, or confirms payment.
 export const CANONICAL_PAYMENT_ROOT = 'https://ekodi.kr/ekodipay';
@@ -262,4 +263,5 @@ const searchExposureEntry= {
 // applies the shared add-only search head itself (router is bypassed).
 const ekodiWorkerEntry={...searchExposureEntry,async fetch(request,env,ctx){const response=await searchExposureEntry.fetch(request,env,ctx);try{return await ensureSiteDiscoveryHead(request,response,{id:'pay',name:'EKODI Pay'})}catch{return response}}};
 // FOOTER-TRAFFIC-GUARANTEE: public HTML from this route always carries footer visit stats.
-export default withFooterTraffic(ekodiWorkerEntry);
+// EKODI-EDGE-TRAFFIC-SHIELD-001: this apex route bypasses the Shared Site guard, so it carries its own.
+export default withEdgeTrafficShield(withFooterTraffic(ekodiWorkerEntry),{service:'ekodipay'});

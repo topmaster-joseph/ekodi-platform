@@ -1,6 +1,7 @@
-import { operatorPushEmails, operatorPushReady, operatorDeviceCount, registerOperatorDevice, validOperatorSubscription } from './operator-push.js';
+import { GOOGLE_SECRET_PATTERN, clearGoogleSecret, saveGoogleSecret, storedGoogleSecretStatus, withStoredGoogleSecret } from './mail-google-secret-store.js';
+import { operatorPushEmails, operatorPushReady, operatorDeviceCount, registerOperatorDevice, validOperatorSubscription, operatorPushDiagnostics, sendOperatorPush } from './operator-push.js';
 import { decryptMailCredential, encryptMailCredential, mailCredentialReady, mailNonceHash, readMailState, signMailState } from './mail-credential-vault.js';
-import { exchangeGoogleMailCode, getGoogleMailMessage, googleMailAuthorizeUrl, googleMailConfigured, googleMailProfile, hasGoogleReadScope, hasGoogleSendScope, listGoogleMailMessages, refreshGoogleMailToken, sendGoogleMailMessage } from './mail-google-adapter.js';
+import { MAIL_GOOGLE_REDIRECT_URI, googleMailClientId, exchangeGoogleMailCode, getGoogleMailMessage, googleMailAuthorizeUrl, googleMailConfigured, googleMailProfile, hasGoogleReadScope, hasGoogleSendScope, listGoogleMailMessages, refreshGoogleMailToken, sendGoogleMailMessage } from './mail-google-adapter.js';
 const SUPABASE_URL = 'https://renzehysxirjilvdxacv.supabase.co';
 const DEFAULT_PUBLISHABLE_KEY = 'sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_';
 const MAIL_PREFIX = '/api/mail/control';
@@ -126,23 +127,45 @@ export async function mailActor(request, env) {
   const token=bearer(request); if(!token)return null;
   try{const [user,raw]=await Promise.all([supabaseJson('/auth/v1/user',token,env),supabaseJson('/rest/v1/rpc/current_site_activity_contexts',token,env,{method:'POST',body:'{}'})]);
     if(!user?.id||!user?.email)return null; const contexts=(Array.isArray(raw)?raw:[]).map(item=>({workspaceId:String(item?.tenant_id||''),workspaceKey:String(item?.workspace_key||''),workspaceSlug:String(item?.tenant||'').toLowerCase(),workspaceName:String(item?.workspace_name||item?.tenant||''),workspaceKind:String(item?.workspace_kind||'organization'),authorizationRole:String(item?.authorization_role||''),activityRole:String(item?.activity_role||''),activityRoleLabel:String(item?.activity_role_label||''),canManage:WRITE_ROLES.has(String(item?.authorization_role||''))})).filter(x=>x.workspaceId&&x.workspaceSlug);
-    return{userId:String(user.id),email:String(user.email).toLowerCase(),contexts};}catch(error){console.error('EKODI Mail actor',error?.message||error);return null}
+    const actor={userId:String(user.id),email:String(user.email).toLowerCase(),emailVerified:Boolean(user.email_confirmed_at),contexts};
+    actor.personKeys=await linkedPersonKeys(env,actor);
+    return actor;}catch(error){console.error('EKODI Mail actor',error?.message||error);return null}
 }
+// One person, several verified EKODI logins: MAIL_LINKED_PERSON_EMAILS="a@x,b@y;c@z" (groups split by ';').
+export function linkedEmailGroup(env,email){
+  const me=String(email||'').trim().toLowerCase();if(!me)return[];
+  for(const group of String(env?.MAIL_LINKED_PERSON_EMAILS||'').split(';')){
+    const members=group.split(',').map(x=>x.trim().toLowerCase()).filter(x=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
+    if(members.length>1&&members.includes(me))return[...new Set(members)];
+  }
+  return[];
+}
+async function linkedPersonKeys(env,actor){
+  const keys=new Set([actor.userId]);
+  const group=actor.emailVerified?linkedEmailGroup(env,actor.email):[];
+  if(group.length&&env?.DB){
+    try{const rows=await env.DB.prepare(`SELECT DISTINCT owner_key FROM mail_accounts WHERE owner_type='person' AND lower(created_by_email) IN (${group.map(()=>'?').join(',')})`).bind(...group).all();
+      for(const r of rows.results||[])if(r.owner_key)keys.add(String(r.owner_key));}catch(error){console.error('EKODI Mail linked identities',error?.message||error)}
+  }
+  return[...keys];
+}
+function personKeysOf(actor){return Array.isArray(actor?.personKeys)&&actor.personKeys.length?actor.personKeys:[actor.userId]}
 function providerForEmail(email,requested=''){const v=String(requested||'').trim().toLowerCase();if(ACCOUNT_PROVIDERS[v])return v;const d=String(email||'').split('@').pop().toLowerCase();if(['gmail.com','googlemail.com'].includes(d))return'gmail';if(['outlook.com','hotmail.com','live.com'].includes(d))return'outlook';if(d==='naver.com')return'naver';if(['daum.net','hanmail.net'].includes(d))return'daum';if(d==='kakao.com')return'kakao';return'generic-imap'}
 function publicAccount(r){return{id:Number(r.id),ownerType:r.owner_type,ownerKey:r.owner_key,workspaceSlug:r.workspace_slug||'',provider:r.provider,providerLabel:ACCOUNT_PROVIDERS[r.provider]?.label||r.provider,emailAddress:r.email_address,displayName:r.display_name||r.email_address,connectorMode:r.connector_mode,connectionStatus:r.connection_status,enabled:Boolean(r.enabled),lastSyncAt:r.last_sync_at||null,lastError:r.last_error||'',credentialStored:Boolean(r.credential_ref)}}
-async function accountsForActor(db,actor){const personal=await db.prepare(`SELECT * FROM mail_accounts WHERE owner_type='person' AND owner_key=? ORDER BY display_name,email_address`).bind(actor.userId).all();const work=await Promise.all(actor.contexts.map(c=>db.prepare(`SELECT * FROM mail_accounts WHERE owner_type='workspace' AND owner_key=? ORDER BY display_name,email_address`).bind(c.workspaceId).all()));return[...personal.results.map(r=>({...publicAccount(r),ownerLabel:'개인'})),...work.flatMap((x,i)=>x.results.map(r=>({...publicAccount(r),ownerLabel:actor.contexts[i].workspaceName})))]}
+async function accountsForActor(db,actor){const keys=personKeysOf(actor);const personal=await db.prepare(`SELECT * FROM mail_accounts WHERE owner_type='person' AND owner_key IN (${keys.map(()=>'?').join(',')}) ORDER BY display_name,email_address`).bind(...keys).all();const work=await Promise.all(actor.contexts.map(c=>db.prepare(`SELECT * FROM mail_accounts WHERE owner_type='workspace' AND owner_key=? ORDER BY display_name,email_address`).bind(c.workspaceId).all()));return[...personal.results.map(r=>({...publicAccount(r),ownerLabel:'개인'})),...work.flatMap((x,i)=>x.results.map(r=>({...publicAccount(r),ownerLabel:actor.contexts[i].workspaceName})))]}
 
 async function accountsVisibleForActor(db,actor){const rows=await accountsForActor(db,actor);return Promise.all(rows.map(async a=>{if(a.ownerType==='person')return{...a,permissions:{read:true,send:true,manage:true}};const grant=await db.prepare(`SELECT can_read,can_send,can_manage FROM mail_account_grants WHERE account_id=? AND principal_type='person' AND principal_key=?`).bind(a.id,actor.userId).first();const context=actor.contexts.find(c=>c.workspaceId===a.ownerKey);return{...a,permissions:{read:Boolean(grant?.can_read),send:Boolean(grant?.can_send),manage:Boolean(grant?.can_manage)||Boolean(context?.canManage)}}}))}
 export async function accountAccess(db, actor, accountId) {
   const id=Number(accountId||0); if(!Number.isInteger(id)||id<1)return null;
   const row=await db.prepare('SELECT * FROM mail_accounts WHERE id=? AND enabled=1').bind(id).first(); if(!row)return null;
-  if(row.owner_type==='person'){if(row.owner_key!==actor.userId)return null;return{row,permissions:{read:true,send:true,manage:true}}}
+  if(row.owner_type==='person'){if(!personKeysOf(actor).includes(row.owner_key))return null;return{row,permissions:{read:true,send:true,manage:true}}}
   const context=actor.contexts.find(c=>c.workspaceId===row.owner_key); if(!context)return null;
   const grant=await db.prepare(`SELECT can_read,can_send,can_manage FROM mail_account_grants WHERE account_id=? AND principal_type='person' AND principal_key=?`).bind(id,actor.userId).first();
   return{row,context,permissions:{read:Boolean(grant?.can_read),send:Boolean(grant?.can_send),manage:Boolean(grant?.can_manage)||Boolean(context.canManage)}};
 }
 async function credentialForAccount(db, accountId){return db.prepare('SELECT * FROM mail_credentials WHERE account_id=?').bind(Number(accountId)).first()}
 export async function googleAccessForAccount(env, db, account){
+  env = await withStoredGoogleSecret(env);
   if(!googleMailConfigured(env)||!mailCredentialReady(env))throw Object.assign(new Error('Google Mail OAuth 구성이 아직 준비되지 않았습니다.'),{code:'MAIL_GOOGLE_NOT_CONFIGURED',status:503});
   const row=await credentialForAccount(db,account.id); if(!row)throw Object.assign(new Error('메일 계정 인증이 필요합니다.'),{code:'MAIL_ACCOUNT_NOT_CONNECTED',status:409});
   const credential=await decryptMailCredential(env,row); if(!credential.refreshToken)throw Object.assign(new Error('메일 계정 재연결이 필요합니다.'),{code:'MAIL_REFRESH_TOKEN_MISSING',status:409});
@@ -405,7 +428,9 @@ async function requireWorkspace(request, env, slug) {
 export async function connectedSenderStatus(env, addresses) {
   const list=(addresses||[]).map(a=>String(a||'').trim().toLowerCase()).filter(Boolean);
   if(!list.length||!env?.DB?.prepare)return [];
-  const ready=googleMailConfigured(env)&&mailCredentialReady(env);
+  // The Gmail OAuth client secret may be stored in D1 (Mail Hub phone setup), not only in worker env.
+  const runtimeEnv=await withStoredGoogleSecret(env).catch(()=>env);
+  const ready=googleMailConfigured(runtimeEnv)&&mailCredentialReady(runtimeEnv);
   const rows=await env.DB.prepare(`SELECT a.id,lower(a.email_address) AS address,a.connection_status,c.scopes FROM mail_accounts a LEFT JOIN mail_credentials c ON c.account_id=a.id WHERE a.enabled=1 AND a.provider='gmail' AND lower(a.email_address) IN (${list.map(()=>'?').join(',')})`).bind(...list).all().catch(()=>({results:[]}));
   const byAddress=new Map();
   for(const r of rows?.results||[]){const ok=ready&&r.connection_status==='connected'&&hasGoogleSendScope(r.scopes||'');const prev=byAddress.get(r.address);if(!prev||ok)byAddress.set(r.address,{id:r.id,ready:ok});}
@@ -426,13 +451,57 @@ export async function handleMailControl(request, env) {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
   if (!env.DB) return json({ error: '메일 관리 데이터베이스가 연결되지 않았습니다.', code: 'DB_UNAVAILABLE' }, 503, request);
   await ensureSchema(env.DB);
+  // EKODI-MAIL-GOOGLE-SECRET-MOBILE-001: Worker secret 이 없으면 운영자가 화면에서 저장한 암호화 보관값을 사용.
+  env = await withStoredGoogleSecret(env);
+
+  // EKODI-MAIL-GOOGLE-SECRET-MOBILE-001: 운영자 전용 Gmail 연결 설정(모바일에서 보안 비밀번호 붙여넣기).
+  if(url.pathname==='/api/mail/control/google-oauth-setup'){
+    const actor=await mailActor(request,env);if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);
+    const isOperator=operatorPushEmails(env).includes(actor.email);
+    if(!isOperator)return json({error:'운영자 계정만 설정할 수 있습니다.',code:'OPERATOR_ONLY'},403,request);
+    if(request.method==='GET'){const st=await storedGoogleSecretStatus(env);return json({...st,isOperator,clientId:googleMailClientId(env),redirectUri:MAIL_GOOGLE_REDIRECT_URI,credentialKeyReady:mailCredentialReady(env)},200,request)}
+    if(request.method==='POST'){const body=await readJson(request);const secret=String(body?.secret||'').trim();if(!GOOGLE_SECRET_PATTERN.test(secret))return json({error:'Google 클라이언트 보안 비밀번호(GOCSPX-로 시작)를 그대로 붙여넣어 주세요.',code:'INVALID_GOOGLE_SECRET'},400,request);try{const r=await saveGoogleSecret(env,secret,actor.email);return json({ok:true,...r},201,request)}catch(e){return json({error:e.message,code:e.code||'SAVE_FAILED'},e.status||500,request)}}
+    if(request.method==='DELETE'){await clearGoogleSecret(env);return json({ok:true,configured:false},200,request)}
+    return json({error:'허용되지 않은 요청입니다.',code:'METHOD_NOT_ALLOWED'},405,request);
+  }
+
+  // A phone probe is explicitly operator-triggered; no public token, customer
+  // application or device endpoint is exposed. Provider accepted != handset received.
+  if(url.pathname==='/api/mail/control/operator-push/test'){
+    if(request.method!=='POST')return json({error:'허용되지 않은 요청입니다.',code:'METHOD_NOT_ALLOWED'},405,request);
+    const actor=await mailActor(request,env);
+    if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);
+    if(!actor.emailVerified||!operatorPushEmails(env).includes(actor.email))
+      return json({error:'인증된 운영자만 시험할 수 있습니다.',code:'OPERATOR_ONLY'},403,request);
+    if(request.headers.get('origin')!=='https://ekodi.kr')
+      return json({error:'같은 사이트에서 요청하세요.',code:'ORIGIN_REQUIRED'},403,request);
+    if(!operatorPushReady(env))
+      return json({error:'운영 알림 암호키 미설정',code:'OPERATOR_PUSH_NOT_CONFIGURED'},503,request);
+    if(!env.AUTH_RATE_LIMITER?.limit)
+      return json({error:'발송 보호 장치 미설정',code:'PUSH_RATE_LIMIT_UNAVAILABLE'},503,request);
+    const permitted=await env.AUTH_RATE_LIMITER.limit({key:'operator-push-selftest:'+actor.userId});
+    if(permitted?.success!==true)
+      return json({error:'발송 제한 중입니다.',code:'PUSH_RATE_LIMITED'},429,request);
+    const diagnostics=await operatorPushDiagnostics(env.DB,actor.email);
+    if(!diagnostics.devices)return json({error:'이 계정에 등록된 기기가 없습니다.',code:'NO_REGISTERED_DEVICE'},409,request);
+    if(diagnostics.lastAttemptAt && Date.now()-Date.parse(diagnostics.lastAttemptAt)<120000)
+      return json({error:'최근 2분 이내 발송 이력이 있습니다.',code:'PUSH_PROBE_COOLDOWN'},429,request);
+    const result=await sendOperatorPush(env,{
+      title:'[에코디] 운영 알림 시험',
+      body:'에코디 알림 전달 경로를 확인하세요. 이 표시는 휴대전화 수신 확인을 대신하지 않습니다.',
+      targetPath:'/mail/admin',operatorEmail:actor.email
+    });
+    const status=result.ok?200:503;
+    return json({ok:Boolean(result.ok),gatewayAccepted:Boolean(result.ok),sentDevices:Number(result.sent||0),
+      deviceReceiptVerified:false,code:result.code||null},status,request);
+  }
 
   // EKODI-OPERATOR-PUSH-001: 운영자 전용 휴대폰 알림 등록(로그인한 운영자 계정만).
   if(url.pathname==='/api/mail/control/operator-push'){
     const actor=await mailActor(request,env);if(!actor)return json({error:'로그인이 필요합니다.',code:'AUTH_REQUIRED'},401,request);
     const isOperator=operatorPushEmails(env).includes(actor.email);const ready=operatorPushReady(env);
-    if(request.method==='GET')return json({available:ready,publicKey:ready?String(env.NOTIFICATION_VAPID_PUBLIC_KEY):null,isOperator,devices:isOperator?await operatorDeviceCount(env.DB,actor.email):0},200,request);
-    if(!isOperator)return json({error:'운영자 계정만 등록할 수 있습니다.',code:'OPERATOR_ONLY'},403,request);
+    if(request.method==='GET')return json({available:ready,publicKey:ready?String(env.NOTIFICATION_VAPID_PUBLIC_KEY):null,isOperator:isOperator&&actor.emailVerified,devices:isOperator&&actor.emailVerified?await operatorDeviceCount(env.DB,actor.email):0,diagnostics:isOperator&&actor.emailVerified?await operatorPushDiagnostics(env.DB,actor.email):null},200,request);
+    if(!isOperator||!actor.emailVerified)return json({error:'인증된 운영자만 등록할 수 있습니다.',code:'OPERATOR_ONLY'},403,request);
     if(request.method==='POST'){if(!ready)return json({error:'운영 알림 암호키가 아직 준비되지 않았습니다.',code:'OPERATOR_PUSH_NOT_CONFIGURED'},503,request);const body=await readJson(request);if(!validOperatorSubscription(body?.subscription))return json({error:'알림 구독 정보가 올바르지 않습니다.',code:'INVALID_SUBSCRIPTION'},400,request);await registerOperatorDevice(env.DB,actor.email,body.subscription);return json({ok:true,devices:await operatorDeviceCount(env.DB,actor.email)},201,request)}
     if(request.method==='DELETE'){await env.DB.prepare('UPDATE operator_push_devices SET disabled_at=? WHERE owner_email=? AND disabled_at IS NULL').bind(new Date().toISOString(),actor.email).run();return json({ok:true,devices:0},200,request)}
     return json({error:'허용되지 않은 요청입니다.',code:'METHOD_NOT_ALLOWED'},405,request);
@@ -458,6 +527,14 @@ export async function handleMailControl(request, env) {
   if(request.method==='GET'&&url.pathname===`${MAIL_PREFIX}/oauth/google/callback`){
     if(!googleMailConfigured(env)||!mailCredentialReady(env))return callbackHtml('Google Mail OAuth 환경설정이 아직 준비되지 않았습니다.');
     const state=await readMailState(env,url.searchParams.get('state'));const code=String(url.searchParams.get('code')||'');
+    const googleError=String(url.searchParams.get('error')||'').replace(/[^a-z_]/gi,'').slice(0,60);
+    if(googleError){
+      const deniedId=Number(state?.accountId||0);
+      if(deniedId>0)await env.DB.prepare("UPDATE mail_accounts SET last_error=?,updated_at=? WHERE id=? AND connection_status<>'connected'").bind('google_'+googleError,new Date().toISOString(),deniedId).run();
+      return callbackHtml(googleError==='access_denied'
+        ?'Google에서 연결이 거부되었습니다. 권한 허용을 취소했거나, 이 Gmail이 EKODI Mail 앱의 테스트 사용자로 등록되지 않았을 수 있습니다. 관리자에게 테스트 사용자 등록을 요청한 뒤 다시 연결해 주세요.'
+        :`Google 연결이 완료되지 않았습니다(${googleError}). 다시 연결해 주세요.`);
+    }
     if(!state||!code||Number(state.exp||0)<Date.now())return callbackHtml('연결 요청이 만료되었거나 올바르지 않습니다.');
     const stateRow=await env.DB.prepare('SELECT * FROM mail_oauth_states WHERE nonce_hash=? AND account_id=? AND actor_user_id=? AND expires_at>?').bind(await mailNonceHash(state.nonce),Number(state.accountId),String(state.actorUserId),new Date().toISOString()).first();
     if(!stateRow)return callbackHtml('이미 사용되었거나 만료된 연결 요청입니다.');

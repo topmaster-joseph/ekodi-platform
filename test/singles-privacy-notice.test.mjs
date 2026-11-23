@@ -27,7 +27,12 @@ test('main and consent shell link to privacy review but launch gates remain clos
  assert.equal((await routeSinglesSurface(req('/singles/api/me'),env)).status,503);
  assert.equal((await routeSinglesSurface(req('/singles/api/discover'),env)).status,503);
  const native=await readFile(new URL('../.github/workflows/verify-singles-native-browser.yml',import.meta.url),'utf8');
- assert.equal(native.split('/singles/privacy').length-1,2,'both native profiles must inspect the privacy draft');
+ const legal=native.split('\n  legal:\n')[1];
+ assert.ok(legal,'independent legal/privacy browser verification lane must exist');
+ assert.match(legal,/device_profile: \[desktop, mobile-portrait\]/,'the privacy lane must run on both desktop and mobile');
+ assert.match(legal,/surface_paths: '[^']*\/singles\/privacy,/,'the actual privacy route must be inspected');
+ assert.match(legal,/verification_lane: singles-legal/,'legal verification must have its own cancellation group');
+ assert.equal(native.split('/singles/privacy').length-1,1,'privacy is defined once and expanded across both device profiles');
  const source=await readFile(new URL('../singles-surface.js',import.meta.url),'utf8');
  assert.match(source,/SINGLES_M1_ENABLED==='true'/);
  assert.match(source,/paid_brokerage_enabled:false/);

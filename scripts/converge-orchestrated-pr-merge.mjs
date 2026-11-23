@@ -6,6 +6,12 @@ import { fileURLToPath } from 'node:url';
 import { safeGitHubHttpDiagnostic } from './github-http-diagnostic.mjs';
 const repo=String(process.env.GITHUB_REPOSITORY||'').trim();
 const token=String(process.env.GH_TOKEN||'').trim();
+// EKODI-RELEASE-WORKFLOWS-TOKEN-002 (owner approval 2026-11-22): GITHUB_TOKEN can never merge a
+// change to .github/workflows (HTTP 403 "Resource not accessible by integration"). Only then is the
+// exact-SHA merge retried once with the owner-issued, repo-scoped workflows token. Every other
+// call — and every ordinary merge — keeps using GITHUB_TOKEN.
+const workflowsToken=String(process.env.GH_WORKFLOWS_TOKEN||'').trim();
+function integrationScopeRefusal(response,data){return response?.status===403&&/Resource not accessible by integration/i.test(String(data?.message||''));}
 // Post-merge reconcile (RECOVERY-POST-MERGE-LANES-001): dispatched on main by the release
 // provenance recovery after an immediate merge, naming the merged orchestrator branch.
 const reconcileBranch=String(process.env.POST_MERGE_RECONCILE_BRANCH||'').trim();
@@ -27,7 +33,9 @@ async function api(path,init={}){
       return {r:{ok:true,status:204,headers:new Headers()},data:{}};
     }
   }
-  const r=await fetch('https://api.github.com/repos/'+repo+path,{...init,headers:{authorization:`Bearer ${token}`,accept:'application/vnd.github+json','x-github-api-version':'2022-11-28','content-type':'application/json',...(init.headers||{})}});
+  const {token:overrideToken,...rest}=init;
+  init=rest;
+  const r=await fetch('https://api.github.com/repos/'+repo+path,{...init,headers:{authorization:`Bearer ${overrideToken||token}`,accept:'application/vnd.github+json','x-github-api-version':'2022-11-28','content-type':'application/json',...(init.headers||{})}});
   const text=await r.text();let data={};try{data=text?JSON.parse(text):{}}catch{data={raw:text}};
   if(!r.ok && [401,403,429].includes(r.status)) console.error(safeGitHubHttpDiagnostic({status:r.status,headers:r.headers,data}));
   return {r,data};
@@ -258,8 +266,12 @@ const controlApiTouched=changedFiles.some(file=>
   // An API-only notification update must not silently ship just the static page.
   'notification-control.js',
   'notification-webpush.js',
+  'operator-notify.js',
   // Search Visibility evidence D1 API is part of Control API deployment ownership.
   'search-visibility-control.js',
+  // JOURNAL-EDITOR-ALERTS-20261113: 저널 편집부 알림 API(최고관리자 전용)는 Control API에 묶인다.
+  'journal-editor-inbox-control.js',
+  'journal-editor-inbox.js',
   // Read-only first-party Search Console reporter is imported by Search Visibility Control API.
   'google-search-console-readonly.js',
   // Church Live host authority and runtime tenant mapping execute in Control API.
@@ -358,6 +370,7 @@ const qtinOrderTouched=changedFiles.some(file=>[
   'migrations/0202_qtin_buyer_accounts.sql',
   'migrations/0203_qtin_product_intros.sql',
   'migrations/0204_qtin_order_delivery.sql',
+  'migrations/0205_qtin_operator_notice_outbox.sql',
   'wrangler.qtin-order.toml',
   'wrangler.qtin-order.staging.toml',
   '.github/workflows/deploy-qtin-order.yml',
@@ -403,6 +416,12 @@ const publishingSiteTouched=changedFiles.some(file=>
   file==='deploy/manifests/publishing.worker.json'||
   file==='.github/workflows/deploy-publishing.yml'
 );
+// SEARCH-VISIBILITY-GSC-PROVISION-20261104: the read-only Search Console reader key is
+// provisioned from the protected search-registration environment after its release merges.
+const searchConsoleReaderTouched=changedFiles.some(file=>[
+  '.github/workflows/provision-search-console-reader.yml',
+  'scripts/search-console-reader-readiness.mjs',
+].includes(file));
 const labHomepageTouched=changedFiles.some(file=>
   file.startsWith('sites/ekodi-lab/')||
   file==='deploy/manifests/ekodilab.pages.json'||
@@ -440,6 +459,9 @@ const shellRuntimeTouched=changedFiles.some(file=>
    'scripts/converge-orchestrated-pr-merge.mjs'].includes(file)
 );
 const sharedSiteTouched=changedFiles.some(file=>
+  // Office is built into the existing Shared Site Core dist; token-mediated merges
+  // do not emit normal main push events. Dispatch only its guarded release owner.
+  file.startsWith('office-prototype/')||
   // /notifications/ is included in Shared Site dist. A static-only change must
   // trigger its receipt-bound release even if the Control API was already deployed.
   file.startsWith('notifications/')||
@@ -471,7 +493,7 @@ const sharedSiteTouched=changedFiles.some(file=>
   // Static asset response headers (CSP, caching) ship with the Site Core build.
   file==='_headers'||
   // Control is a first-party Site Core surface, never a separate public Shell release.
-  ['control.html','control.css','control.js','admin-control-home.js','admin-control-home.css'].includes(file)||
+  ['control.html','control.css','control.js','admin-control-home.js','admin-control-home.css','admin-journal-inbox.js','journal-editor-inbox.js','mail-contact.js'].includes(file)||
   // Shared administrator menu, canonical route registry and design contracts are production Site Core assets.
   // Public Site publication controls are a Site Core admin bundle asset. This must
   // dispatch the guarded release after token-mediated protected merges (issue #6508).
@@ -524,6 +546,9 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='seonammedi-monitor.js'||
   file==='seonammedi-relevance.js'||
   file==='wrangler.site.toml'||
+  // Pre-candidate route registration is a production Site Core dependency.
+  // Protected bot merges suppress push; dispatch the guarded release explicitly.
+  file==='scripts/ensure-church-route-ownership.mjs'||
   // Invest's canonical public landing and member gate are shipped by Site Core.
   file==='invest-access-ui.js'||
   file==='platform-router-entry-worker.js'||
@@ -540,6 +565,10 @@ const sharedSiteTouched=changedFiles.some(file=>
   file==='.github/workflows/verify-admin-production-ui-e2e.yml'||
   file==='scripts/admin-production-ui-coverage.mjs'||
   file==='scripts/ekodi-background-browser-worker.mjs'||
+  // An EKODI Singles read-only browser workflow update must be verified in production.
+  // GitHub-token protected merges suppress main push; explicitly send it through the
+  // guarded Shared Site Core release, then the success-only workflow_run acceptance.
+  file==='.github/workflows/verify-singles-native-browser.yml'||
   // Hybrid native browser admin page shares the guarded Site Core release boundary.
   file==='hybrid-execution-admin.js'||
   file==='device-control-admin.js'||
@@ -894,6 +923,14 @@ async function dispatchPostMergeDeploys(){
     if(!dispatch.r.ok)fail('EKODI Lab deploy dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
     console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'deploy-ekodi-lab-homepage.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
   }
+  if(searchConsoleReaderTouched){
+    const dispatch=await api('/actions/workflows/provision-search-console-reader.yml/dispatches',{
+      method:'POST',
+      body:JSON.stringify({ref:'main',inputs:{release_branch_ref:branch,release_task_id:taskId}})
+    });
+    if(!dispatch.r.ok)fail('Search Console reader provisioning dispatch failed '+dispatch.r.status+' '+JSON.stringify(dispatch.data).slice(0,500));
+    console.log(JSON.stringify({ok:true,action:'deploy-dispatched',workflow:'provision-search-console-reader.yml',pr:pr.number,taskId,branch,authority:'ekodi-orchestrator'}));
+  }
   // GITHUB_TOKEN merges do not invoke ordinary main push workflows.
   // Explicit dispatch forwards the already verified EKODI release receipt.
   if(controlApiTouched){
@@ -1122,7 +1159,12 @@ for(let cycle=0;cycle<180;cycle++){
   }
 
   await retireUnapprovedReleaseRuns();
-  const merged=await api('/pulls/'+pr.number+'/merge',{method:'PUT',body:JSON.stringify({sha:headSha,merge_method:'squash',commit_title:fresh.title})});
+  const mergeBody=JSON.stringify({sha:headSha,merge_method:'squash',commit_title:fresh.title});
+  const merged=await api('/pulls/'+pr.number+'/merge',{method:'PUT',body:mergeBody}).then(first=>{
+    if(!(integrationScopeRefusal(first.r,first.data)&&workflowsToken))return first;
+    console.log(JSON.stringify({ok:true,action:'merge-retry-workflows-token',pr:pr.number,headSha}));
+    return api('/pulls/'+pr.number+'/merge',{method:'PUT',token:workflowsToken,body:mergeBody});
+  });
   if(merged.r.ok&&merged.data?.merged===true){
     await dispatchPostMergeDeploys();
     console.log(JSON.stringify({ok:true,action:'merged',pr:pr.number,mergeSha:merged.data.sha,taskId,branch,authority:'ekodi-orchestrator'}));

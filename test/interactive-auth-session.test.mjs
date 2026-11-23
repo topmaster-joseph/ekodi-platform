@@ -6,6 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import {
   INTERACTIVE_AUTH_COMMANDS,
   INTERACTIVE_AUTH_POLICY_ID,
+  INTERACTIVE_AUTH_SERVICES,
   assessInteractiveAuthReceipt,
   projectInteractiveAuthStatus,
   projectInteractiveAuthVerification,
@@ -134,6 +135,45 @@ test('Domeggook external sign-in requires personal consent and projects no walle
   assert.doesNotMatch(JSON.stringify(projectInteractiveAuthStatus(receipt.interactiveAuth.status)), /token|do-not-leak/);
 });
 
+
+test('Korail manual login uses official origin and never returns passenger, fare, seat or payment data', () => {
+  const service=INTERACTIVE_AUTH_SERVICES['korail-ticket'];
+  assert.equal(service.entryUrl,'https://www.korail.com/ticket/login');
+  assert.equal(service.automationOrigin,'https://www.korail.com');
+  assert.deepEqual(service.authenticatedPathPrefixes,['/ticket/']);
+  assert.deepEqual(service.features,[]);
+  const start=sanitizeInteractiveAuthPayload(INTERACTIVE_AUTH_COMMANDS.start,{
+    service:'korail-ticket',userWillSignInPersonally:true,entryUrl:'https://evil.example/login',
+    cookieExport:true,credentialRelay:true,hostInputInjection:true,
+  },{now:Date.parse('2026-11-18T00:00:00Z'),randomUUID:()=>SID.slice(4)});
+  assert.equal(start.entryUrl,service.entryUrl);
+  assert.equal(start.cookieExport,false);
+  assert.equal(start.credentialRelay,false);
+  assert.equal(start.localConsentRequired,true);
+  assert.equal(start.hostInputInjection,false);
+  const verificationRequest=sanitizeInteractiveAuthPayload(INTERACTIVE_AUTH_COMMANDS.verify,{
+    service:'korail-ticket',sessionId:SID,readOnlyAcknowledged:true,mutation:true,uploads:true,
+  });
+  assert.equal(verificationRequest.probe,'login-status-only-readonly');
+  assert.equal(verificationRequest.mutation,false);
+  assert.equal(verificationRequest.uploads,false);
+  assert.deepEqual(verificationRequest.featureIds,[]);
+  const output=projectInteractiveAuthVerification({
+    service:'korail-ticket',sessionId:SID,pageOrigin:'https://www.korail.com',
+    authenticated:true,menuLabelCount:93,
+    features:[{id:'ticket',menuVisible:true,passengerName:'secret'}],
+    usageLines:['좌석 13호차 5C 결제 47,300원', '잔여 47,300원 고객@example.com 010-1234-5678'],
+    passengerName:'secret',ticketNumber:'SENSITIVE',
+  });
+  assert.equal(output.authenticated,true);
+  assert.equal(output.menuLabelCount,0);
+  assert.deepEqual(output.features,[]);
+  assert.deepEqual(output.usageLines,[]);
+  assert.doesNotMatch(JSON.stringify(output),/47,300|13호차|SENSITIVE|secret|example.com/);
+  const noOrigin=projectInteractiveAuthVerification({service:'korail-ticket',sessionId:SID,pageOrigin:'https://fake.korail.com'});
+  assert.equal(noOrigin.pageOrigin,'');
+});
+
 // ---------------------------------------------------------------------------
 // Integration: real Control API handler over a D1-compatible SQLite adapter.
 // ---------------------------------------------------------------------------
@@ -152,7 +192,7 @@ function d1(db) {
 }
 const sha = v => createHash('sha256').update(v).digest('hex');
 
-function setup({ role = 'super_admin', capability = true, domeggookCapability = false, lastSeen = new Date().toISOString() } = {}) {
+function setup({ role = 'super_admin', capability = true, domeggookCapability = false, korailCapability = false, lastSeen = new Date().toISOString() } = {}) {
   const db = new DatabaseSync(':memory:');
   db.exec(`CREATE TABLE admins (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL DEFAULT '', password_salt TEXT NOT NULL DEFAULT '', password_iterations INTEGER, birth_hash TEXT NOT NULL DEFAULT '', birth_salt TEXT NOT NULL DEFAULT '', role TEXT NOT NULL DEFAULT 'super_admin', created_at TEXT NOT NULL DEFAULT '');
     CREATE TABLE sessions (token_hash TEXT PRIMARY KEY, admin_id INTEGER NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT '');
@@ -164,7 +204,7 @@ function setup({ role = 'super_admin', capability = true, domeggookCapability = 
     await handleDeviceControl(new Request('https://ekodi.kr/api/control/devices', { headers: { authorization: 'Bearer admin-token-0123456789abcdef' } }), env);
     db.prepare(`INSERT INTO device_registry (id, label, platform, hostname, os_version, agent_version, token_hash, capabilities_json, settings_json, diagnostics_json, profile_name, last_seen_at, enrolled_at, enrolled_by)
       VALUES ('dev_1','PC','windows','USER4','Windows','2.5.7',?, ?, '{}', '{}', '', ?, ?, 1)`)
-      .run(sha('device-token-abcdef0123456789'), JSON.stringify({ interactiveAuthSession: capability, domeggookNativeAuth: domeggookCapability }), lastSeen, lastSeen);
+      .run(sha('device-token-abcdef0123456789'), JSON.stringify({ interactiveAuthSession: capability, domeggookNativeAuth: domeggookCapability, korailNativeAuth: korailCapability }), lastSeen, lastSeen);
   } };
 }
 const admin = (env, path, body) => handleDeviceControl(new Request(`https://ekodi.kr${path}`, {
@@ -221,6 +261,25 @@ test('integration: Domeggook requires a separately upgraded native agent capabil
   assert.equal(next.command.payload.cookieExport,false);
 });
 
+
+test('integration: Korail is denied to legacy agents; updated agents only open official manual sign-in', async () => {
+  const command={type:INTERACTIVE_AUTH_COMMANDS.start,confirmed:true,
+    payload:{service:'korail-ticket',userWillSignInPersonally:true,entryUrl:'https://evil.example',cookieExport:true}};
+  const old=setup({korailCapability:false});await old.enroll();
+  const refused=await admin(old.env,'/api/control/devices/dev_1/commands',command);
+  assert.equal(refused.status,409);
+  assert.equal((await refused.json()).code,'KORAIL_NATIVE_AUTH_AGENT_UPGRADE_REQUIRED');
+  const updated=setup({korailCapability:true});await updated.enroll();
+  const permitted=await admin(updated.env,'/api/control/devices/dev_1/commands',command);
+  assert.equal(permitted.status,202);
+  const next=await (await agent(updated.env,'/api/device-agent/commands/next')).json();
+  assert.equal(next.command.payload.entryUrl,'https://www.korail.com/ticket/login');
+  assert.equal(next.command.payload.localConsentRequired,true);
+  assert.equal(next.command.payload.cookieExport,false);
+  assert.equal(next.command.payload.hostInputInjection,false);
+  assert.equal(next.command.payload.screenCapture,false);
+});
+
 test('integration: a receipt that claims cookie export is stored as failed', async () => {
   const t = setup(); await t.enroll();
   await admin(t.env, '/api/control/devices/dev_1/commands', { type: INTERACTIVE_AUTH_COMMANDS.start, confirmed: true, payload: { service: 'factchat-mokpo', userWillSignInPersonally: true } });
@@ -251,5 +310,7 @@ test('admin UI exposes the session panel without rendering credential fields', (
   assert.match(ui, /function externalAuthPanel\(device\)/);
   assert.match(ui, /computer\.auth_session\.close/);
   assert.match(ui, /domeggook-business/);
+  assert.match(ui, /korail-ticket/);
+  assert.match(ui, /korailNativeAuth/);
   assert.doesNotMatch(ui.slice(ui.indexOf('function externalAuthPanel')), /type=["']?password|input\.type\s*=\s*'password'/);
 });

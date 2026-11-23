@@ -3,6 +3,8 @@ import researchWorker from './education/research/worker.js';
 import { instructorGate, isGatedPath, adminUnlock, sessionStatus } from './education-instructor-gate.js';
 import { instructorDocs } from './education-instructor-docs.js';
 import {educationScreenApi} from './education-screen-share-api.js';
+import {educationFeedback} from './education-feedback.js';
+import {courseHubRouter} from './education/course-hub/router.js';
 export {EducationScreenRoom} from './education-screen-room.js';
 
 const SECURITY_HEADERS={
@@ -22,8 +24,14 @@ export default{
     if(url.pathname==='/health')return json({ok:true,service:'ekodi-education',surface:'education-platform',areas:['admission','study'],contextModel:'person-space-role',officialSourceRequired:true,submissionExecution:false,sensitiveDocumentStorage:false,instructorDocumentShare:'instructor-own-documents-expiring-links',dataMode:runtimeConfig(env).dataMode,ekodiShell:true});
     if(url.pathname==='/config.js')return new Response(`window.EKODI_EDU_CONFIG=${JSON.stringify(runtimeConfig(env))};`,{headers:{'content-type':'application/javascript; charset=utf-8','cache-control':'no-store',...SECURITY_HEADERS}});
     if(url.pathname==='/admin'||url.pathname==='/admin/')return Response.redirect('https://ekodi.kr/admin/',307);
+    // One canonical course registry, public learner view and separately verified instructor authority.
+    const courseHub=await courseHubRouter(request,env,{url});
+    if(courseHub)return injectEkodiShell(withHeaders(courseHub),'edu');
     const screenShare=await educationScreenApi(request,env,{url});
     if(screenShare)return screenShare;
+    // Lecture feedback survey (anonymous QR answers; instructor-only summary).
+    const feedback=await educationFeedback(request,env,{url});
+    if(feedback)return feedback;
     // EKODI super admin → instructor session (central admin token verified server-side, super_admin only).
     const admin=await adminUnlock(request,env,{url});
     if(admin)return admin;
@@ -48,6 +56,10 @@ export default{
     // Only public pizza classroom HTML may embed a user-selected official YouTube player.
     if(/^\/pizza-experience\/?$/.test(url.pathname) && String(response.headers.get('content-type')||'').includes('text/html')){
       response.headers.set('content-security-policy',SECURITY_HEADERS['content-security-policy']+'; frame-src https://www.youtube-nocookie.com https://www.youtube.com');
+    }
+    // Owner-only Google Slides deck for this course; do not loosen other pages' CSP.
+    if(/^\/study\/cold-safety-2026\/?$/.test(url.pathname) && String(response.headers.get('content-type')||'').includes('text/html')){
+      response.headers.set('content-security-policy',SECURITY_HEADERS['content-security-policy']+'; frame-src https://docs.google.com');
     }
     if(url.pathname.startsWith('/study/live/screen-share/'))response.headers.set('referrer-policy','no-referrer');
     return injectEkodiShell(response,'edu');

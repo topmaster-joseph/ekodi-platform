@@ -6,6 +6,7 @@ import { cooperativeCss, cooperativeScript } from './cooperative-ui.js';
 import { cooperativeCharter } from './cooperative-charter.js';
 import { COOPERATIVE_IMAGE_PATHS } from './cooperative-media.js';
 import { cooperativeLocatorAvailability } from './cooperative-locator.js';
+import { handleSignatureAdmin, handleSignatureSigner } from './cooperative-signatures.js';
 
 const headers = (type = 'application/json; charset=utf-8') => ({
   'content-type': type, 'cache-control': 'private, no-store', 'x-content-type-options': 'nosniff',
@@ -31,7 +32,7 @@ export async function cooperativeLocatorGuard(request, env) {
   if (url.hostname !== 'ekodi.kr') return null;
   const route = cooperativeRoute(url.pathname);
   if (!route || route.platformContext) return null;
-  if (route.locator !== route.coop.publicSlug && !['/', '/members', '/admin'].includes(route.path)) return null;
+  if (route.locator !== route.coop.publicSlug && !['/', '/members', '/admin', '/sign'].includes(route.path)) return null;
   const availability = await cooperativeLocatorAvailability(env, route.coop, request);
   return availability.ok ? null : json({ ok: false, code: availability.code }, 503);
 }
@@ -77,11 +78,17 @@ async function join(request, env, coop) {
   const identity = await cooperativeIdentity(request, env);
   if (!identity?.email) return json({ ok: false, code: 'COOP_LOGIN_REQUIRED' }, 401);
   // 등록 화면에 "지금 로그인된 이메일"을 보여 주기 위한 본인 확인(본인 이메일만 반환).
-  if (request.method === 'GET') return json({ ok: true, email: String(identity.email).trim().toLowerCase() });
+  if (request.method === 'GET') {
+    // 등록 전에 출자 1좌 금액과 출자금 입금 계좌를 안내한다(운영진이 등록한 경우에만).
+    // 등록 전에는 1좌 금액과 납입 의무만 안내하고, 입금 계좌는 등록 후 조합원 공간에서 안내한다.
+    const { state } = await loadCooperativeProject(env.DB, coop);
+    return json({ ok: true, email: String(identity.email).trim().toLowerCase(), shareUnit: state.profile.shareUnit });
+  }
   if (request.method !== 'POST') return json({ ok: false, code: 'METHOD_NOT_ALLOWED' }, 405);
   const body = await inputJson(request);
-  if (Object.keys(body).some(key => !['consent', 'representative', 'business', 'phone', 'businessNumber'].includes(key))) return json({ ok: false, code: 'COOP_SELF_FIELDS_ONLY' }, 400);
+  if (Object.keys(body).some(key => !['consent', 'representative', 'business', 'phone', 'businessNumber', 'depositAgreement'].includes(key))) return json({ ok: false, code: 'COOP_SELF_FIELDS_ONLY' }, 400);
   if (body.consent !== true) return json({ ok: false, code: 'COOP_JOIN_CONSENT_REQUIRED' }, 400);
+  if (body.depositAgreement !== true) return json({ ok: false, code: 'COOP_DEPOSIT_AGREEMENT_REQUIRED' }, 400);
   const representative = trim(body.representative, 80);
   if (!representative) return json({ ok: false, code: 'COOP_REPRESENTATIVE_REQUIRED' }, 400);
   const phone = coopPhone(body.phone);
@@ -108,9 +115,10 @@ async function join(request, env, coop) {
     const state = project.state;
     if (!state.founders.some(f => f.accountEmail === email)) {
       const unlinked = state.founders.filter(f => !f.accountEmail && f.representative === representative);
-      if (unlinked.length === 1) Object.assign(unlinked[0], { accountEmail: email, phone, ...(businessNumber ? { businessNumber } : {}), ...(business ? { business } : {}) });
+      if (unlinked.length === 1) Object.assign(unlinked[0], { accountEmail: email, phone, ...(businessNumber ? { businessNumber } : {}), ...(business ? { business } : {}), });
       else state.founders.push({ id: `${coop.workspaceId}:member:${crypto.randomUUID()}`, representative, position: 'member',
-        business, businessNumber: businessNumber || null, phone, industry: null, shares: null, consent: 'pending', accountEmail: email });
+        business, businessNumber: businessNumber || null, phone, industry: null, shares: null, consent: 'pending', accountEmail: email,
+        payment: 'unpaid', paymentConfirmedAt: null });
       try {
         await saveCooperativeProject(env.DB, coop, state, project.revision, { identity, scope: 'self-join', role: 'member' });
       } catch (error) { if (error.status === 409 && attempt < 2) continue; throw error; }
@@ -197,7 +205,7 @@ export async function routeCooperative(request, env) {
   if (!route) return null;
   const { coop, locator, path, platformContext } = route;
   try {
-    const humanPage = ['/', '/members', '/admin'].includes(path);
+    const humanPage = ['/', '/members', '/admin', '/sign'].includes(path);
     const canonicalRoot = url.pathname === '/' + coop.publicSlug;
     const locatorGuard = await cooperativeLocatorGuard(request, env);
     if (locatorGuard) return locatorGuard;
@@ -208,7 +216,7 @@ export async function routeCooperative(request, env) {
     if (['GET', 'HEAD'].includes(request.method)) {
       if (path === '/assets/app.css' && !platformContext) return new Response(request.method === 'HEAD' ? null : cooperativeCss(), { headers: headers('text/css; charset=utf-8') });
       if (path === '/assets/app.js' && !platformContext) return new Response(request.method === 'HEAD' ? null : cooperativeScript(), { headers: headers('text/javascript; charset=utf-8') });
-      if (['/', '/members', '/admin'].includes(path)) {
+      if (['/', '/members', '/admin'].includes(path) || (path === '/sign' && !platformContext)) {
         const surface = path === '/' ? 'public' : path.slice(1);
         const h = new Headers(headers('text/html; charset=utf-8'));
         h.set('x-ekodi-route', `cooperative-${surface}`);
@@ -229,10 +237,20 @@ export async function routeCooperative(request, env) {
     if (!env.DB?.prepare) return json({ ok: false, code: 'COOP_DATABASE_UNAVAILABLE' }, 503);
     if (path === '/api/application' && !platformContext) return application(request, env, coop);
     if (path === '/api/join' && !platformContext) return join(request, env, coop);
-    const administrative = path === '/api/project' || path === '/api/export';
+    // 서명·직인 요청 링크(로그인 없음): 링크 토큰이 곧 이 한 사람·한 서류에 대한 권한이다.
+    if (path.startsWith('/api/sign/') && !platformContext) {
+      const signed = await handleSignatureSigner(request, env, coop, path, await loadCooperativeProject(env.DB, coop), { headers });
+      return signed || json({ ok: false, code: 'COOP_ROUTE_NOT_FOUND' }, 404);
+    }
+    const signatureAdmin = path === '/api/signatures' || path.startsWith('/api/signatures/') || path.startsWith('/api/documents/');
+    const administrative = path === '/api/project' || path === '/api/export' || signatureAdmin;
     const access = await resolveCooperativeAccess(request, env, coop, { administrative, platformContext });
     if (!access.allowed) return json({ ok: false, code: access.code }, access.status);
     const project = await loadCooperativeProject(env.DB, coop);
+    if (signatureAdmin) {
+      const handled = await handleSignatureAdmin(request, env, coop, path, project, access, { headers, inputJson });
+      return handled || json({ ok: false, code: 'COOP_ROUTE_NOT_FOUND' }, 404);
+    }
     if (path === '/api/me' && request.method === 'GET') return json({ ok: true, ...cooperativeMemberProjection(coop, project, access) });
     if (path === '/api/project' && request.method === 'GET') {
       const applications = await env.DB.prepare('SELECT person_id, email, representative, business, message, status, updated_at FROM cooperative_applications WHERE workspace_id = ? ORDER BY updated_at DESC LIMIT 100').bind(coop.workspaceId).all();
@@ -281,13 +299,17 @@ export async function routeCooperative(request, env) {
     }
     if (path === '/api/my-business' && request.method === 'PUT' && !platformContext) {
       const body = await inputJson(request);
-      if (Object.keys(body).some(key => !['business', 'industry', 'phone', 'businessNumber', 'revision'].includes(key))) return json({ ok: false, code: 'COOP_SELF_FIELDS_ONLY' }, 400);
+      if (Object.keys(body).some(key => !['business', 'industry', 'phone', 'businessNumber', 'depositReported', 'revision'].includes(key))) return json({ ok: false, code: 'COOP_SELF_FIELDS_ONLY' }, 400);
       const founder = project.state.founders.find(f => f.accountEmail === access.identity.email);
       if (!founder) return json({ ok: false, code: 'COOP_ACCOUNT_NOT_LINKED' }, 403);
       if ('phone' in body) { const phone = coopPhone(body.phone); if (phone === null) return json({ ok: false, code: 'COOP_PHONE_INVALID' }, 400); founder.phone = phone || null; }
       if ('businessNumber' in body) { const number = coopBusinessNumber(body.businessNumber); if (number === null) return json({ ok: false, code: 'COOP_BUSINESS_NUMBER_INVALID' }, 400); founder.businessNumber = number || null; }
-      founder.business = trim(body.business, 160) || null;
-      founder.industry = trim(body.industry, 160) || null;
+      // 조합원은 '입금했어요' 알림만 보낼 수 있고, 납입 확인(confirmed)은 운영진만 명부에서 바꾼다.
+      if (body.depositReported === true && (founder.payment || 'unpaid') === 'unpaid') founder.payment = 'reported';
+      if ('business' in body || 'industry' in body) {
+        founder.business = trim(body.business, 160) || null;
+        founder.industry = trim(body.industry, 160) || null;
+      }
       const result = await saveCooperativeProject(env.DB, coop, project.state, body.revision, access);
       return json({ ok: true, ...cooperativeMemberProjection(coop, result, access) });
     }

@@ -44,7 +44,8 @@ jobs:
        github.actor == 'topmaster-joseph' &&
        github.event.issue.pull_request == null &&
        github.event.comment.body == 'EKODI-EDUCATION-RECONCILE')
-    runs-on: ubuntu-latest
+    # Playwright 1.55.x Chromium does not install on ubuntu-26.04 (ubuntu-latest); keep browser jobs on LTS.
+    runs-on: ubuntu-24.04
     timeout-minutes: 13
     steps:
       - uses: actions/checkout@v7

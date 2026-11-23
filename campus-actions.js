@@ -25,7 +25,7 @@
     { type: '클라우드', name: '에코디 클라우드', domain: 'cloud.ekodi.kr', section: 'workspace', fallback: 'services', group: 'communication', lifecycle: 'planned' },
     { type: '미디어', name: '에코디미디어', domain: 'media.ekodi.kr', section: 'communication', fallback: 'services', group: 'communication', lifecycle: 'planned' },
     { type: '고객', name: '청계면상인회', domain: 'cgma.ekodi.kr', url: 'https://ekodi.kr/cgma/', label: 'ekodi.kr/cgma · cgma.or.kr', section: 'clients', fallback: 'services', group: 'clients' },
-    { type: '고객', name: '자담치킨 목포대점', domain: 'jadam.ekodi.kr', section: 'clients', fallback: 'services', group: 'clients' },
+    { type: '고객', name: 'BBQ 무안청계점', domain: 'ekodi.kr/bbqcg', url: 'https://ekodi.kr/bbqcg', label: 'ekodi.kr/bbqcg', section: 'clients', fallback: 'services', group: 'clients' },
     { type: '고객', name: '피자마루 목포대점', domain: 'pizzamaru.ekodi.kr', section: 'clients', fallback: 'services', group: 'clients' },
     { type: '고객', name: '요거트퍼플 목포대점', domain: 'yogurt.ekodi.kr', section: 'clients', fallback: 'services', group: 'clients' },
   ];
@@ -427,6 +427,9 @@
     if (!grid || !Array.isArray(services)) return false;
 
     for (const service of services) {
+      // The legacy homepage registry must not resurrect a retired storefront in
+      // the current customer-site roster. Keep its historical tenant data intact.
+      if (String(service?.id || '').toLowerCase() === 'jadam') continue;
       const domain = normalizeDomain(service?.label || service?.domain || service?.url);
       if (!domain) continue;
       // A registry entry may name the same site by a legacy subdomain or by its
@@ -576,10 +579,12 @@
     { id: 'ekodibiz-trade', publicPath: '/ekodibiz/trade', adminPath: '/ekodibiz/trade/admin', siteType: 'org' },
     { id: 'ekodimall', publicPath: '/ekodimall', adminPath: '/ekodimall/admin', siteType: 'store' },
     { id: 'ekodibooks', publicPath: '/books', adminPath: '/books/admin', siteType: 'brand' },
+    { id: 'funding', publicPath: '/funding', adminPath: '/funding/admin', siteType: 'org' },
     { id: 'cheonggye-local', publicPath: '/cheonggye', adminPath: '/cheonggye/admin', siteType: 'org' },
     { id: 'cgma', publicPath: '/cgma', adminPath: '/cgma/admin', siteType: 'org' },
     { id: 'cmpmyi', publicPath: '/cmpmyi', adminPath: '/cmpmyi/admin', siteType: 'store' },
     { id: 'jadam', publicPath: '/jadam', adminPath: '/jadam/admin', siteType: 'store' },
+    { id: 'bbqcg', publicPath: '/bbqcg', adminPath: '/bbqcg/admin', siteType: 'store' },
     { id: 'pizzamaru', publicPath: '/pizzamaru', adminPath: '/pizzamaru/admin', siteType: 'store' },
     { id: 'yogurt', publicPath: '/yogurt', adminPath: '/yogurt/admin', siteType: 'store' },
     { id: 'work', publicPath: '/work', adminPath: '/work/admin', siteType: 'org' },
@@ -800,7 +805,15 @@
 
   function syncSiteManager(section = currentSiteSection()) {
     if (!section || !document.querySelector('#campusSiteGroups')) return;
-    const requested = new URLSearchParams(location.search).get('site') || '';
+    const rawRequested = new URLSearchParams(location.search).get('site') || '';
+    // Historical selected Jadam tabs hand off to the current active BBQ workspace,
+    // not to a synthetic tenant or a privileged admin alias.
+    const requested = section === 'sites-clients' && rawRequested === 'jadam' ? 'bbqcg' : rawRequested;
+    if (requested !== rawRequested) {
+      const url = new URL(location.href);
+      url.searchParams.set('site', requested);
+      history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+    }
     const sites = sitesForSection(section);
     activeSiteKey = sites.some(site => site.key === requested) ? requested : (sites.some(site => site.key === activeSiteKey) ? activeSiteKey : '');
     renderSiteStrip(section, sites);

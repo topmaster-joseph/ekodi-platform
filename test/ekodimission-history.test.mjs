@@ -7,7 +7,7 @@ const read=name=>readFile(new URL(name,root),'utf8');
 const env={ASSETS:{fetch:async request=>{try{return new Response(await readFile(new URL('.'+new URL(request.url).pathname,root)),{status:200,headers:{'content-type':'text/html; charset=utf-8'}})}catch{return new Response('Not Found',{status:404})}}}};
 
 test('mission history is a first-class public route and slash variants agree',async()=>{
- const path='/ekodimission/history';
+ const path='/mission/history';
  const a=await spaceWorker.fetch(new Request('https://ekodi.kr'+path),env);
  const b=await spaceWorker.fetch(new Request('https://ekodi.kr'+path+'/'),env);
  assert.equal(a.status,200);assert.equal(b.status,200);
@@ -16,22 +16,30 @@ test('mission history is a first-class public route and slash variants agree',as
  assert.equal(a.headers.get('x-robots-tag'),'index, follow');
  const html=await a.text();
  assert.equal(html,await b.text());
- assert.match(html,/href="https:\/\/ekodi.kr\/ekodimission\/history"/);
- assert.match(html,/data-mission-nav/);
+ assert.match(html,/href="https:\/\/ekodi.kr\/mission\/history"/);
+ assert.doesNotMatch(html,/href="https:\/\/ekodi.kr\/ekodimission\/history"/);
+  assert.match(html,/data-mission-nav/);
  assert.match(html,/id="history-2018"/);
  assert.match(html,/id="history-2026"/);
- assert.match(html,/설립 월·일이 달라/);
+ assert.match(html,/<time class="history-day" datetime="2026-08-21">08\.21–23<\/time><span>제주 여름캠프<\/span>/);
+ assert.doesNotMatch(html,/선교회 연혁|MISSION HISTORY/);
  assert.doesNotMatch(html,/student\.phone|account_password|생년월일|주민등록번호/);
 });
 
 test('history timeline is ordered most recent to oldest with unique anchors and no fabricated foundation date',async()=>{
  const page=await read('ekodimission-history.page');
- const years=[...page.matchAll(/<li class="mission-history-entry" id="history-(\d{4})">/g)].map(m=>Number(m[1]));
+ const years=[...page.matchAll(/<li class="mission-history-entry history-year" id="history-(\d{4})">/g)].map(m=>Number(m[1]));
  assert.deepEqual(years,[2026,2025,2024,2023,2022,2021,2018]);
  assert.equal(new Set(years).size,years.length);
  assert.match(page,/<time datetime="2018">2018<\/time>/);
  assert.doesNotMatch(page,/datetime="2018-(?:03|08)-13"/);
  assert.ok(page.includes('제주 여름캠프'));
+ assert.doesNotMatch(page,/← 에코디선교회/);
+ assert.match(page,/id="history-2024">.*?<ul class="history-items"><li class="history-recurring"><time class="history-day" datetime="2024-01">1월 ~ 현재<\/time><span>토요모임/);
+ for(const block of page.matchAll(/<ul class="history-items">(.*?)<\/ul>/g)){
+   const dates=[...block[1].matchAll(/class="history-day" datetime="([^"]+)"/g)].map(m=>m[1]);
+   assert.deepEqual(dates,[...dates].sort().reverse(),'월·일 내림차순');
+ }
  assert.ok(page.includes('서울 공동체 여행'));
 });
 

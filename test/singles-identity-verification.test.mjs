@@ -81,4 +81,14 @@ test('test-channel results are never accepted as adult verification',async()=>{
  portone({status:'VERIFIED',id:ID,verifiedCustomer:{birthDate:'1990-01-01',ci:'x'}});
  const r2=await handleSinglesSocial(post('/identity/complete',{identity_verification_id:ID}),'/identity/complete',db(),uid,reply);
  assert.equal((await r2.json()).error,'identity_test_channel','missing channel type fails closed');
+ // A legacy environment override must never convert a sandbox result into a real adult grant.
+ settings.SINGLES_IDENTITY_ALLOW_TEST='true';
+ try{
+  const blocked=db({rpc:{singles_identity_complete:()=>({data:'verified',error:null})}});
+  portone({status:'VERIFIED',id:ID,channel:{type:'TEST'},verifiedCustomer:{birthDate:'1990-01-01',ci:'x'}});
+  const bypassAttempt=await handleSinglesSocial(post('/identity/complete',{identity_verification_id:ID}),'/identity/complete',blocked,uid,reply);
+  assert.equal(bypassAttempt.status,409);
+  assert.equal((await bypassAttempt.json()).error,'identity_test_channel');
+  assert.ok(!blocked.calls.some(c=>c.n==='singles_identity_complete'),'legacy override cannot write adult grant');
+ }finally{delete settings.SINGLES_IDENTITY_ALLOW_TEST;}
 });

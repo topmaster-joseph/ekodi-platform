@@ -42,6 +42,19 @@ for (const [id, svc] of Object.entries(policy.services || {})) {
   must(new URL(mod.entryUrl).origin === mod.automationOrigin && mod.automationOrigin.startsWith('https://'), `service ${id} entry must be https on its own origin`);
 }
 must(Object.keys(INTERACTIVE_AUTH_SERVICES).length === Object.keys(policy.services || {}).length, 'service registry count drift');
+const korail = policy.services?.['korail-ticket'];
+must(korail?.entryUrl === 'https://www.korail.com/ticket/login' &&
+  korail?.automationOrigin === 'https://www.korail.com', 'Korail official origin must be pinned');
+must(korail?.loginEvidence === 'visible-logout-marker-and-no-password-form',
+  'Korail login cannot be inferred from URL or hidden password fields alone');
+must(korail?.verification === 'login-status-only-readonly',
+  'Korail may only verify a login state');
+for (const key of ['readSeatAvailability','readPassengerData','readPaymentData','transmitFareOrTicketData','submitBooking','payForTickets','sendUsageLines','retainSessionAfterExpiry']) {
+  must(policy.verification?.serviceSpecificGuards?.['korail-ticket']?.[key] === false,
+    'Korail must block '+key);
+}
+must(policy.authority?.korailBookingHumanGateRequired === true,
+  'Korail booking must have a separate human gate');
 const domeggook = policy.services?.['domeggook-business'];
 must(domeggook?.loginEvidence === 'visible-logout-marker-and-no-password-form',
   'Domeggook must prove a visible logout marker, not infer auth from home URL');
@@ -74,6 +87,15 @@ must(start > 0 && end > start, 'agent interactive auth section missing');
 must(agent.includes("'domeggook-business' = @{") && agent.includes("logoutMarkerVisible"),
   'agent native Domeggook service or boolean login evidence missing');
 
+must(agent.includes("'korail-ticket' = @{") && agent.includes("korailNativeAuth = [bool](Resolve-EkodiInteractiveBrowser)"),
+  'Korail local service registry and per-device agent capability required');
+must(agent.includes("location.origin === 'https://www.korail.com' ? []") &&
+     agent.includes("location.origin === 'https://www.korail.com') ? ''"),
+  'Korail sign-in may not extract navigation labels or fares from the page');
+must(control.includes("KORAIL_NATIVE_AUTH_AGENT_UPGRADE_REQUIRED"),
+  'Legacy agents must fail closed for Korail');
+must(read('device-control-admin.js').includes("capability(device, 'korailNativeAuth')"),
+  'Korail admin must gate on upgraded agent capability');
 const section = agent.slice(start, end);
 for (const forbidden of ['Network.getCookies', 'Network.getAllCookies', 'Storage.getCookies', 'Page.captureScreenshot', 'Page.startScreencast',
   'Input.dispatch', 'SendKeys', 'Set-Clipboard', 'Get-Clipboard', 'opera.exe', 'localStorage', 'sessionStorage', 'document.cookie', '--headless']) {

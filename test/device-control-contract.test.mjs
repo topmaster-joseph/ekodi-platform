@@ -506,3 +506,16 @@ test('browser task journal crosses Device Control sanitization and is shown with
   assert.match(admin, /item\.commandType/);
   assert.doesNotMatch(admin, /item\.commandLine|item\.profilePath/);
 });
+
+
+test('site vault runs synthetic DPAPI roundtrip on Windows; never on cloud Linux', async()=>{
+  if(process.platform!=='win32')return;
+  const {execFileSync}=await import('node:child_process');
+  const {fileURLToPath}=await import('node:url');
+  const script=fileURLToPath(new URL('../tools/ekodi-device-agent/windows/tests/site-vault/verify-site-vault.ps1',import.meta.url));
+  const result=execFileSync('powershell.exe',['-NoProfile','-File',script],{
+    encoding:'utf8',timeout:45000,windowsHide:true,
+    env:{...process.env,EKODI_VAULT_TEST_ONLY:'1'}
+  });
+  assert.match(result,/EKODI Site Vault Windows DPAPI synthetic roundtrip PASS/);
+});

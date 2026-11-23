@@ -88,12 +88,21 @@ function messageBody(message) {
     filename: p.filename, mimeType: p.mimeType || 'application/octet-stream', size: Number(p.body?.size || 0), attachmentId: p.body.attachmentId,
   }));
 }
-export async function listGoogleMailMessages(accessToken, { q = '', pageToken = '', maxResults = 30 } = {}) {
-  const params = new URLSearchParams({ maxResults: String(Math.max(1, Math.min(50, Number(maxResults) || 30))), labelIds: 'INBOX' });
+export async function listGoogleMailMessages(accessToken, { q = '', pageToken = '', maxResults = 30, inboxOnly = true } = {}) {
+  const params = new URLSearchParams({ maxResults: String(Math.max(1, Math.min(50, Number(maxResults) || 30))) });
+  if (inboxOnly) params.set('labelIds', 'INBOX');
   if (q) params.set('q', String(q).slice(0, 200)); if (pageToken) params.set('pageToken', String(pageToken).slice(0, 512));
   const list = await gmailFetch(accessToken, `/messages?${params}`);
   const details = await Promise.all((list.messages || []).map(item => gmailFetch(accessToken, `/messages/${encodeURIComponent(item.id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`).then(summarize)));
   return { messages: details, nextPageToken: list.nextPageToken || null, resultSizeEstimate: Number(list.resultSizeEstimate || 0) };
+}
+// Fetch immutable source identity without downloading the message body or attachments.
+// Approval must independently re-read the referenced Gmail message under the same account.
+export async function getGoogleMailMessageMetadata(accessToken, messageId) {
+  const id=String(messageId||'');
+  if(!/^[A-Za-z0-9_-]{5,128}$/.test(id)) throw Object.assign(new Error('INVALID_MESSAGE_ID'),{code:'INVALID_MESSAGE_ID',status:400});
+  const message=await gmailFetch(accessToken,`/messages/${encodeURIComponent(id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`);
+  return summarize(message);
 }
 export async function getGoogleMailMessage(accessToken, messageId) {
   const message = await gmailFetch(accessToken, `/messages/${encodeURIComponent(messageId)}?format=full`);
@@ -104,16 +113,40 @@ function encodeRaw(value) {
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
-function sanitizeHeader(value) { return String(value || '').replace(/[\r\n]+/g, ' ').trim(); }export async function sendGoogleMailMessage(accessToken, { to, cc = '', bcc = '', replyTo = '', subject = '', body = '' }) {
-  const lines = [
+function sanitizeHeader(value) { return String(value || '').replace(/[\r\n]+/g, ' ').trim(); }function encodeMimeWord(value) {
+  // 제목·파일 이름의 한글을 RFC 2047 방식으로 표기한다(메일 앱에서 깨지지 않게).
+  const text = sanitizeHeader(value);
+  if (/^[\x20-\x7e]*$/.test(text)) return text;
+  const bytes = new TextEncoder().encode(text); let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return `=?UTF-8?B?${btoa(binary)}?=`;
+}
+function wrap76(base64) { return String(base64).replace(/.{1,76}/g, '$&\r\n').trim(); }
+export async function sendGoogleMailMessage(accessToken, { to, cc = '', bcc = '', replyTo = '', subject = '', body = '', attachments = [] }) {
+  const head = [
     `To: ${sanitizeHeader(to)}`,
     ...(cc ? [`Cc: ${sanitizeHeader(cc)}`] : []),
     ...(bcc ? [`Bcc: ${sanitizeHeader(bcc)}`] : []),
     ...(replyTo ? [`Reply-To: ${sanitizeHeader(replyTo)}`] : []),
-    `Subject: ${sanitizeHeader(subject)}`,
-    'MIME-Version: 1.0', 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: 8bit', '', String(body || ''),
   ];
-  return gmailFetch(accessToken, '/messages/send', { method: 'POST', body: JSON.stringify({ raw: encodeRaw(lines.join('\r\n')) }) });
+  const files = (Array.isArray(attachments) ? attachments : []).filter((a) => a && a.base64);
+  if (!files.length) {
+    const lines = [...head, `Subject: ${encodeMimeWord(subject)}`,
+      'MIME-Version: 1.0', 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: 8bit', '', String(body || '')];
+    return gmailFetch(accessToken, '/messages/send', { method: 'POST', body: JSON.stringify({ raw: encodeRaw(lines.join('\r\n')) }) });
+  }
+  // JOURNAL-SUBMISSIONS-20261113: 원고 파일 첨부(multipart/mixed).
+  const boundary = `ekodi_${crypto.randomUUID().replace(/-/g, '')}`;
+  const parts = [...head, `Subject: ${encodeMimeWord(subject)}`, 'MIME-Version: 1.0', `Content-Type: multipart/mixed; boundary="${boundary}"`, '',
+    `--${boundary}`, 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: 8bit', '', String(body || '')];
+  for (const file of files) {
+    const name = encodeMimeWord(String(file.filename || 'attachment').replace(/["\\]/g, '_'));
+    const type = sanitizeHeader(file.contentType || 'application/octet-stream');
+    parts.push(`--${boundary}`, `Content-Type: ${type}; name="${name}"`, 'Content-Transfer-Encoding: base64',
+      `Content-Disposition: attachment; filename="${name}"`, '', wrap76(file.base64));
+  }
+  parts.push(`--${boundary}--`, '');
+  return gmailFetch(accessToken, '/messages/send', { method: 'POST', body: JSON.stringify({ raw: encodeRaw(parts.join('\r\n')) }) });
 }
 export function scopeSet(value) { return new Set(String(value || '').split(/\s+/).filter(Boolean)); }
 export function hasGoogleReadScope(value) { return scopeSet(value).has(GMAIL_READ_SCOPE); }

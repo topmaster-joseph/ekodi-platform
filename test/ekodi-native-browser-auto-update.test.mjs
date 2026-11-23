@@ -48,7 +48,10 @@ test('native browser workers remain private, headless, canonical and cost indepe
 });
 
 test('native Agent must not claim an update is verified until new-version heartbeat succeeds',()=>{
-  assert.match(agent, /\$AgentVersion = '2\.6\.5'/);
+  const versionMatch = agent.match(/\$AgentVersion = '(\d+)\.(\d+)\.(\d+)'/);
+  assert.ok(versionMatch, 'EKODI Agent must declare its semantic version');
+  const versionCode = Number(versionMatch[1])*10000 + Number(versionMatch[2])*100 + Number(versionMatch[3]);
+  assert.ok(versionCode >= 20607, 'Agent must be 2.6.7+ for Korail local sign-in capability');
   assert.match(agent,/function Confirm-EkodiAgentAutoUpdateAfterRestart/);
   assert.match(agent,/outcome -cne 'installed-pending-restart'/);
   assert.match(agent,/targetVersion -cne \$AgentVersion/);

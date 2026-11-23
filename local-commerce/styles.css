@@ -2,3 +2,9 @@
 
 /* Scoped CI 2026-11-12, no operational policy change. */
 .hero .local-ci[data-site-ci="local-market"]{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-right:7px;vertical-align:middle;color:inherit}.hero .local-ci svg{display:block;width:23px;height:23px}
+
+/* EKODI Local Commerce beta: a purpose statement, not a promise that payments are live. */
+.hero .ekodi-mission-statement{margin:17px 0 0;max-width:710px;padding:14px 18px;border:1px solid #d7e6d9;border-radius:14px;background:#f6faf6}
+.hero .ekodi-mission-label{display:block;color:#436f52;font-size:11px;font-weight:850;letter-spacing:.08em;margin-bottom:5px}
+.hero .ekodi-mission-statement p{margin:0;font-size:14px;line-height:1.8;word-break:keep-all;color:#3e5145}
+@media(max-width:390px){.hero .ekodi-mission-statement{padding:12px 14px;margin-top:13px}}

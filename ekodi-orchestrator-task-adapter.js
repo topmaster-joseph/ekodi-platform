@@ -23,6 +23,14 @@ const NON_DEPLOY_SURFACE=Object.freeze([
   /^[^/]+\.md$/,/^docs?\/.*\.md$/,
   /^\.github\/workflows\/(?!deploy-)[^/]+\.ya?ml$/,
   /^scripts\/(?:validate|verify|audit|detect)-[^/]+\.mjs$/,
+  // CI/operations scripts: no deployed runtime imports scripts/ (guarded by
+  // test/orchestrator-no-deploy-surface.test.mjs), so they change only when a
+  // workflow next runs them.
+  /^scripts\/(?:lib\/)?[^/]+\.m?js$/,
+  // Local PC/device agent tooling, never deployed to EKODI production.
+  /^tools\//,
+  // Staging-only Wrangler configs; production uses the non-staging file.
+  /^wrangler\.[^/]*staging[^/]*\.toml$/,
 ]);
 export function isNonDeploySurface(files){
   return Array.isArray(files)&&files.length>0&&files.every(file=>typeof file==='string'&&NON_DEPLOY_SURFACE.some(rule=>rule.test(file)));
@@ -327,6 +335,23 @@ export async function handleOrchestratorCompletionReconciliation(request,env,{fe
     return new Response(JSON.stringify({ok:true,taskId:id,state:updated?.state||'unknown',completedAt:updated?.completed_at||null,authority:'ekodi-orchestrator'}),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
   }
 
+  if(action==='park'){
+    const json=(status,data)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
+    const id=text(body.taskId,160),branch=text(body.branchRef,220);
+    if(!validTaskId(id)||!validReleaseBranch(branch)||!branch.endsWith(`/${id}`))return json(400,{ok:false,reason:'invalid_task_or_branch'});
+    const row=await db.prepare('SELECT * FROM ekodi_orchestrator_tasks WHERE task_id=? AND branch_ref=? AND deployment_requested=1 AND permission_class=\'delegated\'').bind(id,branch).first();
+    if(!row)return json(404,{ok:false,reason:'task_not_found'});
+    if(row.state==='blocked'&&row.dead_letter_reason==='unclaimed_no_worker_14d')return json(200,{ok:true,taskId:id,state:'blocked',idempotent:true});
+    if(row.state!=='assigned')return json(409,{ok:false,reason:'only_assigned_tasks_can_be_parked',state:row.state});
+    const age=Date.parse(String(row.created_at||'').replace(' ','T')+(/[zZ]|[+-]\d\d:?\d\d$/.test(String(row.created_at||''))?'':'Z'));
+    if(!Number.isFinite(age)||Date.now()-age<UNCLAIMED_PARK_AFTER_DAYS*864e5)return json(409,{ok:false,reason:'task_too_recent_to_park'});
+    if(!(await verifyUnclaimedBranch(branch,{fetchImpl})))return json(409,{ok:false,reason:'unclaimed_unconfirmed'});
+    const parkedAt=now();
+    const result=await db.prepare("UPDATE ekodi_orchestrator_tasks SET state='blocked',state_version=state_version+1,dead_letter_reason='unclaimed_no_worker_14d',updated_at=? WHERE task_id=? AND state='assigned'").bind(parkedAt,id).run();
+    if(changes(result)<1)return json(409,{ok:false,reason:'state_changed_concurrently'});
+    await appendEvent(db,id,'assigned','blocked','ekodi-orchestrator','parked_unclaimed',{afterDays:UNCLAIMED_PARK_AFTER_DAYS,branch,verifiedAt:parkedAt,reopenable:true});
+    return json(200,{ok:true,taskId:id,state:'blocked',reason:'unclaimed_no_worker_14d'});
+  }
   return new Response(JSON.stringify({ok:false,reason:'unsupported_action'}),{status:400,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
 }
 
@@ -385,6 +410,18 @@ function agentId(value){
 function generatedBranchRef(agent,id){return `ai/${agentId(agent)}/${id}`}
 function validTaskId(value){return /^orch_[a-z0-9][a-z0-9_-]{15,120}$/i.test(text(value,160))}
 function validReleaseBranch(value){return /^ai\/[a-z0-9][a-z0-9._-]{0,31}\/orch_[a-z0-9][a-z0-9_-]{15,120}$/i.test(text(value,220))}
+
+// A delegated task is "unclaimed" when, 14 days after submission, no worker has
+// pushed its branch or opened any PR for it. Such tasks are parked as blocked
+// (never completed, never deleted) so the backlog is visible and re-openable.
+export const UNCLAIMED_PARK_AFTER_DAYS=14;
+export async function verifyUnclaimedBranch(branch,{fetchImpl=fetch}={}){
+  const pulls=await fetchJson(`${GITHUB_API}/repos/${GITHUB_REPOSITORY}/pulls?state=all&head=${encodeURIComponent(`topmaster-joseph:${branch}`)}&per_page=5`,{fetchImpl});
+  if(!pulls.ok||!Array.isArray(pulls.data))return false;
+  if(pulls.data.length)return false;
+  const ref=await fetchJson(`${GITHUB_API}/repos/${GITHUB_REPOSITORY}/branches/${branch.split('/').map(encodeURIComponent).join('/')}`,{fetchImpl});
+  return ref.ok===false&&ref.status===404;
+}
 
 async function appendEvent(db,id,fromState,toState,actor,reason,evidence=null){
   const row=await db.prepare('SELECT COALESCE(MAX(seq),0)+1 AS seq FROM ekodi_orchestrator_task_events WHERE task_id = ?').bind(id).first();

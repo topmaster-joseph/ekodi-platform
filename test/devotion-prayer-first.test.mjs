@@ -37,7 +37,9 @@ test('read-aloud screen retains simple voice selector, listen and accessible adv
  const row=ui.element;
  assert.equal(row.dataset.advanced,'false');
  const controls=row.children.filter(el=>el.dataset?.speechAction).map(el=>el.dataset.speechAction);
- assert.deepEqual(controls,['play','pause','repeat','stop','settings']);
+ assert.deepEqual(controls,['play','pause','repeat','stop','loop','settings']);
+ const loop=row.children.find(el=>el.dataset?.speechAction==='loop');
+ assert.equal(loop.attributes['aria-pressed'],'false');
  const settings=row.children.at(-1);
  settings.click();
  assert.equal(row.dataset.advanced,'true');

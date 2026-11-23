@@ -104,10 +104,21 @@ test('EKODI native Chromium Search Visibility GSC action uses only synthetic rea
   assert.match(coverage,/googleScenario==='not_configured'/);
   assert.match(coverage,/googleScenario='connected'/);
   assert.match(coverage,/googleScenario='no_rows'/);
-  assert.match(coverage,/googleReadRequests\.length!==3/);
+  assert.match(coverage,/googleScenario='zero_impressions'/);
+  assert.match(coverage,/googleReadRequests\.length!==4/);
+  // The verifier must track the UI's own empty-data wording (11/21 post-promotion failure).
+  assert.ok(ui.includes('이 기간 Google 검색 성과 자료가 없습니다') && coverage.includes('이 기간 Google 검색 성과 자료가 없습니다'));
+  assert.ok(ui.includes('노출이 없어 평균 순위는 계산되지 않습니다') && coverage.includes('노출이 없어 평균 순위는 계산되지 않습니다'));
   assert.match(coverage,/page\.unroute\(googleRoute,mockGoogleRead\)/);
   assert.match(coverage,/synthetic-readonly-ui/);
   assert.match(ui,/data-sv-google-read/);
   assert.match(ui,/GOOGLE_SEARCH_SA_KEY_JSON|Google Search Console 읽기 전용 서비스 계정이 아직 서버에 연결되지 않았습니다/);
   assert.doesNotMatch(coverage,/confirmed_manually|api\.googleapis\.com\/webmasters\/v3\/sites/);
+});
+
+test('zero Google impressions never render a misleading average position of 0.0',async()=>{
+  const {readFile}=await import('node:fs/promises');
+  const source=await readFile(new URL('../search-visibility-admin.js',import.meta.url),'utf8');
+  assert.match(source,/metrics&&metrics\.impressions>0/);
+  assert.match(source,/노출이 없어 평균 순위는 계산되지 않습니다/);
 });

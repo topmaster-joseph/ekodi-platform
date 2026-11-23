@@ -68,6 +68,7 @@ export function eligibleSiteImprovementTargets(registry=siteLifecycleRegistry){
     const url=clean(site?.canonicalUrl,500);
     if(!url.startsWith('https://ekodi.kr/'))return false;
     if(site?.class!=='workspace_user_site')return false;
+    if(site.lifecycleState==='retired'||site.visibility==='archive-only')return false;
     return !/preparing|planned|pending_canonical/i.test(clean(site?.migrationState,120));
   }).map(site=>Object.freeze({
     id:clean(site.id,120),

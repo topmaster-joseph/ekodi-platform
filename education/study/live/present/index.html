@@ -43,6 +43,8 @@
     <section class="pres-card ai-card" id="aiCard"><h3>AI 시연 · FactChat 기관계정</h3>
       <p class="kbd" id="aiAuth">확인 중</p>
       <div class="pres-controls"><label class="sr-only" for="aiTrack">시연 분야</label><select id="aiTrack" class="ai-select"></select><button type="button" class="btn btn-small" id="aiLoad">현재 단계 프롬프트</button></div>
+      <div class="pres-controls"><label class="sr-only" for="aiDemo">강사 시연 고르기</label><select id="aiDemo" class="ai-select" hidden></select><a class="btn btn-small" id="aiGuide" href="../guide/" hidden>세부 강의안</a></div>
+      <p class="kbd" id="aiHandoff" hidden></p>
       <label class="sr-only" for="aiInput">실행할 프롬프트</label><textarea id="aiInput" class="ai-input" maxlength="8000" placeholder="프롬프트를 입력하거나 「현재 단계 프롬프트」를 누르세요."></textarea>
       <div class="pres-controls"><button type="button" class="btn btn-small btn-primary" id="aiRun">실행</button><button type="button" class="btn btn-small" id="aiShow">무대에 띄우기</button><a class="btn btn-small" id="aiLogin" hidden>최고관리자 로그인</a></div>
       <p class="kbd" id="aiStatus" role="status"></p>

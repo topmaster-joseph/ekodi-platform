@@ -1,3 +1,4 @@
+import { officeFileToHtml } from './church-office-import.js';
 const PREFIX = '/api/church/admin/reports';
 const VALID_STATUS = new Set(['DRAFT', 'AI_DRAFT', 'REVIEW', 'APPROVED', 'SENT']);
 const REPORT_MONTHS = new Set([2, 4, 6, 8, 10, 12]);
@@ -416,10 +417,10 @@ function documentUrl(value) {
 }
 function documentRow(row) {
   return { id: row.id, bundle: row.bundle, bundleUrl: row.bundle_url, title: row.title, category: row.category, year: row.doc_year,
-    gdocUrl: row.gdoc_url, hwpxUrl: row.hwpx_url, note: row.note, sortOrder: Number(row.sort_order || 0), createdAt: row.created_at, updatedAt: row.updated_at };
+    gdocUrl: row.gdoc_url, hwpxUrl: row.hwpx_url, note: row.note, editable: Number(row.editable || 0) > 0, sortOrder: Number(row.sort_order || 0), createdAt: row.created_at, updatedAt: row.updated_at };
 }
 async function listDocuments(request, env, sessionData) {
-  const rows = await env.DB.prepare("SELECT * FROM church_documents WHERE status='active' ORDER BY bundle DESC, sort_order ASC, created_at ASC LIMIT 300").all();
+  const rows = await env.DB.prepare("SELECT d.*, (SELECT COUNT(*) FROM church_document_contents c WHERE c.doc_id=d.id) AS editable FROM church_documents d WHERE d.status='active' ORDER BY d.bundle DESC, d.sort_order ASC, d.created_at ASC LIMIT 300").all();
   return json({ documents: (rows.results || []).map(documentRow), canWrite: roleAllowed(sessionData, WRITE_ROLES) }, 200, request, env);
 }
 async function createDocument(request, env, sessionData) {
@@ -439,6 +440,69 @@ async function archiveDocumentRow(request, env, sessionData, id) {
   if (!Number(result?.meta?.changes || 0)) return json({ error: '문서를 찾을 수 없습니다.' }, 404, request, env);
   await audit(env, sessionData.email, 'church.document.archive', id, '');
   return json({ ok: true }, 200, request, env);
+}
+
+// ── 문서 바로 편집: 문서 본문(HTML)을 D1에 두고 관리자 화면에서 열어 고치고 바로 저장한다. 저장할 때마다 이전본을 남긴다. ──
+const DOCUMENT_CONTENT_MAX = 400000;
+export function sanitizeDocumentHtml(value) {
+  let html = String(value || '');
+  const BLOCKED = 'script|iframe|object|embed|link|meta|base|form|input|button|textarea|select|style|svg|math';
+  html = html.replace(new RegExp(`<\\s*(${BLOCKED})\\b[^>]*>[\\s\\S]*?<\\s*\\/\\s*\\1\\s*>`, 'gi'), '');
+  html = html.replace(new RegExp(`<\\s*\\/?\\s*(${BLOCKED})\\b[^>]*>`, 'gi'), '');
+  html = html.replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+  html = html.replace(/(href|src)\s*=\s*("|')\s*(javascript|data|vbscript):[^"']*\2/gi, '$1="#"');
+  html = html.replace(/expression\s*\(/gi, '');
+  return html.trim();
+}
+async function getDocumentContent(request, env, sessionData, id) {
+  const doc = await env.DB.prepare("SELECT id,title FROM church_documents WHERE id=? AND status='active'").bind(id).first();
+  if (!doc) return json({ error: '문서를 찾을 수 없습니다.' }, 404, request, env);
+  const row = await env.DB.prepare('SELECT html,updated_at,updated_by FROM church_document_contents WHERE doc_id=?').bind(id).first();
+  if (!row) return json({ error: '이 문서는 아직 바로 편집할 본문이 없습니다.' }, 404, request, env);
+  const revisions = (await env.DB.prepare('SELECT COUNT(*) AS n FROM church_document_revisions WHERE doc_id=?').bind(id).first())?.n || 0;
+  return json({ id, title: doc.title, html: row.html, updatedAt: row.updated_at, updatedBy: row.updated_by, revisions: Number(revisions), canWrite: roleAllowed(sessionData, WRITE_ROLES) }, 200, request, env);
+}
+async function saveDocumentContent(request, env, sessionData, id) {
+  const body = await readBody(request); if (!body || typeof body.html !== 'string') return json({ error: '저장할 내용을 확인해 주세요.' }, 400, request, env);
+  if (body.html.length > DOCUMENT_CONTENT_MAX) return json({ error: '문서가 너무 큽니다.' }, 413, request, env);
+  const html = sanitizeDocumentHtml(body.html); if (!html) return json({ error: '빈 문서는 저장할 수 없습니다.' }, 400, request, env);
+  const current = await env.DB.prepare('SELECT html,updated_at,updated_by FROM church_document_contents WHERE doc_id=?').bind(id).first();
+  if (!current) return json({ error: '문서를 찾을 수 없습니다.' }, 404, request, env);
+  if (body.baseUpdatedAt && body.baseUpdatedAt !== current.updated_at) return json({ error: '다른 곳에서 먼저 저장된 내용이 있습니다. 새로고침 후 다시 편집해 주세요.', updatedAt: current.updated_at, updatedBy: current.updated_by }, 409, request, env);
+  if (html === current.html) return json({ ok: true, updatedAt: current.updated_at, unchanged: true }, 200, request, env);
+  const now = new Date().toISOString();
+  await env.DB.batch([
+    env.DB.prepare('INSERT INTO church_document_revisions (id,doc_id,html,saved_at,saved_by) VALUES (?,?,?,?,?)').bind('cdrev-' + crypto.randomUUID(), id, current.html, current.updated_at, current.updated_by || ''),
+    env.DB.prepare('UPDATE church_document_contents SET html=?, updated_at=?, updated_by=? WHERE doc_id=?').bind(html, now, sessionData.email, id),
+    env.DB.prepare('UPDATE church_documents SET updated_at=? WHERE id=?').bind(now, id),
+  ]);
+  await audit(env, sessionData.email, 'church.document.edit', id, `${html.length}`);
+  return json({ ok: true, updatedAt: now }, 200, request, env);
+}
+
+async function importOfficeDocument(request, env, sessionData) {
+  let form; try { form = await request.formData(); } catch { return json({ error: '파일을 확인해 주세요.' }, 400, request, env); }
+  const file = form.get('file'); const blank = String(form.get('blank') || '') === '1';
+  if (!blank && (!file || typeof file === 'string')) return json({ error: '한글(.hwpx) 또는 워드(.docx) 파일을 골라 주세요.' }, 400, request, env);
+  if (file && typeof file !== 'string' && file.size > 10 * 1024 * 1024) return json({ error: '10MB 이하 파일만 올릴 수 있습니다.' }, 413, request, env);
+  let html = '<p></p>';
+  if (!blank) { try { html = sanitizeDocumentHtml(await officeFileToHtml(await file.arrayBuffer(), file.name)); } catch (error) { return json({ error: String(error?.message || error) }, 422, request, env); } }
+  if (!html) html = '<p></p>';
+  if (html.length > DOCUMENT_CONTENT_MAX) return json({ error: '문서가 너무 커서 바로 편집으로 열 수 없습니다.' }, 413, request, env);
+  const fallbackTitle = blank ? '새 문서' : String(file.name || '문서').replace(/\.[^.]+$/, '');
+  const title = clean(form.get('title'), 200) || clean(fallbackTitle, 200);
+  const categoryRaw = clean(form.get('category'), 40); const category = DOCUMENT_CATEGORIES.has(categoryRaw) ? categoryRaw : '기타';
+  const now = new Date().toISOString(); const id = 'cdoc-' + crypto.randomUUID();
+  if (!blank && env.CHURCH_DOCUMENT_FILES) {
+    await env.CHURCH_DOCUMENT_FILES.put(`church/ekodichurch/imports/${id}/${clean(file.name, 120) || 'original'}`, await file.arrayBuffer(), { customMetadata: { tenant: 'ekodichurch', kind: 'imported-original' } }).catch(() => {});
+  }
+  await env.DB.batch([
+    env.DB.prepare('INSERT INTO church_documents (id,bundle,bundle_url,title,category,doc_year,gdoc_url,hwpx_url,note,sort_order,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)')
+      .bind(id, clean(form.get('bundle'), 200) || '올린 문서', '', title, category, clean(form.get('year'), 20) || now.slice(0, 4), '', '', blank ? '새로 만든 문서' : `원본 파일: ${clean(file.name, 160)}`, 900, sessionData.email, now, now),
+    env.DB.prepare('INSERT INTO church_document_contents (doc_id,html,updated_at,updated_by) VALUES (?,?,?,?)').bind(id, html, now, sessionData.email),
+  ]);
+  await audit(env, sessionData.email, 'church.document.import', id, title);
+  return json({ ok: true, id }, 201, request, env);
 }
 
 // ── 발급서류(증명서) 보관: 업로드 → 비공개 R2, 종류·대상자별 최근 발급분을 '최근서류'로 관리 ──
@@ -549,6 +613,18 @@ export async function handleChurchReportsRequest(request, env) {
     if (!roleAllowed(sessionData, DOCUMENT_READ_ROLES)) return json({ error: '발급서류 조회 권한이 없습니다.' }, 403, request, env);
     if (issuedMatch[2] === 'file' && request.method === 'GET') return downloadIssued(request, env, sessionData, issuedMatch[1]);
     if (issuedMatch[2] === 'archive' && request.method === 'POST') { if (!roleAllowed(sessionData, WRITE_ROLES)) return json({ error: '발급서류 보관해제 권한이 없습니다.' }, 403, request, env); return archiveIssued(request, env, sessionData, issuedMatch[1]); }
+    return json({ error: '허용되지 않은 요청입니다.' }, 405, request, env);
+  }
+  if (path === `${PREFIX}/documents/import`) {
+    if (request.method !== 'POST') return json({ error: '허용되지 않은 요청입니다.' }, 405, request, env);
+    if (!roleAllowed(sessionData, WRITE_ROLES)) return json({ error: '문서 등록 권한이 없습니다.' }, 403, request, env);
+    return importOfficeDocument(request, env, sessionData);
+  }
+  const contentMatch = path.match(/^\/api\/church\/admin\/reports\/documents\/(cdoc-[A-Za-z0-9-]{1,80})\/content$/);
+  if (contentMatch) {
+    if (!roleAllowed(sessionData, DOCUMENT_READ_ROLES)) return json({ error: '문서보관 조회 권한이 없습니다.' }, 403, request, env);
+    if (request.method === 'GET') return getDocumentContent(request, env, sessionData, contentMatch[1]);
+    if (request.method === 'PUT') { if (!roleAllowed(sessionData, WRITE_ROLES)) return json({ error: '문서 편집 권한이 없습니다.' }, 403, request, env); return saveDocumentContent(request, env, sessionData, contentMatch[1]); }
     return json({ error: '허용되지 않은 요청입니다.' }, 405, request, env);
   }
   const documentMatch = path.match(/^\/api\/church\/admin\/reports\/documents\/(cdoc-[A-Za-z0-9-]{1,80})\/archive$/);

@@ -1,5 +1,7 @@
 import {notificationAdminAuthority} from './notification-admin-authority.js';
 import {NOTIFICATION_TOPICS,topicPublisherReadiness} from './notification-control.js';
+import {buildNotificationFleetCoverage} from './notification-fleet-coverage.js';
+import {operatorPushReady} from './operator-push.js';
 
 const PREFIX='/api/notifications/admin/summary';
 const TOPICS=Object.keys(NOTIFICATION_TOPICS);
@@ -66,8 +68,18 @@ export async function handleNotificationAdminSummary(request,env,{transport=fetc
         enabled:env.NOTIFICATION_MISSION_SATURDAY_NOTICE_ENABLED==='true',
         ready:publisher.ready&&env.NOTIFICATION_MISSION_SATURDAY_NOTICE_ENABLED==='true'
       }:undefined;
+      const diagnosis=[];
+      if(Number(delivery?.stalled||0)>0||Number(event?.overdue||0)>0)diagnosis.push('delivery_or_event_stalled');
+      if(Number(delivery?.failed||0)>0)diagnosis.push('delivery_failed');
+      if(!publisher.ready)diagnosis.push('publisher_not_ready');
+      if(!Number(subscribers?.n||0))diagnosis.push('no_active_subscribers');
+      if(!Number(event?.total||0))diagnosis.push('no_events_in_window');
+      // No traffic does not mean healthy and "delivered" is not device receipt.
+      const health=diagnosis.some(code=>code==='delivery_or_event_stalled'||code==='delivery_failed')
+        ?'attention':!publisher.ready?'configuration_required':
+          (!Number(event?.total||0)||!Number(subscribers?.n||0))?'unverified':'delivery_queue_clear';
       topics.push({
-        id:key,label:NOTIFICATION_TOPICS[key],publisher,saturdayNotice,
+        id:key,label:NOTIFICATION_TOPICS[key],publisher,saturdayNotice,health,diagnosis,
         subscriberDevices:Number(subscribers?.n||0),
         events:Number(event?.total||0),eventsPending:Number(event?.pending||0),
         eventsOverdue:Number(event?.overdue||0),lastEventAt:event?.lastEventAt||null,
@@ -79,7 +91,56 @@ export async function handleNotificationAdminSummary(request,env,{transport=fetc
   }catch{
     return json({ok:false,error:'notification_metrics_unavailable'},503);
   }
+  // Only the platform super-admin may enumerate all registered sites and the
+  // private operator device fleet. Site admins retain strictly topic-scoped data.
+  let fleet,operatorChannel,healthAudit;
+  if(actor.kind==='platform'){
+    // Only the platform owner sees all topics' persisted scheduled scan results.
+    // Absence of a deployed migration or fresh run is visibly NOT healthy.
+    healthAudit={status:'unavailable',lastScanAt:null,fresh:false,topics:[]};
+    try {
+      const rows=(await env.DB.prepare(
+        'SELECT topic,state,subscriber_devices,events_24h,failed_24h,stalled,events_overdue,'+
+        'publisher_ready,push_enabled,checked_at,changed_at,consecutive_attention '+
+        'FROM notification_health_snapshots ORDER BY topic'
+      ).bind().all()).results||[];
+      const known=rows.filter(row=>TOPICS.includes(String(row.topic)));
+      const latest=known.map(row=>row.checked_at).filter(Boolean).sort().at(-1)||null;
+      const age=latest?new Date(now).getTime()-Date.parse(latest):Infinity;
+      healthAudit={status:known.length?'recorded':'no_scan_yet',lastScanAt:latest,
+        fresh:Number.isFinite(age)&&age>=0&&age<=30*60000,topics:known.map(row=>({
+          topic:String(row.topic),state:String(row.state),devices:Number(row.subscriber_devices||0),
+          events24h:Number(row.events_24h||0),failed24h:Number(row.failed_24h||0),
+          stalled:Number(row.stalled||0),overdue:Number(row.events_overdue||0),
+          publisherReady:row.publisher_ready===1,pushEnabled:row.push_enabled===1,
+          checkedAt:row.checked_at,changedAt:row.changed_at,
+          consecutiveAttention:Number(row.consecutive_attention||0)
+        })),handsetReceiptVerified:false};
+    }catch{/* migration/cron unavailable: fail visibly, not as green. */}
+
+    fleet=buildNotificationFleetCoverage({readiness:key=>topicPublisherReadiness(env,key)});
+    const configured=operatorPushReady(env);
+    let registeredDevices=null,gatewayAcceptedDevices=null,gatewayFailedDevices=null,lastGatewayAttemptAt=null;
+    try{
+      // Aggregate gateway outcomes only. No owner, device endpoint or token
+      // leaves the private operator database.
+      const record=await env.DB.prepare(
+        'SELECT COUNT(*) AS n, MAX(last_sent_at) AS lastAttemptAt, '+
+        'SUM(CASE WHEN last_status BETWEEN 200 AND 299 THEN 1 ELSE 0 END) AS accepted, '+
+        'SUM(CASE WHEN last_status IS NOT NULL AND (last_status < 200 OR last_status >= 300) THEN 1 ELSE 0 END) AS failed '+
+        'FROM operator_push_devices WHERE disabled_at IS NULL'
+      ).first();
+      registeredDevices=Number(record?.n||0);
+      gatewayAcceptedDevices=Number(record?.accepted||0);
+      gatewayFailedDevices=Number(record?.failed||0);
+      lastGatewayAttemptAt=record?.lastAttemptAt||null;
+    }catch{/* Operator schema not provisioned; do not mutate during a GET. */}
+    operatorChannel={configured,registeredDevices,gatewayAcceptedDevices,gatewayFailedDevices,lastGatewayAttemptAt,
+      ready:configured&&registeredDevices!==null&&registeredDevices>0,
+      deliveredToPhoneVerified:false};
+  }
   return json({ok:true,scope:actor.kind==='platform'?topic:'authorized_sites',
+    ...(actor.kind==='platform'?{fleet,operatorChannel,healthAudit}:{}),
     window,cutoff,subscriberCountScope:'current_active_devices',
     deliveryCountScope:'events_created_in_window',stalledThresholdMinutes:15,
     topics,webPushEnabled:

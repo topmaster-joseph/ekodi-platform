@@ -11,14 +11,19 @@ const accountId=String(process.env.CLOUDFLARE_ACCOUNT_ID||'').trim();
 const token=String(process.env.CLOUDFLARE_API_TOKEN||'').trim();
 const run=String(process.env.POINTS_E2E_RUN||'').replace(/[^0-9a-z-]/gi,'').slice(0,40);
 const mode=process.argv[2];
-const staticTokenId=String(process.env.STATIC_ACCESS_SERVICE_TOKEN_ID||'').trim();
+const rawStaticTokenId=String(process.env.STATIC_ACCESS_SERVICE_TOKEN_ID||'').trim();
+// Owners copy the token ID from the dashboard address bar; accept that URL but
+// use only the exact token UUID inside it. Anything else is still refused.
+const tokenUuid=rawStaticTokenId.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)?.[0]||'';
+const staticTokenId=/^[A-Za-z0-9_-]{8,128}$/.test(rawStaticTokenId)?rawStaticTokenId:tokenUuid;
+const tokenIdShape=()=>`length=${rawStaticTokenId.length} url=${rawStaticTokenId.includes('/')} client_id_like=${/\.access$/i.test(rawStaticTokenId)} uuid_found=${Boolean(tokenUuid)}`;
 if(accountId!==DEVELOPMENT_ACCOUNT)throw new Error('development Cloudflare account required');
 if(!token||!run||!['open','open-static','close'].includes(mode))throw new Error('usage: points-staging-access.mjs open|close (CLOUDFLARE_API_TOKEN, POINTS_E2E_RUN)');
 const name=`ekodi-points-e2e-${run}`;
 process.on('uncaughtException',e=>{console.log(`::error::points-staging-access ${mode}: ${String(e?.message||e).slice(0,400)}`);process.exit(1);});
 process.on('unhandledRejection',e=>{console.log(`::error::points-staging-access ${mode}: ${String(e?.message||e).slice(0,400)}`);process.exit(1);});
 
-async function api(path,init={}){
+async function api(path,init={},withInfo=false){
   const res=await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}${path}`,{...init,
     headers:{authorization:`Bearer ${token}`,'content-type':'application/json',...(init.headers||{})}});
   const body=await res.json().catch(()=>({}));
@@ -29,7 +34,7 @@ async function api(path,init={}){
     const msg=`HTTP ${res.status} ${JSON.stringify(body.errors||body.messages||body).slice(0,300)}`;
     const e=new Error(`Cloudflare ${init.method||'GET'} ${path.split('?')[0]} failed: ${msg}`);e.status=res.status;throw e;
   }
-  return body.result;
+  return withInfo?{result:body.result,info:body.result_info}:body.result;
 }
 const env=(k,v,secret=false)=>{if(secret)console.log(`::add-mask::${v}`);if(process.env.GITHUB_ENV)fs.appendFileSync(process.env.GITHUB_ENV,`${k}=${v}\n`);};
 const hostOf=domain=>String(domain||'').toLowerCase().replace(/^https?:\/\//,'').split('/')[0];
@@ -61,21 +66,57 @@ async function stagingApps(){
   return {apps:picked,all:apps,auds:[...auds]};
 }
 
+// The dashboard sometimes labels the .access Client ID as a token ID.
+// Resolve only via DEVELOPMENT account metadata and an exact match to the
+// independently protected Client ID. A failed/partial listing is not proof.
+async function resolveStaticTokenId(){
+  if(!rawStaticTokenId)
+    throw new Error(`protected STATIC_ACCESS_SERVICE_TOKEN_ID is required for a least-privilege Access policy (${tokenIdShape()}; expected the token UUID or matching Client ID)`);
+  if(/^[A-Za-z0-9_-]{8,128}$/.test(staticTokenId))return staticTokenId;
+  const clientId=String(process.env.STATIC_ACCESS_ID||'').trim();
+  const clientIdLike=/\.access(?:\.[A-Za-z0-9.-]+)?$/i.test(rawStaticTokenId);
+  if(!clientIdLike||!clientId||rawStaticTokenId!==clientId)
+    throw new Error(`protected STATIC_ACCESS_SERVICE_TOKEN_ID is invalid or differs from approved Client ID (${tokenIdShape()}; expected token UUID or matching Client ID)`);
+  // Cloudflare paginates Access service-token metadata. Only a bounded,
+  // fully verified listing can establish one exact protected Client ID.
+  // Never log IDs, matching candidates, or credentials.
+  const perPage=100,maxPages=10;
+  let expectedPages=null;
+  const exact=[];
+  for(let page=1;page<=maxPages;page++){
+    const {result:tokens,info}=await api(`/access/service_tokens?per_page=${perPage}&page=${page}`,{},true);
+    if(!Array.isArray(tokens)||!info||!Number.isSafeInteger(info.page)||info.page!==page||
+       !Number.isSafeInteger(info.total_pages)||info.total_pages<1||info.total_pages>maxPages||
+       !Number.isSafeInteger(info.count)||info.count!==tokens.length||tokens.length>perPage||
+       (expectedPages!==null&&info.total_pages!==expectedPages))
+      throw new Error('development Access token metadata missing, inconsistent or truncated; refusing any policy change');
+    expectedPages=info.total_pages;
+    exact.push(...tokens.filter(t=>t?.client_id===clientId&&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(t.id||''))));
+    if(page===expectedPages)break;
+  }
+  if(exact.length!==1)
+    throw new Error('development Access Client ID did not resolve to exactly one token UUID; refusing policy change');
+  if(exact[0].expires_at&&(!Number.isFinite(Date.parse(exact[0].expires_at))||
+    Date.parse(exact[0].expires_at)<=Date.now()))
+    throw new Error('development Access service token expired; refusing policy change');
+  console.log('::notice::Development Access Client ID resolved to a unique token UUID (value not logged).');
+  return exact[0].id;
+}
+
 if(mode==='open-static'){
-  // The static token's ID is an independent owner-protected input. Never
-  // create an any_valid_service_token policy: that authorizes unrelated
-  // services and is not scoped to this synthetic browser verification.
-  if(!/^[A-Za-z0-9_-]{8,128}$/.test(staticTokenId))
-    throw new Error('protected STATIC_ACCESS_SERVICE_TOKEN_ID is required for a least-privilege Access policy');
+  // Never create an any_valid_service_token policy or accept a best guess.
+  const effectiveTokenId=await resolveStaticTokenId();
   const {apps}=await stagingApps();
   if(!apps.length)throw new Error('no readable development staging Access application; refusing broad or unverified access');
   const policies=[];
   for(const app of apps){
     const policy=await api(`/access/apps/${app.id}/policies`,{method:'POST',body:JSON.stringify({
-      name,decision:'non_identity',include:[{service_token:{token_id:staticTokenId}}],exclude:[],require:[]})});
+      name,decision:'non_identity',include:[{service_token:{token_id:effectiveTokenId}}],exclude:[],require:[]})});
     policies.push(`${app.id}:${policy.id}`);
+    // Persist each successful app policy for unconditional partial-failure cleanup.
+    env('E2E_ACCESS_POLICIES',policies.join(','));
   }
-  env('E2E_ACCESS_POLICIES',policies.join(','));
   console.log(`::notice::Run-scoped exact-service-token policy added on ${policies.length} staging app(s).`);
 }else if(mode==='open'){
   const {apps,all,auds}=await stagingApps();
@@ -95,14 +136,28 @@ if(mode==='open-static'){
     const policy=await api(`/access/apps/${app.id}/policies`,{method:'POST',body:JSON.stringify({
       name,decision:'non_identity',include:[{service_token:{token_id:created.id}}],exclude:[],require:[]})});
     policies.push(`${app.id}:${policy.id}`);
+    // Persist each successful app policy for unconditional partial-failure cleanup.
+    env('E2E_ACCESS_POLICIES',policies.join(','));
   }
-  env('E2E_ACCESS_POLICIES',policies.join(','));
   console.log(`::notice::Ephemeral Access service token issued and allowed on ${policies.length} staging app(s).`);
 }else{
   let failed=0;
   for(const pair of String(process.env.E2E_ACCESS_POLICIES||'').split(',').filter(Boolean)){
     const [appId,policyId]=pair.split(':');
     try{await api(`/access/apps/${appId}/policies/${policyId}`,{method:'DELETE'});}catch(e){failed++;console.log(String(e.message));}
+  }
+  // Delete only the ID issued in THIS run; the named list sweep below is a
+  // backup for a crash between creation and writing E2E_ACCESS_TOKEN_ID.
+  // This prevents a token hidden beyond the first metadata page from leaking.
+  const mintedTokenId=String(process.env.E2E_ACCESS_TOKEN_ID||'').trim();
+  if(mintedTokenId){
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(mintedTokenId)){
+      failed++;
+      console.log('Run-scoped minted Access token ID is malformed; refusing deletion.');
+    }else{
+      try{await api(`/access/service_tokens/${mintedTokenId}`,{method:'DELETE'});}
+      catch(e){if(e.status!==404){failed++;console.log('Run-scoped minted Access token deletion failed.');}}
+    }
   }
   // Also sweep any run-named leftovers (e.g. a crash between create and env write).
   try{

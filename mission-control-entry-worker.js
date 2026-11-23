@@ -27,6 +27,7 @@ import { handleMarketingOrderConnectors } from './marketing-order-connectors.js'
 import { handleAuthorBillingControl, runAuthorBillingSchedule } from './author-billing-control.js';
 import { handleSystemHealthControl } from './system-health-control.js';
 import { handleSearchVisibilityControl } from './search-visibility-control.js';
+import { handleJournalInboxControl, JOURNAL_INBOX_PATH } from './journal-editor-inbox-control.js';
 import { handleTrafficIntelligence } from './traffic-intelligence-control.js';
 import { handleApiCostControl } from './api-cost-control.js';
 import { handleAiEvalSummary } from './ai-eval-control.js';
@@ -42,6 +43,7 @@ import { handleEkodiMcpGateway, handleEkodiMcpMetadata } from './ekodi-mcp-gatew
 import { handleOrchestratorReleaseReceipt, handleOrchestratorCompletionReconciliation } from './ekodi-orchestrator-task-adapter.js';
 import { handleDevotionalControl } from './devotional-control.js';
 import { handleNotificationApi, runNotificationSchedule } from './notification-control.js';
+import {runNotificationHealthAudit} from './notification-health-audit.js';
 import { runMissionSaturdayNotice } from './notification-saturday-publisher.js';
 import { handleNotificationAdminSummary } from './notification-admin-summary.js';
 import { handleCommonScriptureControl } from './common-scripture-control.js';
@@ -153,6 +155,7 @@ async function proxyPersonalFinanceAdminControl(request, env) {
 
 // EKODI-OPERATOR-NOTIFY-001: 내부 Worker 전용 운영자 알림 RPC(named entrypoint, 공개 경로 없음).
 export { OperatorNotifier } from './operator-notify.js';
+import { runMailPushWatch } from './mail-push-watch.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -331,6 +334,10 @@ export default {
       catch (error) { console.error('Traffic Intelligence control error', error); return errorResponse('Traffic Intelligence 처리 중 오류가 발생했습니다.', 'TRAFFIC_INTELLIGENCE_CONTROL_ERROR'); }
     }
 
+    if (path === JOURNAL_INBOX_PATH) {
+      try { const response = await handleJournalInboxControl(request, env); if (response) return applyApiSecurityHeaders(response); }
+      catch (error) { console.error('Journal inbox control error', error); return errorResponse('저널 새 소식 처리 중 오류가 발생했습니다.', 'JOURNAL_INBOX_CONTROL_ERROR'); }
+    }
     if (path === '/api/control/search-visibility') {
       try { const response = await handleSearchVisibilityControl(request, env); if (response) return applyApiSecurityHeaders(response); }
       catch (error) { console.error('Search Visibility control error', error); return errorResponse('검색노출 통합관리 처리 중 오류가 발생했습니다.', 'SEARCH_VISIBILITY_CONTROL_ERROR'); }
@@ -448,6 +455,21 @@ export default {
     // Never dispatch GitHub commands from the webhook observation queue.
     try { await drainGitHubObservations(env, { limit: 10 }); }
     catch (error) { console.error('EKODI GitHub observations unavailable', error?.message); }
+    // EKODI-MAIL-PUSH-ALL-001: 연결된 모든 Gmail 새 메일 → 최고관리자 휴대폰 알림(본문 제외).
+    const mailPush = runMailPushWatch(env).then(r => { if (r?.notified || r?.errors) console.log('mail push watch', JSON.stringify(r)); }).catch(error => console.error('mail push watch failed', error?.message));
+    if (ctx?.waitUntil) ctx.waitUntil(mailPush); else await mailPush;
+
+    // EKODI-NOTIFICATION-HEALTH-AUDIT-001: privacy-safe state snapshots on
+    // the existing 10-minute cron. Run before customer reporting may return
+    // early, so notification health is not silently skipped on reporting days.
+    const notificationHealthAudit=runNotificationHealthAudit(env,{
+      now:new Date(Number(controller?.scheduledTime||Date.now()))
+    }).catch(error=>{
+      console.error('Notification health audit unavailable',error?.name||'audit_failed');
+      return {ok:false,code:'AUDIT_UNAVAILABLE'};
+    });
+    if(ctx?.waitUntil)ctx.waitUntil(notificationHealthAudit);
+    else await notificationHealthAudit;
 
     const customerSchedule = typeof customerEntryWorker.scheduled === 'function'
       ? await customerEntryWorker.scheduled(controller, env, ctx)

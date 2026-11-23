@@ -1,0 +1,51 @@
+name: EKODI Journal Essay Diagnose
+
+# 읽기 전용 진단: 에코디언 주간 에세이의 작성·투고·게재 상태와 최근 출판 실행 기록을 보여준다.
+on:
+  workflow_dispatch:
+    inputs:
+      release_branch_ref:
+        description: Orchestrator-issued release branch (ai/<agent>/orch_<task-id>)
+        required: true
+        type: string
+      release_task_id:
+        description: Orchestrator task id for that release branch
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  WRANGLER_VERSION: '4.127.1'
+  EKODI_RELEASE_BRANCH_REF: ${{ inputs.release_branch_ref || '' }}
+  EKODI_RELEASE_TASK_ID: ${{ inputs.release_task_id || '' }}
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: EKODI AI Orchestration Gate
+        run: node "$GITHUB_WORKSPACE/scripts/validate-ekodi-ai-change-orchestration.mjs" --release
+      - name: Read essay state (read-only)
+        shell: bash
+        run: |
+          set -uo pipefail
+          q() { npx --yes wrangler@${WRANGLER_VERSION} d1 execute "$1" --remote --config wrangler.publishing.toml --json --command "$2" 2>&1 | tail -c 6000; echo; }
+          {
+            echo '## Essays'; echo '```'
+            q ekodi-publishing "SELECT slug,status,title,length(body) AS chars,created_at,publish_at,notified_at,published_at FROM publishing_journal_essays ORDER BY created_at DESC LIMIT 10"
+            echo '```'; echo '## Recent AI factory runs'; echo '```'
+            q ekodi-publishing "SELECT at,substr(result_json,1,1800) AS result FROM publishing_ai_runs ORDER BY at DESC LIMIT 8"
+            echo '```'; echo '## Editor inbox'; echo '```'
+            q ekodi-auth "SELECT kind,title,received_at,seen_at,digest_at FROM journal_editor_inbox ORDER BY received_at DESC LIMIT 10"
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"

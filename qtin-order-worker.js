@@ -1,14 +1,14 @@
 // EKODI-QTIN-GROUP-ORDER-001
 // 큐티인(QTIN) 월간 공동구매 — 에코디교회·에코디선교회 공용 신청서.
-//  • 매월 20일(KST) 다음달호 신청을 열고 25일 23:59에 마감한다.
+//  • 매월 15일(KST) 다음달호 신청을 열고 25일 23:59에 마감한다.
 //  • 신청 도서와 가격·표지는 QTM 쇼핑몰(qtm.or.kr)의 온라인 판매가격 그대로 자동 수집한다.
 //  • 토스페이먼츠 결제 승인이 서버에서 확인된 신청만 '완료(paid)'로 기록·집계한다.
 //  • 관리자(ekodi.kr/qtin/admin)는 월별·기관별 발주 수량, 결제, 수령 현황을 관리한다.
 import {
   ORGS, FULFILLMENT, QTM_ORIGIN, PENDING_TTL_MS,
-  clean, escapeHtml, kstParts, campaignId, parseCampaignId, addMonth, defaultWindow, targetIssueFor,
+  clean, escapeHtml, kstParts, kstToUtc, campaignId, parseCampaignId, addMonth, defaultWindow, effectiveCampaignWindow, targetIssueFor,
   inPreparationWindow, campaignState, formatKst, formatWon, parseIssueTitle, titleMatchesIssue, isQtinFamily,
-  extractItemIds, parseProductDetail, parseProductIntro, seriesSortOrder, buildOrderDraft, newOrderId, isValidTossOrderId,
+  extractItemIds, parseProductDetail, parseProductIntro, seriesSortOrder, qtinAudienceGroup, buildOrderDraft, newOrderId, isValidTossOrderId,
   assessConfirmation, maskName, csvEscape, absoluteQtmUrl, SHIPPING_FEE, DELIVERY_METHODS, CHURCH_PICKUP_ADDRESS,
 } from './qtin-order-core.js';
 import * as ekodipay from './ekodipay-core.js';
@@ -107,12 +107,21 @@ async function audit(env, targetId, actor, action, detail = '') {
 
 // ---------- campaigns & products ----------
 async function getCampaign(env, id) {
-  return env.DB.prepare('SELECT * FROM qtin_campaigns WHERE id=?').bind(id).first();
+  const row = await env.DB.prepare('SELECT * FROM qtin_campaigns WHERE id=?').bind(id).first();
+  return effectiveCampaignWindow(row);
 }
 async function ensureCampaign(env, year, month) {
   const id = campaignId(year, month);
   const existing = await getCampaign(env, id);
-  if (existing) return existing;
+  if (existing) {
+    // Upgrade only the historical default 20th opening (never a custom window).
+    const previous = addMonth(year, month, -1);
+    const legacyOpen = kstToUtc(previous.year, previous.month, 20).toISOString();
+    const canonical = defaultWindow(year, month);
+    await env.DB.prepare('UPDATE qtin_campaigns SET opens_at=?, updated_at=? WHERE id=? AND opens_at=? AND closes_at=?')
+      .bind(canonical.opensAt, new Date().toISOString(), id, legacyOpen, canonical.closesAt).run();
+    return existing;
+  }
   const { opensAt, closesAt } = defaultWindow(year, month);
   const now = new Date().toISOString();
   await env.DB.prepare(`INSERT OR IGNORE INTO qtin_campaigns (id, target_year, target_month, opens_at, closes_at, status, created_at, updated_at)
@@ -133,7 +142,7 @@ async function currentCampaign(env, now = new Date()) {
     if (row && campaignState(row, now) === 'open') return row;
   }
   const forced = await env.DB.prepare("SELECT * FROM qtin_campaigns WHERE manual_state='force_open' ORDER BY id DESC LIMIT 1").first();
-  if (forced) return forced;
+  if (forced) return effectiveCampaignWindow(forced);
   const row = await getCampaign(env, target.id);
   if (row) return row;
   const { opensAt, closesAt } = defaultWindow(target.year, target.month);
@@ -257,7 +266,9 @@ async function anonymizeOld(env, now = new Date()) {
 
 export async function runScheduled(env, now = new Date(), options = {}) {
   if (isStaging(env)) return { skipped: 'isolated-staging' };
-  const report = { expired: await expirePending(env, now), anonymized: 0, sync: null };
+  const report = { expired: await expirePending(env, now), anonymized: 0, sync: null, operatorNotices: null };
+  try { report.operatorNotices = await dispatchDueQtinNotices(env, now); }
+  catch { report.operatorNotices = { error: 'OUTBOX_UNAVAILABLE' }; }
   if (kstParts(now).day === 1) report.anonymized = await anonymizeOld(env, now);
   if (inPreparationWindow(now)) {
     const target = targetIssueFor(now);
@@ -274,13 +285,80 @@ async function tossRequest(env, path, options = {}, profileId) {
   // EKODIPAY-CORE-001: every Toss call goes through the shared module with the order's merchant profile.
   return ekodipay.tossRequest(env, profileId || ekodipay.activeProfileId(env), path, options);
 }
+// QTIN source events use the pre-existing private Control API OperatorNotifier.
+// The outbox has NO applicant name, phone, email, payment key, or receipt token.
+export async function dispatchDueQtinNotices(env, now = new Date(), onlyOrderId = null) {
+  if (isStaging(env) || !flag(env?.QTIN_OPERATOR_NOTIFY_ENABLED)) return { skipped: 'disabled', sent: 0 };
+  const at = now.toISOString();
+  const leaseUntil = new Date(now.getTime() + 5 * 60 * 1000).toISOString();
+  // Recover any worker lost after reserving a send (Cron retries are bounded).
+  await env.DB.prepare("UPDATE qtin_operator_notice_outbox SET status='retry' WHERE status='sending' AND next_attempt_at <= ?").bind(at).run();
+  const sql = `SELECT n.order_id, n.attempt_count, o.org, o.campaign_id, o.total_quantity, o.total_amount
+    FROM qtin_operator_notice_outbox n JOIN qtin_orders o ON o.id=n.order_id
+    WHERE n.status IN ('pending','retry') AND n.next_attempt_at <= ? AND o.status='paid'
+      AND o.id NOT LIKE '${TEST_ORDER_PREFIX}%'
+      ${onlyOrderId ? 'AND n.order_id=?' : ''}
+    ORDER BY n.created_at ASC LIMIT 20`;
+  const query = env.DB.prepare(sql).bind(...(onlyOrderId ? [at, onlyOrderId] : [at]));
+  const rows = (await query.all()).results || [];
+  let sent = 0, failed = 0;
+  for (const row of rows) {
+    const reserved = await env.DB.prepare(`UPDATE qtin_operator_notice_outbox
+      SET status='sending', attempt_count=attempt_count+1, next_attempt_at=?
+      WHERE order_id=? AND status IN ('pending','retry') AND next_attempt_at <= ?`)
+      .bind(leaseUntil, row.order_id, at).run();
+    if (!reserved?.meta?.changes) continue;
+    let outcome = { ok: false, code: 'NOTIFIER_UNAVAILABLE' };
+    try {
+      if (env.OPERATOR_NOTIFY?.notify) {
+        outcome = await env.OPERATOR_NOTIFY.notify({
+          source: 'qtin',
+          subject: '큐티인 결제완료 신청 1건',
+          lines: [
+            `${row.campaign_id}월호 · ${ORGS[row.org]?.label || '기타'}`,
+            `${Number(row.total_quantity)}권 · ${formatWon(row.total_amount)} · 결제승인 완료`
+          ],
+          link: 'https://ekodi.kr/qtin/admin'
+        });
+      }
+    } catch { outcome = { ok: false, code: 'NOTIFIER_RPC_FAILED' }; }
+    // Only gateway-accepted Web Push counts as phone alert; email alone is insufficient.
+    if (outcome?.push === true) {
+      await env.DB.prepare("UPDATE qtin_operator_notice_outbox SET status='sent', sent_at=?, last_error='' WHERE order_id=? AND status='sending'")
+        .bind(at, row.order_id).run();
+      sent += 1;
+    } else {
+      const tries = Number(row.attempt_count) + 1;
+      const retryAt = new Date(now.getTime() + Math.min(12 * 60, 5 * 2 ** Math.min(tries - 1, 7)) * 60 * 1000).toISOString();
+      const reason = clean(outcome?.code || 'NOTIFIER_FAILED', 60);
+      await env.DB.prepare("UPDATE qtin_operator_notice_outbox SET status='retry', next_attempt_at=?, last_error=? WHERE order_id=? AND status='sending'")
+        .bind(retryAt, reason, row.order_id).run();
+      failed += 1;
+      console.warn('qtin paid operator push queued for retry', reason);
+    }
+  }
+  return { sent, failed };
+}
+
 async function markPaid(env, order, payment, actor) {
   const now = new Date().toISOString();
   const result = await env.DB.prepare(`UPDATE qtin_orders SET status='paid', payment_key=?, payment_method=?, approved_at=?, receipt_url=?, updated_at=?
     WHERE id=? AND status IN ('payment_pending','expired','payment_failed')`)
     .bind(clean(payment.paymentKey, 220), clean(payment.method, 60), clean(payment.approvedAt, 60) || now, clean(payment.receipt?.url, 500), now, order.id).run();
+  const changed = result?.meta?.changes || 0;
   await audit(env, order.id, actor, 'order.paid', { method: payment.method, amount: payment.totalAmount, status: payment.status });
-  return result?.meta?.changes || 0;
+  if (changed && !order.id.startsWith(TEST_ORDER_PREFIX) && flag(env?.QTIN_OPERATOR_NOTIFY_ENABLED)) {
+    try {
+      await env.DB.prepare(`INSERT OR IGNORE INTO qtin_operator_notice_outbox
+        (order_id, status, attempt_count, next_attempt_at, created_at)
+        VALUES (?, 'pending', 0, ?, ?)`).bind(order.id, now, now).run();
+      await dispatchDueQtinNotices(env, new Date(), order.id);
+    } catch (error) {
+      // Payment truth remains authoritative even if the private alert channel fails.
+      console.warn('qtin paid alert outbox unavailable', clean(error?.code || 'OUTBOX_FAILED', 60));
+    }
+  }
+  return changed;
 }
 
 export async function confirmPayment(env, { paymentKey, orderId, amount }, now = new Date()) {
@@ -404,7 +482,7 @@ async function createOrder(env, body, now = new Date(), request = null) {
   }
   const campaign = await currentCampaign(env, now);
   if (campaign.virtual || campaignState(campaign, now) !== 'open' || clean(body?.campaignId, 10) !== campaign.id) {
-    return { status: 409, data: { error: '지금은 신청 기간이 아닙니다. 매월 20일~25일에 다음달호를 신청할 수 있습니다.' } };
+    return { status: 409, data: { error: '지금은 신청 기간이 아닙니다. 매월 15일~25일에 다음달호를 신청할 수 있습니다.' } };
   }
   const products = await listProducts(env, campaign.id);
   const result = buildOrderDraft({ ...body, email: clean(body?.email, 160) || buyer.data.email }, products);
@@ -488,6 +566,15 @@ table.r{width:100%;border-collapse:collapse;margin:12px 0}table.r td,table.r th{
 .empty{padding:40px 20px;text-align:center;background:var(--card);border:1px dashed var(--line);border-radius:16px;color:var(--muted)}
 .staging{background:#173e2e;color:#fff;padding:10px 14px;border-radius:12px;margin-top:12px;font-size:14px}`;
 
+
+// Site-specific navigation/identity follows the Church and Mission public shells;
+// the underlying QTIN order, auth and payment service remains a single tenant-safe module.
+const QTIN_PORTAL_CSS="\n/* QTIN is one ordering engine with two site-specific shells. Keep purchase logic unchanged. */\n.wrap{width:min(1160px,calc(100% - 32px))}\n.qtin-site-header{position:sticky;top:0;z-index:40;width:100%;background:#faf9f5;border-bottom:1px solid #e0e5df;color:#173730}\n.qtin-site-header--mission{background:#f7f3ea;color:#172019}\n.qtin-site-header-inner{width:min(1160px,calc(100% - 32px));min-height:74px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:clamp(9px,1.5vw,20px)}\n.qtin-site-brand{display:flex;align-items:center;gap:10px;flex:0 0 auto;color:inherit;text-decoration:none;white-space:nowrap}\n.qtin-site-brand-mark{width:36px;height:36px;display:grid;place-items:center;flex:0 0 auto;border:1px solid #40665c;border-radius:50%;font:21px/1 Georgia,serif}\n.qtin-site-header--mission .qtin-site-brand-mark{background:#315c46;color:#fff;border-color:#315c46}\n.qtin-site-brand-mark svg{width:23px;height:23px;display:block}\n.qtin-site-brand-text{display:flex;flex-direction:column;gap:2px}\n.qtin-site-brand-text strong{font-family:'Gowun Batang','Noto Serif KR',serif;font-size:clamp(17px,1.65vw,21px);line-height:1.2}\n.qtin-site-brand-text small{font:700 9px/1.3 system-ui,sans-serif;letter-spacing:.16em;color:#6b8177}\n.qtin-site-menu{margin-left:auto;min-width:0}\n.qtin-site-menu summary{display:none}\n.qtin-site-menu nav{display:flex;gap:clamp(9px,1.25vw,20px);align-items:center;justify-content:flex-end}\n.qtin-site-menu nav a{font-size:clamp(12px,.92vw,14px);font-weight:750;color:#315347;text-decoration:none;white-space:nowrap}\n.qtin-site-menu nav a[aria-current=page]{color:#173730;text-decoration:underline;text-underline-offset:5px}\n.qtin-site-menu nav a:hover{text-decoration:underline;text-underline-offset:4px}\n.qtin-site-account{border:1px solid #d3e1d9;background:#fff;color:#315347;border-radius:999px;min-height:36px;padding:7px 12px;font-size:12px;font-weight:750;white-space:nowrap;text-decoration:none}\n.qtin-site-account:hover{background:#edf4ee}\n.qtin-site-footer{width:100%;background:#faf9f5;border-top:1px solid #dfe7df;margin:0;color:#445c50;padding:28px 0 24px;font-size:13px}\n.qtin-site-footer--mission{background:#f7f3ea;color:#46564d}\n.qtin-site-footer-inner{width:min(1120px,calc(100% - 32px));margin:auto;display:grid;gap:13px}\n.qtin-site-footer-brand{font:700 17px/1.4 'Gowun Batang',serif;color:#21473a}\n.qtin-site-footer-info,.qtin-site-footer-legal,.qtin-site-footer-bottom{display:flex;gap:10px 22px;align-items:center;flex-wrap:wrap}\n.qtin-site-footer-info a,.qtin-site-footer-legal a,.qtin-site-footer-bottom a{color:inherit;text-decoration:none}\n.qtin-site-footer-legal a:hover,.qtin-site-footer-info a:hover{text-decoration:underline}\n.qtin-site-footer-bottom{border-top:1px solid #e0e7df;padding-top:12px;justify-content:space-between;font-size:12px}\n.qtin-site-footer--mission .qtin-site-footer-inner{grid-template-columns:1fr auto;align-items:center}\n.qtin-site-footer--mission p{margin:3px 0 0;line-height:1.65}\n.qtin-order-legal{margin:20px auto 32px;color:#61766b;font-size:12px;line-height:1.7}\nheader.top{padding-top:28px}\n.qtin-catalog{margin:20px 0 28px}\n.qtin-catalog-head{display:flex;align-items:end;justify-content:space-between;gap:15px;margin:0 0 13px}\n.qtin-catalog-head h2{font-size:clamp(20px,2.4vw,27px);margin:3px 0 0;letter-spacing:-.035em}\n.qtin-catalog-head p{color:var(--muted);margin:4px 0 0;font-size:13px}\n.qtin-catalog-count{display:inline-flex;white-space:nowrap;padding:7px 11px;border-radius:999px;border:1px solid #d7e4db;background:#eef4ef;color:#1c533e;font-weight:750;font-size:13px}\n.qtin-catalog-tabs{position:sticky;top:74px;z-index:25;padding:12px 0;background:rgba(251,250,246,.98);display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0 8px}\n.qtin-catalog-tabs [role=tab]{scroll-margin-top:110px;display:inline-flex;gap:7px;align-items:center;justify-content:center;white-space:nowrap;min-height:42px;padding:8px 15px;border:1px solid #dbe4dd;border-radius:999px;background:#fff;color:#3b5949;font:inherit;font-size:14px;font-weight:750;line-height:1.4;cursor:pointer}\n.qtin-catalog-tabs [role=tab] span{color:#687b70;font-size:12px;font-weight:700}\n.qtin-catalog-tabs [role=tab][aria-selected=true]{background:#234e3a;border-color:#234e3a;color:#fff}\n.qtin-catalog-tabs [role=tab][aria-selected=true] span{color:#dfebe2}\n.qtin-catalog-tabs [role=tab]:focus-visible{outline:3px solid #d6b579;outline-offset:2px}\n.qtin-catalog-result{color:#607367;font-size:13px;margin:6px 0}\n.qtin-catalog .grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:16px 0 0}\n.qtin-catalog .book[hidden]{display:none!important}\n.qtin-catalog .book{min-width:0}\n.qtin-catalog .book .info h3{min-height:2.9em}\n@media(max-width:1060px){\n .qtin-site-menu nav{gap:10px}\n .qtin-site-account{display:none}\n .qtin-catalog .grid{grid-template-columns:repeat(3,minmax(0,1fr))}\n}\n@media(max-width:760px){\n .qtin-site-header-inner{min-height:65px;flex-wrap:wrap;gap:8px;position:relative}\n .qtin-site-brand-text strong{font-size:18px}\n .qtin-site-menu{margin-left:auto}\n .qtin-site-menu summary{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:7px 14px;border:1px solid #d8e4da;border-radius:9px;background:#fff;color:#234a39;font-weight:750;cursor:pointer;list-style:none}\n .qtin-site-menu summary::-webkit-details-marker{display:none}\n .qtin-site-menu nav{display:none;position:absolute;right:0;top:calc(100% - 1px);min-width:min(290px,calc(100vw - 24px));max-width:calc(100vw - 24px);padding:13px;border:1px solid #dae3da;box-shadow:0 15px 30px rgba(23,55,48,.12);border-radius:0 0 14px 14px;background:#faf9f5;flex-direction:column;align-items:stretch;z-index:50}\n .qtin-site-menu[open] nav{display:flex}\n .qtin-site-menu nav a{padding:9px 12px;font-size:14px}\n .qtin-site-account{display:none}\n .qtin-site-footer--mission .qtin-site-footer-inner{grid-template-columns:1fr}\n .qtin-catalog .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}\n .qtin-catalog-tabs{top:65px;flex-wrap:nowrap;overflow-x:auto;padding:3px 2px 8px;scrollbar-width:thin;scroll-snap-type:x proximity}\n .qtin-catalog-tabs [role=tab]{flex:0 0 auto;scroll-snap-align:start;min-height:44px;padding:8px 12px;font-size:13px}\n .qtin-catalog-head h2{font-size:22px}\n}\n@media(max-width:370px){\n .qtin-catalog .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}\n .qtin-catalog .book .info{padding:10px}\n .qtin-catalog .book .info h3{font-size:12px}\n .qtin-catalog-tabs [role=tab]{font-size:12px}\n .qtin-site-footer-info{gap:7px 14px}\n}\n";
+const QTIN_PORTAL_HEADERS=Object.freeze({"church":"<header class=\"qtin-site-header qtin-site-header--church\" id=\"top\"><div class=\"qtin-site-header-inner\">\n<a class=\"qtin-site-brand\" href=\"/ekodichurch/\" aria-label=\"에코디교회 홈\"><span class=\"qtin-site-brand-mark\" aria-hidden=\"true\">E</span><span class=\"qtin-site-brand-text\"><strong>에코디교회</strong><small>EKODI CHURCH</small></span></a>\n<details class=\"qtin-site-menu\"><summary>메뉴</summary><nav aria-label=\"에코디교회 주요 메뉴\">\n<a href=\"/ekodichurch/devotion/\">매일묵상</a><a href=\"/ekodichurch/#worship\">예배·방송</a><a href=\"/ekodichurch/notices/\">공지사항</a><a href=\"/ekodichurch/schedule/\">주요일정</a><a href=\"/ekodichurch/#together\">함께하기</a><a href=\"/qtin/church\" aria-current=\"page\">큐티인 신청</a></nav></details>\n<a class=\"qtin-site-account\" id=\"qtinShellAccount\" href=\"#account\">로그인 · 신청</a>\n</div></header>","mission":"<header class=\"qtin-site-header qtin-site-header--mission\" id=\"top\"><div class=\"qtin-site-header-inner\">\n<a class=\"qtin-site-brand\" href=\"/ekodimission\" aria-label=\"에코디선교회 홈\"><span class=\"qtin-site-brand-mark\" aria-hidden=\"true\"><svg viewBox=\"0 0 64 64\" fill=\"none\" focusable=\"false\"><path d=\"M10 25 H54 M20 25 V46 M44 25 V46 M13 48 Q32 57 51 48\" stroke=\"currentColor\" stroke-width=\"5.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></span><span class=\"qtin-site-brand-text\"><strong>에코디선교회</strong><small>EKODI MISSION</small></span></a>\n<details class=\"qtin-site-menu\"><summary>메뉴</summary><nav aria-label=\"에코디선교회 주요 메뉴\">\n<a href=\"/ekodimission/history\">연혁</a><a href=\"/ekodimission#notices\">공지</a><a href=\"/ekodimission/devotion\">묵상</a><a href=\"/ekodimission#schedule\">일정</a><a href=\"/ekodimission/live\">방송</a><a href=\"/ekodimission/activities\">활동</a><a href=\"/qtin/mission\" aria-current=\"page\">큐티인 신청</a></nav></details>\n<a class=\"qtin-site-account\" id=\"qtinShellAccount\" href=\"#account\">로그인 · 신청</a>\n</div></header>","other":"<header class=\"qtin-site-header\" id=\"top\"><div class=\"qtin-site-header-inner\"><a class=\"qtin-site-brand\" href=\"/qtin\"><span class=\"qtin-site-brand-mark\" aria-hidden=\"true\">E</span><span class=\"qtin-site-brand-text\"><strong>에코디 큐티인</strong><small>EKODI QTIN</small></span></a><details class=\"qtin-site-menu\"><summary>메뉴</summary><nav aria-label=\"큐티인 조직 선택\"><a href=\"/qtin/church\">에코디교회</a><a href=\"/qtin/mission\">에코디선교회</a></nav></details><a class=\"qtin-site-account\" id=\"qtinShellAccount\" href=\"#account\">로그인 · 신청</a></div></header>"});
+const QTIN_PORTAL_FOOTERS=Object.freeze({"church":"<footer class=\"qtin-site-footer qtin-site-footer--church\"><div class=\"qtin-site-footer-inner\"><strong class=\"qtin-site-footer-brand\">EKODI CHURCH</strong><div class=\"qtin-site-footer-info\" aria-label=\"에코디교회 운영 정보\"><span>에코디교회 정찬균</span><span>전남 무안군 청계면 백련동1길 17-4, 1층</span><span>고유번호 307-82-82097</span><a href=\"mailto:ekodichurch@gmail.com\">ekodichurch@gmail.com</a></div><nav class=\"qtin-site-footer-legal\" aria-label=\"법적 고지\"><a href=\"/privacy\">개인정보처리방침</a><a href=\"/terms\">이용약관</a><a href=\"mailto:ekodibiz@gmail.com\">문의</a></nav><div class=\"qtin-site-footer-bottom\"><span>© 2026 EKODI CHURCH</span><a href=\"#top\">맨 위로 ↑</a></div></div></footer>","mission":"<footer class=\"qtin-site-footer qtin-site-footer--mission\"><div class=\"qtin-site-footer-inner\"><div><strong class=\"qtin-site-footer-brand\">에코디선교회</strong><p>말씀대로 살아내고, 곁을 내어주며, 사람과 공동체를 살려내는 선교.</p></div><p>EKODI MISSION · ekodi.kr/ekodimission</p></div></footer>","other":"<footer class=\"qtin-site-footer\"><div class=\"qtin-site-footer-inner\"><strong class=\"qtin-site-footer-brand\">EKODI QTIN</strong><nav class=\"qtin-site-footer-legal\" aria-label=\"관련 사이트\"><a href=\"/ekodichurch/\">에코디교회</a><a href=\"/ekodimission\">에코디선교회</a><a href=\"/privacy\">개인정보처리방침</a></nav><div class=\"qtin-site-footer-bottom\"><span>© 2026 EKODI</span><a href=\"#top\">맨 위로 ↑</a></div></div></footer>"});
+const qtinPortalHeader=org=>QTIN_PORTAL_HEADERS[org]||QTIN_PORTAL_HEADERS.other;
+const qtinPortalFooter=org=>QTIN_PORTAL_FOOTERS[org]||QTIN_PORTAL_FOOTERS.other;
+
 function shell(title, body, scriptNonce = '', extraHead = '') {
   return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(title)}</title><meta name="robots" content="noindex"><style>${BRAND_CSS}</style>${extraHead}</head><body>${body}</body></html>`;
@@ -500,8 +587,8 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
   const issue = `${campaign.year}년 ${campaign.month}월호`;
   const statusLine = open
     ? `신청 중 · ${escapeHtml(formatKst(campaign.closesAt))} 마감`
-    : state === 'scheduled' ? `${escapeHtml(formatKst(campaign.opensAt))} 신청 시작` : `신청 마감 · 다음 신청은 매월 20일에 열립니다`;
-  const cards = products.map(p => `<article class="book" data-id="${escapeHtml(p.id)}" data-price="${p.salePrice}">
+    : state === 'scheduled' ? `${escapeHtml(formatKst(campaign.opensAt))} 신청 시작` : `신청 마감 · 다음 신청은 매월 15일에 열립니다`;
+  const cards = products.map(p => `<article class="book" data-id="${escapeHtml(p.id)}" data-price="${p.salePrice}" data-audience="${qtinAudienceGroup(p.series,p.name)}">
     <button type="button" class="cover" data-intro="${escapeHtml(p.qtmItemId || '')}" data-name="${escapeHtml(p.name)}" data-img="${escapeHtml(p.imageUrl || '')}" aria-label="${escapeHtml(p.name)} 책 소개 보기">${p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" alt="${escapeHtml(p.name)} 표지" loading="lazy" referrerpolicy="no-referrer">` : `<span class="ph">표지 준비 중</span>`}<span class="peek">책 소개</span></button>
     <div class="info"><h3>${escapeHtml(p.name)}</h3>
       <div class="price">${formatWon(p.salePrice)}${p.listPrice > p.salePrice ? `<s>${formatWon(p.listPrice)}</s>` : ''}</div>
@@ -509,9 +596,17 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
       <input type="number" min="0" max="50" value="0" inputmode="numeric" aria-label="${escapeHtml(p.name)} 수량"${open ? '' : ' disabled'}>
       <button type="button" data-step="1" aria-label="${escapeHtml(p.name)} 수량 늘리기"${open ? '' : ' disabled'}>+</button></div>
     </div></article>`).join('');
+  const audienceTabs = [
+    { key: 'all', label: '전체 도서', count: products.length },
+    { key: 'adult', label: '일반·큰글씨', count: products.filter(p => qtinAudienceGroup(p.series,p.name)==='adult').length },
+    { key: 'youth', label: '청소년·청년', count: products.filter(p => qtinAudienceGroup(p.series,p.name)==='youth').length },
+    { key: 'children', label: '어린이', count: products.filter(p => qtinAudienceGroup(p.series,p.name)==='children').length },
+    { key: 'preschool', label: '유아·새싹', count: products.filter(p => qtinAudienceGroup(p.series,p.name)==='preschool').length }
+  ].filter(tab => tab.count>0);
+  const catalogTabs = audienceTabs.map(tab => `<button type="button" role="tab" id="qtin-tab-${tab.key}" data-qtin-tab="${tab.key}" aria-controls="qtinBookGrid" aria-selected="${tab.key==='all'}" tabindex="${tab.key==='all'?'0':'-1'}">${tab.label} <span>${tab.count}</span></button>`).join('');
   const orgChoices = Object.values(ORGS).map(o => `<label class="choice"><input type="radio" name="org" value="${o.id}"${org === o.id ? ' checked' : ''}><span><strong>${o.label}</strong><small>${o.id === 'church' ? '교회 성도·부서' : o.id === 'mission' ? '선교회 회원·사역자' : '다른 교회·단체·개인'}</small></span></label>`).join('');
   const paymentNote = payment.ready ? '' : `<p class="note">온라인 결제 연결을 준비하고 있습니다. 결제가 열리면 바로 신청하실 수 있습니다.</p>${payment.testMode ? '<p class="note" id="testNote" hidden><strong>테스트 결제 모드(관리자 전용)</strong> · 실제 금액이 청구되지 않으며, 이 신청은 집계·발주에 포함되지 않습니다.</p>' : ''}`;
-  const body = `<header class="top"><div class="wrap">
+  const body = `${qtinPortalHeader(org)}<header class="top"><div class="wrap">
   <div class="eyebrow">EKODI · 큐티인 함께 구입</div>
   <h1>${escapeHtml(issue)} 큐티인 신청</h1>
   <p class="lead">날마다 같은 말씀 앞에 서는 기쁨을 함께 나눕니다. 에코디교회와 에코디선교회가 매월 다음달 큐티인을 한 번에 모아 구입합니다. 가격은 QTM 온라인 판매가격 그대로이며, 결제가 확인된 신청만 완료됩니다.</p>
@@ -519,7 +614,7 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
   ${data.dataMode === 'isolated-staging' ? '<div class="staging">ISOLATED STAGING · 샘플 데이터이며 신청·결제가 저장되지 않습니다.</div>' : ''}
 </div></header>
 <main class="wrap">
-  ${products.length ? `<section class="grid" aria-label="${escapeHtml(issue)} 도서">${cards}</section>` : `<div class="empty">${open || state === 'scheduled' ? `${escapeHtml(issue)} 도서 정보를 QTM에서 확인하고 있습니다. 잠시 후 다시 열어 주세요.` : '이번 달 신청이 마감되었습니다. 다음달 20일에 새 큐티인 신청이 열립니다.'}</div>`}
+  ${products.length ? `<section class="qtin-catalog" aria-labelledby="qtinCatalogTitle"><div class="qtin-catalog-head"><div><p>BOOK SELECTION · ${escapeHtml(issue)}</p><h2 id="qtinCatalogTitle">도서 선택</h2><p>대상별 탭으로 찾아보세요. 탭을 바꿔도 선택한 도서와 수량은 유지됩니다.</p></div><span class="qtin-catalog-count">전체 ${products.length}종</span></div><div class="qtin-catalog-tabs" role="tablist" aria-label="대상별 큐티인 도서">${catalogTabs}</div><p class="qtin-catalog-result" id="qtinCatalogResult" role="status" aria-live="polite">전체 ${products.length}종</p><div id="qtinBookGrid" class="grid" role="tabpanel" aria-labelledby="qtin-tab-all" tabindex="0">${cards}</div></section>` : `<div class="empty">${open || state === 'scheduled' ? `${escapeHtml(issue)} 도서 정보를 QTM에서 확인하고 있습니다. 잠시 후 다시 열어 주세요.` : '이번 달 신청이 마감되었습니다. 다음달 20일에 새 큐티인 신청이 열립니다.'}</div>`}
   <section class="panel" id="account" aria-labelledby="accountTitle"><h2 id="accountTitle">구글 계정으로 신청하기</h2>
     <div id="signedOut">
       <p class="note">책을 고르신 뒤 구글 계정으로 로그인하면 연락처를 입력하고 바로 결제하실 수 있습니다. 다음 달에는 입력하신 정보가 자동으로 채워집니다.</p>
@@ -571,12 +666,13 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
 </form></dialog>
 <div class="bar"><div class="wrap"><div class="total">합계 <b id="total">0원</b> · <span id="count">0권</span></div>
   <div class="pay"><button class="btn" id="loginCta" type="button" disabled>구글 로그인하고 신청</button><button class="btn" id="payCard" type="button" hidden disabled>카드로 결제</button><button class="btn alt" id="payTransfer" type="button" hidden disabled>계좌이체</button></div></div></div>
-<footer class="wrap">책은 교회에서 일괄 수령 후 나누어 드리며, 택배를 선택하시면 원하는 곳으로 보내 드립니다(배송비 ${formatWon(SHIPPING_FEE)}). 표지 이미지·가격 출처: <a href="${QTM_ORIGIN}/" rel="noopener" target="_blank">QTM 큐티선교회</a> 온라인 스토어. 결제·구매대행: EKODIBIZ(사업자 213-13-01959, 통신판매업 2023-전남무안-0153). 문의 010-3501-8542</footer>
+<div class="qtin-order-legal wrap">책은 교회에서 일괄 수령 후 나누어 드리며, 택배를 선택하시면 원하는 곳으로 보내 드립니다(배송비 ${formatWon(SHIPPING_FEE)}). 표지 이미지·가격 출처: <a href="${QTM_ORIGIN}/" rel="noopener" target="_blank">QTM 큐티선교회</a> 온라인 스토어. 결제·구매대행: EKODIBIZ(사업자 213-13-01959, 통신판매업 2023-전남무안-0153). 문의 010-3501-8542</div>
+${qtinPortalFooter(org)}
 <script nonce="${scriptNonce}">window.__QTIN__=${JSON.stringify({ campaignId: campaign.id, open, paymentReady: Boolean(payment.ready), testMode: Boolean(payment.testMode), widget: Boolean(payment.widget), org, shippingFee: SHIPPING_FEE }).replace(/</g, '\\u003c')};</script>
 <script src="https://js.tosspayments.com/v2/standard"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script nonce="${scriptNonce}">${clientScript(orderClient)}</script>`;
-  return shell(`${issue} 큐티인 신청 · EKODI`, body, scriptNonce);
+  return shell(`${issue} 큐티인 신청 · EKODI`, body, scriptNonce, `<style>${QTIN_PORTAL_CSS}</style>`);
 }
 
 // Wrangler bundles with esbuild keepNames, which inserts __name(fn, "name") calls into
@@ -606,6 +702,40 @@ function orderClient() {
   let busy = false;
   let session = null;
   const books = [...document.querySelectorAll('.book')];
+  const audienceButtons = [...document.querySelectorAll('[data-qtin-tab]')];
+  const catalogPanel = document.getElementById('qtinBookGrid');
+  const catalogResult = document.getElementById('qtinCatalogResult');
+  function setAudience(active, shouldFocus=false) {
+    const chosen=audienceButtons.find(button=>button.dataset.qtinTab===active);
+    if(!chosen)return;
+    let visible=0;
+    for(const book of books){
+      book.hidden=active!=='all'&&book.dataset.audience!==active;
+      if(!book.hidden)visible++;
+    }
+    for(const button of audienceButtons){
+      const selected=button===chosen;
+      button.setAttribute('aria-selected',String(selected));
+      button.tabIndex=selected?0:-1;
+    }
+    if(catalogPanel)catalogPanel.setAttribute('aria-labelledby',chosen.id);
+    if(catalogResult)catalogResult.textContent=chosen.textContent.trim()+' · '+visible+'종 표시';
+    if(shouldFocus)chosen.focus();
+  }
+  for(const [index,button] of audienceButtons.entries()){
+    button.addEventListener('click',()=>setAudience(button.dataset.qtinTab));
+    button.addEventListener('keydown',event=>{
+      const key=event.key;
+      if(!['ArrowLeft','ArrowRight','Home','End'].includes(key))return;
+      event.preventDefault();
+      const target=key==='Home'?0:key==='End'?audienceButtons.length-1:
+        (index+(key==='ArrowRight'?1:-1)+audienceButtons.length)%audienceButtons.length;
+      setAudience(audienceButtons[target].dataset.qtinTab,true);
+    });
+  }
+  if(audienceButtons.length)setAudience('all');
+
+
 
   // ---- session (Google-verified central EKODI account) ----
   function read(store, key) { try { return JSON.parse(store.getItem(key) || 'null'); } catch { return null; } }
@@ -735,6 +865,7 @@ function orderClient() {
     }
   }
   function showSignedOut() {
+    if($('qtinShellAccount'))$('qtinShellAccount').textContent='로그인 · 신청';
     $('signedOut').hidden = false; $('signedIn').hidden = true; $('buyerForm').hidden = true; $('myOrders').hidden = true;
     refresh();
     prepareGoogle();
@@ -749,6 +880,7 @@ function orderClient() {
     $('departmentLabel').textContent = '소속 교회·단체 이름(필수)';
   }
   async function onSignedIn(focusForm) {
+    if($('qtinShellAccount'))$('qtinShellAccount').textContent='내 신청';
     $('signedOut').hidden = true; $('signedIn').hidden = false; $('buyerForm').hidden = false;
     if (cfg.testMode && !cfg.paymentReady) { const n = $('testNote'); if (n) n.hidden = false; }
     refresh();
@@ -1015,7 +1147,7 @@ async function handleAdminApi(request, env, url) {
     const rows = await env.DB.prepare('SELECT * FROM qtin_campaigns ORDER BY id DESC LIMIT 36').all();
     // Operators see which binding supplied each Toss key and its shape — never the key itself.
     const keys = me.canWrite ? ekodipay.keyDiagnostics(env) : undefined;
-    return json({ campaigns: (rows.results || []).map(c => ({ ...c, state: campaignState(c) })), payment: paymentReadiness(env), keys, me }, 200, env);
+    return json({ campaigns: (rows.results || []).map(raw => { const c = effectiveCampaignWindow(raw); return { ...c, state: campaignState(c) }; }), payment: paymentReadiness(env), keys, me }, 200, env);
   }
   let match = /^\/campaigns\/(\d{4}-\d{2})(\/.*)?$/.exec(path);
   if (match) {
@@ -1140,7 +1272,7 @@ export function renderAdminPage(scriptNonce = '') {
 <div class="fields" style="margin-top:12px"><label class="f">QTM 상품 주소로 직접 추가<input id="addUrl" placeholder="https://www.qtm.or.kr/shop/..."></label>
 <div class="f" style="justify-content:flex-end"><button class="btn alt" id="add" type="button">추가</button></div></div></section>
 <section class="panel"><h2>신청 내역</h2><div class="fields"><label class="f">검색<input id="filter" placeholder="이름·전화·신청번호"></label></div><div id="orders"></div></section>
-<section class="panel"><h2>신청 기간 수동 조정</h2><p class="note">자동: 매월 20일 00:00 ~ 25일 23:59(KST). 필요할 때만 강제 열기/닫기를 사용하세요.</p>
+<section class="panel"><h2>신청 기간 수동 조정</h2><p class="note">자동: 매월 15일 00:00 ~ 25일 23:59(KST). 필요할 때만 강제 열기/닫기를 사용하세요.</p>
 <div class="pay"><button class="btn alt" data-state="force_open" type="button">강제 열기</button><button class="btn alt" data-state="force_closed" type="button">강제 마감</button><button class="btn alt" data-state="" type="button">자동으로 되돌리기</button></div></section>
 </div>
 </main>

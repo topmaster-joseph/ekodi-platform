@@ -73,6 +73,19 @@ try {
       })()};
   });
   console.log('EKODI_CHURCH_SCHEDULE_DIAGNOSTIC='+JSON.stringify({schedule:evidence.worshipSchedule,pageErrors:evidence.pageErrors}));
+  // 예배관리 링크는 #weekly-worship 구역 안에 있고, 교회 홈은 한 번에 한 구역만
+  // 보이는 압축 내비게이션이다(church-section-nav.js 가 church-section-active 를
+  // 토글하고, main.church-section-filtered>section:not(.church-section-active) 는
+  // display:none!important). 다른 구역이 열린 상태에서 이 링크는 설계상 배치되지
+  // 않는다. 2026-11-12 측정에서 첫 미배치 조상은 SECTION.church-weekly-focus
+  // (display:none) 였다 — 운영 결함이 아니라 검사가 틀린 화면 상태를 본 것이다.
+  // 그래서 방문자와 같은 방식으로 그 구역을 먼저 연다. 게스트 단정도 이 상태에서
+  // 해야 의미가 있다. 구역이 닫혀 있으면 어떤 링크든 안 보이므로 저절로 통과한다.
+  await page.evaluate(()=>{location.hash='#weekly-worship';});
+  await page.waitForFunction(()=>getComputedStyle(document.querySelector('#weekly-worship')).display!=='none',
+    null,{timeout:8000});
+  await page.waitForTimeout(400);
+  evidence.weeklySectionOpened=true;
   assert.equal(await link.isVisible(),false,'guest must never see management link');
   evidence.steps.push({name:'guest-hidden-on-real-site',pass:true});
 
@@ -87,13 +100,29 @@ try {
   await page.waitForFunction(()=>document.querySelector('[data-church-worship-admin]')?.hidden===false,
     null,{timeout:10000});
   if(!await link.isVisible()){
-    const style=await link.evaluate(el=>({
-      hidden:el.hidden,cssDisplay:getComputedStyle(el).display,
-      visibility:getComputedStyle(el).visibility,
-      parentDisplay:getComputedStyle(el.parentElement).display,
-      parentVisibility:getComputedStyle(el.parentElement).visibility,
-      rect:el.getBoundingClientRect().toJSON()
-    }));
+    const style=await link.evaluate(el=>{
+      // 요소와 부모만 보면 원인을 못 찾는다. 조상이 display:none 이면 자신의
+      // 계산된 display 는 그대로 남고 사각형만 0×0 이 되므로, 요소·부모가 모두
+      // 정상인데 0×0 인 상태가 된다. 2026-11-12 측정이 정확히 그랬고 범인은
+      // 여섯 단계 위의 SECTION.church-weekly-focus 였다. 첫 미배치 조상을 지목한다.
+      const chain=[];let node=el;
+      while(node&&chain.length<12){
+        const cs=getComputedStyle(node),rect=node.getBoundingClientRect();
+        chain.push({node:node.tagName,classes:String(node.className).slice(0,80),
+          display:cs.display,visibility:cs.visibility,
+          width:Math.round(rect.width),height:Math.round(rect.height)});
+        node=node.parentElement;
+      }
+      const culprit=chain.find(item=>item.display==='none'||item.visibility==='hidden')||null;
+      return {
+        hidden:el.hidden,cssDisplay:getComputedStyle(el).display,
+        visibility:getComputedStyle(el).visibility,
+        parentDisplay:getComputedStyle(el.parentElement).display,
+        parentVisibility:getComputedStyle(el.parentElement).visibility,
+        rect:el.getBoundingClientRect().toJSON(),
+        firstHiddenAncestor:culprit,ancestorChain:chain
+      };
+    });
     evidence.renderingDiagnostic=style;
     throw Error('Permitted link remains visually hidden '+JSON.stringify(style));
   }

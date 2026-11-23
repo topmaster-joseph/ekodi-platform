@@ -5,6 +5,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {chromium} from 'playwright';
+// 공유 감사 분류기. 메서드와 URL 을 완전일치로 보므로, 2026-11-08 푸터 방문통계
+// 외의 쓰기 요청은 전과 같이 치명적으로 남는다.
+import {classifyMutationSecurityBlock} from './education-native-security-observations.mjs';
 
 const origin='https://ekodi.kr';
 const target=origin+'/proposal/';
@@ -19,7 +22,7 @@ page.on('response',res=>{if(res.status()>=400)badResponses.push({status:res.stat
 await page.route('**/*',async route=>{
  const request=route.request(),method=request.method().toUpperCase(),url=request.url();
  // Local generated blob links are not network requests and are not routed.
- if(!['GET','HEAD','OPTIONS'].includes(method)){blockedMutations.push(method);return route.abort('blockedbyclient');}
+ if(!['GET','HEAD','OPTIONS'].includes(method)){blockedMutations.push({method,url:url.slice(0,300)});return route.abort('blockedbyclient');}
  if(!url.startsWith(origin+'/'))return route.abort('blockedbyclient');
  return route.continue();
 });
@@ -49,7 +52,10 @@ try{
   assert.ok(stat.size>350,'Empty generated Office file: '+extension);
   saved.push({extension,filename,bytes:stat.size,localFile:path.basename(dest)});
  }
- assert.deepEqual(blockedMutations,[],'No user data may be submitted to production');
+ // 메서드만 기록하면 방문통계 비콘과 실제 제출을 구분할 수 없다. URL 까지 기록하고
+ // 공유 분류기로 판정한다. 분류되지 않는 쓰기 요청은 그대로 실패다.
+ const unexpectedMutations=blockedMutations.filter(item=>classifyMutationSecurityBlock(item.method,item.url)===null);
+ assert.deepEqual(unexpectedMutations,[],'No user data may be submitted to production');
  assert.deepEqual(badResponses,[],'All live assets must load');
  assert.deepEqual(pageErrors,[],'No browser JavaScript errors');
  await fs.writeFile(path.join(artifactDir,'receipt.json'),JSON.stringify({

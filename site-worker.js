@@ -18,8 +18,9 @@ import { tenantLiveAdminCss, tenantLiveAdminPage, tenantLiveAdminScript } from '
 import { isMallPicksPath, mallPicksResponse } from './mall-weekly-picks-page.js';
 import { decorateMallProductResponse, isMallProductPath } from './mall-product-jsonld.js';
 import { o2oHubPage } from './o2o-hub-page.js';
-import { isEkodibizAgencyPath, proxyEkodibizAgency } from './ekodibiz-agency-route.js';
+import { isEkodibizAgencyPath, proxyEkodibizAgency, legacyAgencyAdminRedirect } from './ekodibiz-agency-route.js';
 import { isO2OIssuedLinkPath, o2oIssuedLinkResponse } from './o2o-issued-links.js';
+import { isPublicAccountingNoticePath, publicAccountingNoticePage } from './public-accounting-notice-page.js';
 
 // Static Assets canonicalizes *.html URLs to extensionless paths.
 // Always request canonical asset paths internally so edge redirects never escape the Worker.
@@ -53,6 +54,8 @@ const PUBLIC_ASSETS = new Set([
   '/ekodi-message-ui.js',
   '/tenant-live.css',
   '/tenant-live.js',
+  '/public-accounting-notice.css',
+  '/public-accounting-notice.js',
   '/mall.css',
   '/mall.js',
   '/pizzamaru-mokpodae.css',
@@ -137,6 +140,7 @@ const ADMIN_ASSETS = new Set([
   '/admin-central-handoff.js',
   '/admin-authenticated-shell.js',
   '/admin-control-home.js',
+  '/admin-journal-inbox.js',
   '/admin-control-home.css',
   '/admin-release-convergence.js',
   '/admin-public-site-controls.js',
@@ -220,6 +224,8 @@ const ADMIN_ASSETS = new Set([
   '/release-control-admin.js',
   '/church-reports-admin.css',
   '/church-reports-admin.js',
+  '/church-sign.woff2',
+  '/church-sign-font-LICENSE.txt',
   '/books-admin.css',
   '/books-admin.js',
   '/books-finance-admin.css',
@@ -245,6 +251,20 @@ const PUBLIC_CSP = [
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
+  "object-src 'none'",
+].join('; ');
+
+// OFFICE-HUB-001: static launcher has no account session, API or file-writing surface.
+// Do not broaden PUBLIC_CSP or inject credentials into this no-JS-network hub.
+const OFFICE_HUB_CSP = [
+  "default-src 'none'",
+  "script-src 'self'",
+  "style-src 'self'",
+  "img-src 'self' data:",
+  "connect-src 'none'",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'none'",
   "object-src 'none'",
 ].join('; ');
 
@@ -740,8 +760,13 @@ export default {
     }
 
     if (host === PUBLIC_HOST) {
+      if (['GET','HEAD'].includes(request.method) && isPublicAccountingNoticePath(url.pathname)) {
+        return withHostSecurity(publicAccountingNoticePage(url.pathname), PUBLIC_CSP, 'public, max-age=120', 'public-accounting-notice');
+      }
       // All agency routes belong to the EKODIBIZ service binding, not the apex static fallback.
       // Preserve its authentication and payment CSP; do not broaden the general service proxy.
+      const agencyAdminLegacy=legacyAgencyAdminRedirect(request);
+      if (agencyAdminLegacy) return agencyAdminLegacy;
       if (isEkodibizAgencyPath(url.pathname)) return proxyEkodibizAgency(request, env);
       // Host the same-origin age verification UX without a separate Worker or client secret.
       if (url.pathname === '/verify/adult' || url.pathname.startsWith('/verify/adult/')) {
@@ -775,6 +800,28 @@ export default {
           secured.headers.set('Content-Type', mime);
         }
         secured.headers.set('X-Content-Type-Options', 'nosniff');
+        secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+        return secured;
+      }
+      // OFFICE-HUB-001: direct /office and /office/ HTTP 200 — never a redirect or a new file API.
+      // Work remains with existing /my/docs/, /proposal/ and /edu/ service owners.
+      if (url.pathname === '/office' || url.pathname.startsWith('/office/')) {
+        if (!['GET','HEAD'].includes(request.method)) {
+          const denied=withHostSecurity(new Response(null,{status:405,headers:{allow:'GET, HEAD'}}),OFFICE_HUB_CSP,'no-store','office-method-blocked');
+          denied.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+          return denied;
+        }
+        const allowed=new Set(['/office','/office/','/office/index.html','/office/office.css','/office/office.js']);
+        if (!allowed.has(url.pathname)) {
+          const absent=withHostSecurity(new Response('Not Found',{status:404}),OFFICE_HUB_CSP,'no-store','office-not-found');
+          absent.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
+          return absent;
+        }
+        // /office is served by an internal asset rewrite, keeping the browser address unchanged.
+        const target=url.pathname==='/office'?'/office/':url.pathname;
+        const asset=await env.ASSETS.fetch(assetRequest(request,target));
+        const secured=withHostSecurity(asset,OFFICE_HUB_CSP,'no-store','office-static-hub');
+        if (asset.ok) secured.headers.set('Content-Type',url.pathname.endsWith('.css')?'text/css; charset=utf-8':url.pathname.endsWith('.js')?'text/javascript; charset=utf-8':'text/html; charset=utf-8');
         secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
         return secured;
       }

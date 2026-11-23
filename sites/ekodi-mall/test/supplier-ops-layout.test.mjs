@@ -50,3 +50,16 @@ test('ops UI only enables mutation after server authorization and discards stale
   assert.match(js,/\+\+authRevision; operationsAuthorized=false; session=null; syncUi\(\)/);
   assert.match(js,/if\(!canOperate\)/);
 });
+
+
+test('operations page clearly identifies administrator-only workflow with safe shopper exit',()=>{
+  assert.match(html, /<nav class="mall-admin-breadcrumb" aria-label="현재 위치">/);
+  assert.match(html, /href="\/ekodimall\/">에코디몰 사용자 화면<\/a>/);
+  assert.match(html, /<span class="mall-role-chip">관리자 전용<\/span>/);
+  assert.match(html, /승인된 운영자만 실행할 수 있습니다/);
+  assert.match(css, /\.supplier-ops-page \.ops-count-strip article\{/);
+  assert.match(css, /\.supplier-ops-page \.ops-form input:focus-visible/);
+  assert.match(css, /\.mall-admin-breadcrumb a:focus-visible/);
+  assert.match(css, /@media\(max-width:560px\)/);
+  assert.doesNotMatch(html,/공급자 등록이 승인됐습니다|자동발주 ON/);
+});

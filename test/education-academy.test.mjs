@@ -70,7 +70,7 @@ test('public academy uses same-origin scripts and protects personal data on firs
 test('Education home and Study retain existing routes and link the academy',async()=>{
  const home=await read('education/index.html'),study=await read('education/study/index.html');
  assert.match(home,/TWO AREAS · ONE EDUCATION CONTEXT/);
- assert.match(home,/href="\/study\/academy\/"/);
- assert.match(study,/href="\/study\/ai-bootcamp\/"/);
- assert.match(study,/href="\/study\/academy\/#consulting"/);
+ assert.match(home,/href="\/edu\/study\/academy\/"/);
+ assert.match(study,/href="\/edu\/study\/ai-bootcamp\/"/);
+ assert.match(study,/href="\/edu\/study\/academy\/#consulting"/);
 });

@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   isolated-chromium:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 9
     steps:
       - uses: actions/checkout@v7
@@ -37,7 +37,7 @@ jobs:
           node --test test/church-native-ui-capability-contract.test.mjs
       - name: Install first-party isolated Chromium harness
         run: |
-          npm install --no-save --package-lock=false playwright@1.55.0
+          npm install --no-save --package-lock=false playwright@1.55.1
           npx playwright install --with-deps chromium
       - name: Live Church UI, synthetic capability, no live admin bearer
         run: node scripts/verify-church-live-ui-with-synthetic-session.mjs

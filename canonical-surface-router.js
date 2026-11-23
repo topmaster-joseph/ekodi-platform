@@ -61,7 +61,7 @@ function canonicalSlashRedirect(request,prefix){
 function canonicalExecutionRootRedirect(request,spec){
   const path=new URL(request.url).pathname;
   const apiLike=spec.id.endsWith('-api')||spec.prefix.includes('/api/');
-  if(apiLike||spec.exact||spec.id==='ai'||path!==spec.prefix)return null;
+  if(apiLike||spec.exact||spec.id==='ai'||spec.id==='volunteer'||path!==spec.prefix)return null;
   return canonicalSlashRedirect(request,spec.prefix);
 }
 function directDocumentNavigation(request){
@@ -166,6 +166,15 @@ function rewriteExecutionText(text,spec,type=''){
   return output;
 }
 function canonicalExecutionLocation(value,spec){
+  // EDU-RELATIVE-LOCATION-20261116: upstream asset hosts answer /study/live with a
+  // root-relative redirect (/study/live/, /guide/stats.html -> /guide/stats). Keep the
+  // public mount prefix, otherwise ekodi.kr/edu/... falls out to the workspace fallback.
+  const raw=String(value||'');
+  if(raw.startsWith('/')&&!raw.startsWith('//')&&spec?.prefix&&!spec.preservePrefix&&!spec.basePathAware){
+    const pathOnly=raw.split(/[?#]/)[0];
+    if(pathOnly!==spec.prefix&&!pathOnly.startsWith(spec.prefix+'/'))return spec.prefix+raw;
+    return raw;
+  }
   try{
     const target=new URL(value);
     const canonical=canonicalAbsoluteUrl(target.hostname,target.pathname,target.search,target.hash);
@@ -267,7 +276,14 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
   const type=String(response.headers.get('content-type')||'').toLowerCase();
   const headers=new Headers(response.headers);let body=response.body;
   if(type.includes('text/html')||type.includes('javascript')||type.includes('text/css')||type.includes('application/json')||type.includes('text/plain')){
-    body=rewriteExecutionText(await response.text(),spec,type);headers.delete('content-length');headers.delete('etag');headers.delete('content-encoding');
+    const payload=await response.text();
+    // The course catalog is service-relative data; its links are mounted once
+    // by the Education UI. Do not rewrite JSON link values at the Site Core
+    // boundary: rewriting here and mounting again produced /edu/edu URLs.
+    const directEducationCatalog=spec.id==='education-academic-alias'&&
+      upstreamUrl.pathname==='/courses/catalog.json'&&type.includes('application/json');
+    body=directEducationCatalog?payload:rewriteExecutionText(payload,spec,type);
+    headers.delete('content-length');headers.delete('etag');headers.delete('content-encoding');
   }
   const location=headers.get('location');if(location)headers.set('location',canonicalExecutionLocation(location,spec));
   headers.set('x-ekodi-canonical-surface',spec.id);headers.set('x-ekodi-canonical-path',spec.prefix);
@@ -276,6 +292,21 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
   const url=new URL(request.url);
   if(url.hostname.toLowerCase()!==CANONICAL_HOST)return null;
   const path=url.pathname;
+  // Reject malformed repeated Education mounts. Valid links are generated
+  // directly as /edu/... by the source UI, not repaired by HTTP redirects.
+  // The old 308 alias is deliberately retired; no legacy route is forwarded.
+  if(/^\/edu(?:\/edu)+(?=\/|$)/.test(path)){
+    return new Response('Invalid Education URL: repeated /edu path segment.',{
+      status:404,
+      headers:{
+        'content-type':'text/plain; charset=utf-8',
+        'cache-control':'no-store',
+        'x-content-type-options':'nosniff',
+        'x-robots-tag':'noindex, nofollow',
+        'x-ekodi-route':'edu-repeated-prefix-rejected',
+      },
+    });
+  }
   const contactResponse=await handleMailContactApi(request,env);
   if(contactResponse)return contactResponse;
   if(request.method==='GET'&&path==='/mail/contact'){
@@ -310,6 +341,13 @@ async function proxyExecutionSurface(request,env,spec,legacyFetch,externalFetch)
     routed.headers.set('x-ekodi-canonical-surface','age-verification-ui');
     routed.headers.set('x-ekodi-canonical-path','/verify/adult');
     return routed;
+  }
+  // EDU-STUDY-LIVE-ALIAS-20261116: the live lecture studio lives under /edu. A bare
+  // /study/live/... (typed without /edu) fell through to the workspace fallback and
+  // showed an unrelated "운영공간" page; send it to the real studio path instead.
+  if(['GET','HEAD'].includes(request.method)&&(path==='/study/live'||path.startsWith('/study/live/'))){
+    const target=new URL(request.url);target.pathname='/edu'+path;
+    return new Response(null,{status:308,headers:{location:target.toString(),'cache-control':'no-store','x-ekodi-route':'edu-study-live-alias','x-robots-tag':'noindex, nofollow'}});
   }
   const executionSurface=executionSurfaceForPath(path);if(executionSurface){
     const rootRedirect=canonicalExecutionRootRedirect(request,executionSurface);if(rootRedirect)return rootRedirect;

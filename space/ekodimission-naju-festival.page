@@ -14,7 +14,7 @@
 <script src="/ekodimission/assets/shell.js" defer></script><script src="/ekodimission/assets/site.js" defer></script>
 </head>
 <body>
-<header class="mission-site-header"><a class="mission-brand" href="/ekodimission"><span class="mission-brand-mark">E</span><span><strong>에코디선교회</strong><small>EKODI MISSION</small></span></a><nav aria-label="주요 메뉴" data-mission-nav></nav></header>
+<header class="mission-site-header"><a class="mission-brand" href="/ekodimission"><span class="mission-brand-mark" data-mission-ci="open-table" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" focusable="false"><path d="M10 25 H54 M20 25 V46 M44 25 V46 M13 48 Q32 57 51 48" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span><strong>에코디선교회</strong><small>EKODI MISSION</small></span></a><nav aria-label="주요 메뉴" data-mission-nav></nav></header>
 <main class="subpage naju-activity-page" data-event-meta
   data-event-url="https://ekodi.kr/ekodimission/activities/261010-naju-yeongsan"
   data-event-title="에코디선교회 10월 10일 토요모임과 나주 영산강축제"
@@ -58,5 +58,5 @@
     <p class="share-status" data-share-status aria-live="polite"></p>
   </section>
 </main>
-<footer class="site-footer"><div><strong>에코디선교회</strong><p>곁을 내어주는 선교, 함께 먹는 복음.</p></div><p class="footnote">2026.10.10 · 나주 영산강정원</p></footer>
+<footer class="site-footer"><div><strong>에코디선교회</strong><p>말씀대로 살아내고, 곁을 내어주며, 사람과 공동체를 살려내는 선교.</p></div><p class="footnote">EKODI MISSION · ekodi.kr/ekodimission</p></footer>
 </body></html>

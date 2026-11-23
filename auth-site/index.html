@@ -32,6 +32,7 @@
     html[data-seamless-sso="1"] #authStatus,
     html[data-seamless-sso="1"] #accessStatus{text-align:center}
     .account-choice{display:grid;gap:10px;margin-top:14px}.account-choice.hide{display:none}
+    html[data-ekodi-login-routing] body::after{content:'로그인 중입니다… 잠시만 기다려 주세요';position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(246,247,244,.88);color:#1d4d3a;font-weight:700;font-size:1.05rem;cursor:progress}
   </style>
 </head>
 <body>
@@ -52,7 +53,7 @@
         <button id="googleRetry" class="google-btn hide" type="button"><span class="gmark">G</span><span>다시 시도</span></button>
         <button id="cancelSignedOut" class="cancel-btn hide" type="button">취소하고 돌아가기</button>
         <p class="micro" id="signedOutCopy">현재 활성화된 로그인 수단으로 본인을 확인하면 고유 EKODI ID와 연결되고, 이후에는 통합 로그인 상태를 재사용합니다.</p>
-        <div id="authStatus" class="notice loading" role="status" aria-live="polite">로그인 화면을 불러오는 중입니다… 잠시만 기다려 주세요.</div>
+        <div id="authStatus" class="notice loading" role="status" aria-live="polite"><span>로그인 화면을 불러오는 중입니다…<br>잠시만 기다려 주세요.</span></div>
       </div>
 
       <div id="signedIn" class="hide">
