@@ -102,6 +102,7 @@ export function deskMessage(essay) {
 // JOURNAL-ESSAY-LENGTH-20261122: 무료 Workers AI는 한 번에 350~520자만 써서(11/15~11/22 매일 draft_unusable) 900자 기준을 못 넘었다.
 // 앞부분을 쓴 뒤 '이어 쓰기'를 최대 ESSAY_CONTINUE_LIMIT번 더 요청해 한 편을 완성한다. 모두 무료 경로(writeText)만 쓴다.
 export const ESSAY_CONTINUE_LIMIT = 4;
+export const ESSAY_PUBLISH_GRACE_MS = 90 * 60_000;
 const ESSAY_SYSTEM = '너는 에코디저널의 필자 에코디언이다. 한국어로만 쓴다.';
 export function essayContinuePrompt(topic, soFar, last) {
   const [, , label, brief] = topic;
@@ -141,7 +142,9 @@ export async function writeEssayDraft(writeText, topic) {
 export async function essayTick(db, writeText, { notify = null, now = Date.now() } = {}) {
   await ensureEssayTable(db);
   const out = { published: [], submitted: null, skipped: '' };
-  const due = (await db.prepare("SELECT id, slug FROM publishing_journal_essays WHERE status='submitted' AND publish_at<=?").bind(nowIso(now)).all()).results || [];
+  // JOURNAL-ESSAY-PUBLISH-GRACE-20261123: 투고는 실행 중간(예: 09:46)에 기록되고 다음 날 실행은 09:40에 시작한다.
+  // 몇 분 차이로 하루가 더 밀리지 않도록 다음 정기 실행이 90분 안쪽으로 앞서면 게재한다(검토 기간은 22시간 30분 이상 유지).
+  const due = (await db.prepare("SELECT id, slug FROM publishing_journal_essays WHERE status='submitted' AND publish_at<=?").bind(nowIso(now + ESSAY_PUBLISH_GRACE_MS)).all()).results || [];
   for (const row of due) {
     await db.prepare("UPDATE publishing_journal_essays SET status='published', published_at=? WHERE id=? AND status='submitted'").bind(nowIso(now), row.id).run();
     out.published.push(row.slug);
