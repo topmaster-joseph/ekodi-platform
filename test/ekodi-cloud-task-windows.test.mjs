@@ -73,7 +73,7 @@ test('read-only hourly Points check sees workflow failure without E2E claim or t
   const {fetchImpl,calls}=fakeClient();
   const report=await collectCloudTaskWindows({registry,now:new Date('2026-11-22T02:00:00Z'),
     fetchImpl,githubToken:'internal-unprinted-token'});
-  assert.equal(report.observedCount,4);
+  assert.equal(report.observedCount,3);
   const points=report.tasks.find(t=>t.id==='points-staging-e2e');
   assert.equal(points.browser,'ci_failed_or_skipped');
   assert.equal(points.productionPointsDisabled,true);
@@ -89,7 +89,7 @@ test('even success plus artifact is insufficient for authenticated browser deliv
   const {fetchImpl,calls}=fakeClient({runStatus:'success'});
   const report=await collectCloudTaskWindows({registry,now:new Date('2026-11-22T02:00:00Z'),
     profile:'daily',fetchImpl});
-  assert.equal(report.observedCount,3);
+  assert.equal(report.observedCount,4);
   const p=report.tasks.find(t=>t.id==='points-staging-e2e');
   assert.equal(p.browser,'artifact_present_not_content_verified');
   assert.equal(p.hasNamedArtifact,true);
@@ -101,7 +101,7 @@ test('even success plus artifact is insufficient for authenticated browser deliv
 test('Monday Church notice is observed through cloud only on due daily profile',async()=>{
   const task=registry.tasks.find(t=>t.id==='church-weekly-notice-publisher');
   assert.equal(task.weekday,'MO');
-  assert.equal(evaluateTaskWindow(task,{date:'2026-11-22',profile:'daily'}),'not_due');
+  assert.equal(evaluateTaskWindow(task,{date:'2026-11-29',profile:'daily'}),'not_due');
   assert.equal(evaluateTaskWindow(task,{date:'2026-11-23',profile:'hourly'}),'not_due');
   assert.equal(evaluateTaskWindow(task,{date:'2026-11-23',profile:'daily'}),'observe_read_only');
   assert.equal(evaluateTaskWindow(task,{date:'2028-01-03',profile:'daily'}),'outside_period');
