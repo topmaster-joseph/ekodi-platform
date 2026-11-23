@@ -257,3 +257,5 @@ body.church-doc-editing{overflow:hidden}
 .church-doc-sheet td,.church-doc-sheet th{overflow:hidden;position:relative}
 .church-doc-sheet.church-doc-resize-cursor,.church-doc-sheet.church-doc-resize-cursor *{cursor:col-resize!important}
 body.church-doc-resizing,body.church-doc-resizing *{cursor:col-resize!important;user-select:none!important}
+.church-doc-sheet{touch-action:pan-y}
+.church-doc-sheet.church-doc-resize-cursor td,.church-doc-sheet.church-doc-resize-cursor th{box-shadow:inset 0 0 0 9999px rgba(46,144,250,.03)}
