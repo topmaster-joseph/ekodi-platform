@@ -51,22 +51,23 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   const genericService=clean.match(/^\/([^/]+)\/([^/]+)\/admin(?:\/([^/]+)(?:\/[^/]+)*)?$/i);
   const root=clean.match(/^\/([^/]+)\/admin(?:\/([^/]+)(?:\/[^/]+)*)?$/i);
   const mall=Boolean(standaloneMall);
-  const workspace=(standaloneMall?'ekodibiz':genericService?.[1]||root?.[1]||'ekodibiz').toLowerCase();
+  const publicWorkspace=(standaloneMall?'ekodibiz':genericService?.[1]||root?.[1]||'ekodibiz').toLowerCase();
+  const workspace=publicWorkspace==='mission'?'ekodimission':publicWorkspace;
   const service=mall?'mall':(genericService?.[2]?.toLowerCase()||null);
   const MISSION_DEFAULT_ACTIVITY='260926-chuseok-open-table';
   const MISSION_ACTIVITY_PUBLIC_PATHS=Object.freeze({
-    '260926-chuseok-open-table':'/ekodimission/apply/260926-open-table',
-    '261003-autumn-community-trip':'/ekodimission/apply/261003-autumn-trip'
+    '260926-chuseok-open-table':'/mission/apply/260926-open-table',
+    '261003-autumn-community-trip':'/mission/apply/261003-autumn-trip'
   });
   function missionActivityPublicUrl(activity,activityKey){
     const candidate=[activity?.public_url,activity?.application_url,activity?.public_path].find(value=>typeof value==='string'&&value.trim());
     if(candidate){
       try{
         const url=new URL(candidate,location.origin);
-        if(url.origin===location.origin&&url.pathname.startsWith('/ekodimission/'))return url.pathname+url.search+url.hash;
+        if(url.origin===location.origin&&/^\/(?:ekodimission|mission)\//.test(url.pathname))return url.pathname.replace(/^\/ekodimission(?=\/|$)/,'/mission')+url.search+url.hash;
       }catch{}
     }
-    return MISSION_ACTIVITY_PUBLIC_PATHS[activityKey]||'/ekodimission/activities';
+    return MISSION_ACTIVITY_PUBLIC_PATHS[activityKey]||'/mission/activities';
   }
   const defaultSection='overview';
   const rawSection=standaloneMall?.[1]||(genericService?.[3]||root?.[2]||((workspace==='ekodibiz'||workspace==='ekodi-biz')&&!service?'business-center':defaultSection));
@@ -74,7 +75,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   const CHANNEL_TARGETS=new Map((CHANNEL_CATALOG||[]).map(target=>[target.id,target]));
   const CHANNEL_PROVIDERS=Object.freeze(Object.fromEntries((CHANNEL_CATALOG||[]).map(target=>[target.id,target])));
   const CHANNEL_AUTH_PATHS=Object.freeze({youtube:'/v1/connect/youtube/start',meta:'/v1/connect/meta/start',threads:'/v1/connect/threads/start'});
-  const base=`/${workspace}`;
+  const base=`/${publicWorkspace}`;
   const adminBase=standaloneMall?'/ekodimall/admin':service==='mall'?'/ekodimall/admin':service?`${base}/${service}/admin`:`${base}/admin`;
   const sectionHref=key=>key==='overview'?`${adminBase}/overview`:`${adminBase}/${key==='channels'?'channel-settings':key}`;
   const $=id=>document.getElementById(id);
@@ -705,7 +706,7 @@ const CHANNEL_AUTOMATION='/marketing-publish-api';
   async function activityRpc(name,body={}){
     const token=await accessToken();if(!token)throw Object.assign(new Error('AUTH_REQUIRED'),{code:'AUTH_REQUIRED',status:401});
     const missionGateway=workspace==='ekodimission';
-    const r=await fetch(missionGateway?'/ekodimission/api/admin/activity-rpc':SUPABASE_URL+'/rest/v1/rpc/'+encodeURIComponent(name),{method:'POST',headers:{...(missionGateway?{}:{apikey:SUPABASE_KEY}),authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify(missionGateway?{rpc:name,args:body}:body),cache:'no-store'});
+    const r=await fetch(missionGateway?'/mission/api/admin/activity-rpc':SUPABASE_URL+'/rest/v1/rpc/'+encodeURIComponent(name),{method:'POST',headers:{...(missionGateway?{}:{apikey:SUPABASE_KEY}),authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify(missionGateway?{rpc:name,args:body}:body),cache:'no-store'});
     const d=await r.json().catch(()=>({}));if(!r.ok)throw Object.assign(new Error(d.message||d.error||('activity_'+r.status)),{status:r.status,code:d.code||d.error});return d;
   }
   const ACTIVITY_STATUS_LABEL=Object.freeze({applied:'신청',waitlist:'대기',confirmed:'확정',attended:'참석',no_show:'불참',cancelled:'취소'});
