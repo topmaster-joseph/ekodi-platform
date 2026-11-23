@@ -766,7 +766,7 @@ export default {
           return withHostSecurity(new Response(null,{status:405,headers:{allow:'GET, HEAD'}}),PUBLIC_CSP,'no-store','bizcards-method-denied');
         }
         if (!allowed.has(url.pathname)) return withHostSecurity(new Response('Not found',{status:404}),PUBLIC_CSP,'no-store','bizcards-not-found');
-        const documentPath = (url.pathname === '/bizcards' || url.pathname === '/bizcards/') ? '/bizcards/index.html' : url.pathname;
+        const documentPath = (url.pathname === '/bizcards' || url.pathname === '/bizcards/' || url.pathname === '/bizcards/index.html') ? '/bizcards/' : url.pathname;
         const response = await env.ASSETS.fetch(assetRequest(request, documentPath));
         const secured = withHostSecurity(response,PUBLIC_CSP,'no-store','bizcards-studio');
         secured.headers.set('X-Robots-Tag','noindex, nofollow, noarchive');
