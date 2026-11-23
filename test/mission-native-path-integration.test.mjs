@@ -41,7 +41,7 @@ test('HEAD /mission is directly serviced without a redirect or body',async()=>{
 test('Cloudflare routes Mission through Worker before static fallback without sacrificing other critical roots',async()=>{
   const {readFile}=await import('node:fs/promises');
   const wrangler=await readFile(new URL('../wrangler.site.toml',import.meta.url),'utf8');
-  const entries=JSON.parse(wrangler.match(/run_worker_first\\s*=\\s*(\\[[^\\]]*\\])/)[1]);
+  const entries=JSON.parse(wrangler.match(/run_worker_first\s*=\s*(\[[^\]]*\])/)[1]);
   assert.equal(entries.length,100,'Cloudflare worker-first budget must stay <= 100');
   const runs=path=>{
     const regex=pattern=>new RegExp('^'+pattern.split('*').map(part=>part.replace(/[.*+?^\\$\\{\\}()|[\\]\\\\]/g,'\\\\$&')).join('.*')+'$').test(path);
