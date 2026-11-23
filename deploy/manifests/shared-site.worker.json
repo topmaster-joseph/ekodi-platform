@@ -637,8 +637,8 @@
         "expect": [
           "EKODI MISSION",
           "data-mission-nav",
-          "/ekodimission/assets/shell.css",
-          "/ekodimission/assets/shell.js"
+          "/mission/assets/shell.css",
+          "/mission/assets/shell.js"
         ],
         "headerExpect": [
           "x-ekodi-route: ekodimission-public",
