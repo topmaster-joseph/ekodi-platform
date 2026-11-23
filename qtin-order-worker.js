@@ -322,7 +322,8 @@ export async function dispatchDueQtinNotices(env, now = new Date(), onlyOrderId 
         });
       }
     } catch { outcome = { ok: false, code: 'NOTIFIER_RPC_FAILED' }; }
-    if (outcome?.ok) {
+    // Only gateway-accepted Web Push counts as phone alert; email alone is insufficient.
+    if (outcome?.push === true) {
       await env.DB.prepare("UPDATE qtin_operator_notice_outbox SET status='sent', sent_at=?, last_error='' WHERE order_id=? AND status='sending'")
         .bind(at, row.order_id).run();
       sent += 1;
