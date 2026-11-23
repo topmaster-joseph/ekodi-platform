@@ -100,6 +100,7 @@ on:
       - 'invest-admin.js'
       - 'invest-admin.css'
       - 'platform-router-entry-worker.js'
+      - 'content-protection-policy.js'
       - 'ekodibiz-agency-route.js'
       - 'test/ekodibiz-ai-agency-canonical-route.test.mjs'
       - 'scripts/verify-ekodibiz-agency-admin-alias-live.mjs'

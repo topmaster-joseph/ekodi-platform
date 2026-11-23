@@ -47,7 +47,7 @@ test('CSP is extended with the exact guard asset, replacing a lone none',()=>{
 test('protected HTML gets no-store, trace header and stripped source map headers',async()=>{
   const upstream=new Response('<html><head></head><body>x</body></html>',{headers:{'content-type':'text/html; charset=utf-8','cache-control':'public, max-age=60','SourceMap':'/a.js.map','content-security-policy':"script-src 'self'"}});
   const response=await applyContentProtection(upstream,new Request('https://ekodi.kr/admin/sites',{headers:{'cf-ray':'abc123'}}),{EKODI_CONTENT_TRACE_SECRET:'s'.repeat(40)});
-  assert.equal(response.headers.get('x-ekodi-content-guard'),'v1');
+  assert.equal(response.headers.get('x-ekodi-content-guard'),'v2');
   assert.match(response.headers.get('x-ekodi-trace'),/^[0-9A-F]{12}$/);
   assert.equal(response.headers.get('cache-control'),'no-store');
   assert.equal(response.headers.get('sourcemap'),null);
