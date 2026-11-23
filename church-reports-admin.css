@@ -259,3 +259,8 @@ body.church-doc-editing{overflow:hidden}
 body.church-doc-resizing,body.church-doc-resizing *{cursor:col-resize!important;user-select:none!important}
 .church-doc-sheet{touch-action:pan-y}
 .church-doc-sheet.church-doc-resize-cursor td,.church-doc-sheet.church-doc-resize-cursor th{box-shadow:inset 0 0 0 9999px rgba(46,144,250,.03)}
+.church-doc-sheet.church-doc-resize-row,.church-doc-sheet.church-doc-resize-row *{cursor:row-resize!important}
+body.church-doc-resizing-row,body.church-doc-resizing-row *{cursor:row-resize!important;user-select:none!important}
+.church-doc-sheet td.cdoc-rowsplit{padding:0!important;border-left:0!important;border-right:0!important;vertical-align:top}
+.church-doc-sheet table.cdoc-rowsplit-inner{width:100%!important;margin:0!important;height:100%;table-layout:fixed!important}
+.church-doc-sheet table.cdoc-rowsplit-inner>tbody>tr>td,.church-doc-sheet table.cdoc-rowsplit-inner>tbody>tr>th{border-top:0!important;border-bottom:0!important}
