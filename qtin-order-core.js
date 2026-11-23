@@ -80,7 +80,7 @@ export function effectiveCampaignWindow(campaign) {
 
 /** The issue whose intake is current or next relative to `now`. */
 export function targetIssueFor(now = new Date()) {
-  // Every intake window (20th–25th of month M) is for issue M+1, so the
+  // Every intake window (15th–25th of month M) is for issue M+1, so the
   // current-or-next window always belongs to next month's issue.
   const { year, month } = kstParts(now);
   const next = addMonth(year, month, 1);
