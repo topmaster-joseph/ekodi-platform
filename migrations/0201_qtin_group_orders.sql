@@ -1,13 +1,13 @@
 -- EKODI-QTIN-GROUP-ORDER-001
 -- 큐티인(QTIN) 월간 공동구매 신청·결제·발주 기록 (에코디교회 · 에코디선교회 공용).
--- 매월 15일 다음달호 신청을 열고 25일에 마감한다. 결제(토스페이먼츠) 승인이 서버에서
+-- 매월 20일 다음달호 신청을 열고 25일에 마감한다. 결제(토스페이먼츠) 승인이 서버에서
 -- 확인된 신청만 'paid'(완료)로 집계한다. Additive only: 기존 테이블·데이터를 바꾸지 않는다.
 
 CREATE TABLE IF NOT EXISTS qtin_campaigns (
   id TEXT PRIMARY KEY,                       -- 대상 월호 'YYYY-MM'
   target_year INTEGER NOT NULL,
   target_month INTEGER NOT NULL,
-  opens_at TEXT NOT NULL,                    -- ISO UTC (기본: 전월 15일 00:00 KST)
+  opens_at TEXT NOT NULL,                    -- ISO UTC (기본: 전월 20일 00:00 KST)
   closes_at TEXT NOT NULL,                   -- ISO UTC (기본: 전월 25일 23:59:59 KST)
   status TEXT NOT NULL DEFAULT 'scheduled',  -- scheduled | open | closed | cancelled (표시용, 실제 판정은 시각 기준)
   manual_state TEXT NOT NULL DEFAULT '',     -- '' | force_open | force_closed
