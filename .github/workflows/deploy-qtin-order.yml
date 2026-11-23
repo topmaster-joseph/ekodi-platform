@@ -24,6 +24,7 @@ on:
       - 'migrations/0203_qtin_product_intros.sql'
       - 'migrations/0204_qtin_order_delivery.sql'
       - 'migrations/0205_qtin_operator_notice_outbox.sql'
+      - 'migrations/202611240210_qtin_order_approval.sql'
       - 'wrangler.qtin-order.toml'
       - 'wrangler.qtin-order.staging.toml'
       - 'test/qtin-order.test.mjs'
@@ -145,6 +146,7 @@ jobs:
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.qtin-order.toml --file migrations/0203_qtin_product_intros.sql
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.qtin-order.toml --file migrations/0204_qtin_order_delivery.sql
           npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.qtin-order.toml --file migrations/0205_qtin_operator_notice_outbox.sql
+          npx --yes wrangler@${WRANGLER_VERSION} d1 execute ekodi-auth --remote --config wrangler.qtin-order.toml --file migrations/202611240210_qtin_order_approval.sql
       - name: Deploy production worker
         shell: bash
         run: |

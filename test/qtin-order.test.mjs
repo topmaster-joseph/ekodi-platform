@@ -7,7 +7,7 @@ import {
   defaultWindow, effectiveCampaignWindow, targetIssueFor, inPreparationWindow, campaignState, parseIssueTitle, titleMatchesIssue, isQtinFamily,
   extractItemIds, parseProductDetail, qtinAudienceGroup, buildOrderDraft, assessConfirmation, csvEscape, normalizePhone, newOrderId, isValidTossOrderId, kstToUtc, CHURCH_PICKUP_ADDRESS,
 } from '../qtin-order-core.js';
-import worker, { handleRequest, syncCampaign, runScheduled, dispatchDueQtinNotices, confirmPayment, handleWebhook, renderOrderPage, renderAdminPage } from '../qtin-order-worker.js';
+import worker, { NOTICE_CRON, handleRequest, syncCampaign, runScheduled, dispatchDueQtinNotices, confirmPayment, handleWebhook, renderOrderPage, renderAdminPage } from '../qtin-order-worker.js';
 
 // ---------- in-memory D1 shim ----------
 function d1() {
@@ -32,6 +32,7 @@ async function freshEnv(extra = {}) {
   DB.raw.exec(await readFile(new URL('../migrations/0203_qtin_product_intros.sql', import.meta.url), 'utf8'));
   DB.raw.exec(await readFile(new URL('../migrations/0204_qtin_order_delivery.sql', import.meta.url), 'utf8'));
   DB.raw.exec(await readFile(new URL('../migrations/0205_qtin_operator_notice_outbox.sql', import.meta.url), 'utf8'));
+  DB.raw.exec(await readFile(new URL('../migrations/202611240210_qtin_order_approval.sql', import.meta.url), 'utf8'));
   return { DB, PUBLIC_BASE_URL: 'https://ekodi.kr/qtin', OPERATOR_EMAILS: 'topmaster.joseph@gmail.com', PAYMENTS_ENABLED: 'true', TOSS_CLIENT_KEY: 'live_ck_abc', TOSS_SECRET_KEY: 'live_sk_abc', QTM_SEED_ITEM_IDS: '1719304225', ...extra };
 }
 
@@ -401,7 +402,8 @@ test('pending orders expire on schedule and a closed page disables payment', asy
 test('worker contract: routes, cron and secrets stay out of config', async () => {
   const prod = await readFile(new URL('../wrangler.qtin-order.toml', import.meta.url), 'utf8');
   assert.match(prod, /pattern = "ekodi\.kr\/qtin\*"/);
-  assert.match(prod, /crons = \["0 15 \* \* \*", "0 3 \* \* \*"\]/);
+  assert.match(prod, /crons = \["0 15 \* \* \*", "0 3 \* \* \*", "15,45 \* \* \* \*"\]/);
+  assert.ok(prod.includes(`"${NOTICE_CRON}"`), "notice-only cron string must match the worker constant");
   assert.match(prod, /database_name = "ekodi-auth"/);
   assert.match(prod, /QTIN_OPERATOR_NOTIFY_ENABLED = "true"/);
   assert.match(prod, /binding = "OPERATOR_NOTIFY"\s*service = "ekodi-auth-api"\s*entrypoint = "OperatorNotifier"/);
@@ -1086,4 +1088,113 @@ test('Church and Mission QTIN pages share one purchase engine but match the corr
   const general=renderOrderPage(fixture,{org:''});
   assert.match(general,/EKODI QTIN/);
   assert.doesNotMatch(general,/href="\/qtin\/church" aria-current="page"/);
+});
+
+// ---------- EKODI-QTIN-ORDER-APPROVAL-001 ----------
+async function paidEnv(notify) {
+  const env = await openEnvWithProducts({ QTIN_OPERATOR_NOTIFY_ENABLED: 'true', OPERATOR_NOTIFY: { notify } });
+  const order = await pendingOrder(env);
+  await env.DB.prepare("UPDATE qtin_orders SET status='paid', approved_at=? WHERE id=?").bind(OPEN_NOW.toISOString(), order.orderId).run();
+  return { env, order };
+}
+const CLOSE_TICK = kstToUtc(2026, 11, 26, 0, 0, 0); // the 00:00 KST cron right after the 25th 23:59:59 close
+
+test('no approval request while intake is still open', async () => {
+  const sent = [];
+  const { env } = await paidEnv(async input => { sent.push(input); return { ok: true, push: true }; });
+  sent.length = 0;
+  await runScheduled(env, kstToUtc(2026, 11, 25, 23, 0, 0), { noticesOnly: true });
+  assert.equal(sent.length, 0);
+  assert.equal((await env.DB.prepare('SELECT COUNT(*) AS n FROM qtin_order_approvals').first()).n, 0);
+});
+
+test('close sends one PII-free final-order approval push, then reminds daily until approved', async () => {
+  const sent = [];
+  const { env } = await paidEnv(async input => { sent.push(input); return { ok: true, push: true }; });
+  sent.length = 0;
+  const report = await runScheduled(env, CLOSE_TICK, { noticesOnly: true });
+  assert.equal(report.approvals.created, 1);
+  assert.equal(sent.length, 1);
+  assert.match(sent[0].subject, /2026년 12월호 마감 · 최종 발주 승인 필요/);
+  assert.match(sent[0].lines[0], /결제완료 1건 · 2권/);
+  assert.ok(sent[0].lines.some(l => /큰글씨.*2권/.test(l)));
+  assert.equal(sent[0].link, 'https://ekodi.kr/qtin/admin?campaign=2026-12#approval');
+  assert.doesNotMatch(JSON.stringify(sent), /김선교|010-9999-0000|buyer@gmail.com/);
+  await runScheduled(env, new Date(CLOSE_TICK.getTime() + 30 * 60000), { noticesOnly: true });
+  assert.equal(sent.length, 1, 'no duplicate within the reminder interval');
+  await runScheduled(env, new Date(CLOSE_TICK.getTime() + 24 * 3600000 + 60000), { noticesOnly: true });
+  assert.equal(sent.length, 2);
+  assert.match(sent[1].subject, /^\[다시 알림\]/);
+});
+
+test('failed phone push is retried soon and not counted as delivered', async () => {
+  let ok = false; const sent = [];
+  const { env } = await paidEnv(async input => { sent.push(input); return ok ? { ok: true, push: true } : { ok: false, push: false, code: 'OPERATOR_PUSH_NO_DEVICE' }; });
+  sent.length = 0;
+  await runScheduled(env, CLOSE_TICK, { noticesOnly: true });
+  let row = await env.DB.prepare('SELECT * FROM qtin_order_approvals').first();
+  assert.equal(row.notice_count, 0);
+  assert.equal(row.notice_last_error, 'OPERATOR_PUSH_NO_DEVICE');
+  ok = true;
+  await runScheduled(env, new Date(CLOSE_TICK.getTime() + 61 * 60000), { noticesOnly: true });
+  row = await env.DB.prepare('SELECT * FROM qtin_order_approvals').first();
+  assert.equal(row.notice_count, 1);
+  assert.equal(sent.length, 2);
+});
+
+test('admin approval requires a closed campaign and matching totals; reminders stop after approval', async () => {
+  const sent = [];
+  const { env, order } = await paidEnv(async input => { sent.push(input); return { ok: true, push: true }; });
+  const auth = body => ({ method: 'POST', headers: { authorization: 'Bearer tok', 'content-type': 'application/json' }, body: JSON.stringify(body || {}) });
+  let sb = mockSupabase('topmaster.joseph@gmail.com');
+  try {
+    const early = await handleRequest(new Request('https://ekodi.kr/qtin/api/admin/campaigns/2026-12/approve', auth({ expectedOrders: 1, expectedAmount: 9000 })), env);
+    assert.equal(early.status, 409, 'cannot approve while intake is open');
+  } finally { sb.restore(); }
+  await env.DB.prepare("UPDATE qtin_campaigns SET manual_state='force_closed' WHERE id='2026-12'").run();
+  await runScheduled(env, CLOSE_TICK, { noticesOnly: true });
+  sb = mockSupabase('topmaster.joseph@gmail.com');
+  try {
+    const summary = await (await handleRequest(new Request('https://ekodi.kr/qtin/api/admin/campaigns/2026-12', { headers: { authorization: 'Bearer tok' } }), env)).json();
+    assert.equal(summary.approval.status, 'pending');
+    const live = summary.approvalLive;
+    assert.equal(live.orders, 1);
+    const blocked = await handleRequest(new Request('https://ekodi.kr/qtin/api/admin/campaigns/2026-12/mark-ordered', auth()), env);
+    assert.equal(blocked.status, 409, 'mark-ordered needs approval first');
+    const stale = await handleRequest(new Request('https://ekodi.kr/qtin/api/admin/campaigns/2026-12/approve', auth({ expectedOrders: 2, expectedAmount: live.amount })), env);
+    assert.equal(stale.status, 409);
+    const res = await handleRequest(new Request('https://ekodi.kr/qtin/api/admin/campaigns/2026-12/approve', auth({ expectedOrders: live.orders, expectedAmount: live.amount })), env);
+    assert.equal(res.status, 200);
+    assert.equal((await res.json()).approval.status, 'approved');
+    const marked = await (await handleRequest(new Request('https://ekodi.kr/qtin/api/admin/campaigns/2026-12/mark-ordered', auth()), env)).json();
+    assert.equal(marked.updated, 1);
+  } finally { sb.restore(); }
+  assert.equal((await env.DB.prepare('SELECT fulfillment_status FROM qtin_orders WHERE id=?').bind(order.orderId).first()).fulfillment_status, 'ordered');
+  const before = sent.length;
+  await runScheduled(env, new Date(CLOSE_TICK.getTime() + 3 * 86400000), { noticesOnly: true });
+  assert.equal(sent.length, before, 'approved campaigns are never re-notified');
+});
+
+test('read-only staff cannot approve', async () => {
+  const { env } = await paidEnv(async () => ({ ok: true, push: true }));
+  await env.DB.prepare("UPDATE qtin_campaigns SET manual_state='force_closed' WHERE id='2026-12'").run();
+  const original = globalThis.fetch;
+  globalThis.fetch = async url => String(url).includes('/auth/v1/user')
+    ? new Response(JSON.stringify({ id: 'u2', email: 'member@gmail.com', email_confirmed_at: '2026-01-01' }), { status: 200 })
+    : new Response(JSON.stringify([{ role: 'member' }]), { status: 200 });
+  try {
+    const res = await handleRequest(new Request('https://ekodi.kr/qtin/api/admin/campaigns/2026-12/approve', { method: 'POST', headers: { authorization: 'Bearer tok' }, body: '{"expectedOrders":1,"expectedAmount":9000}' }), env);
+    assert.equal(res.status, 403);
+  } finally { globalThis.fetch = original; }
+});
+
+test('notices-only cron never triggers QTM sync; admin page carries the approval panel', async () => {
+  const env = await freshEnv();
+  let fetched = 0;
+  const report = await runScheduled(env, OPEN_NOW, { noticesOnly: true, fetchPage: async () => { fetched++; return ''; } });
+  assert.equal(fetched, 0);
+  assert.equal(report.sync ?? null, null);
+  const page = renderAdminPage('n');
+  assert.match(page, /최종 발주 승인/);
+  assert.match(page, /id="approvalBox"/);
 });
