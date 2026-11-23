@@ -65,7 +65,8 @@ export function validateMissionPageSource(source,label='mission page'){
   return true;
 }
 
-export function validateMissionShellSource(source){
+export function validateMissionShellSource(source,{publicProjection=false}={}){
+  const viewPath=href=>publicProjection?missionPublicReferences(href):href;
   const errors=[];
   for(const marker of [
     "window.EKODI_MISSION_NAVIGATION_CONTRACT",
@@ -81,8 +82,8 @@ export function validateMissionShellSource(source){
   ])if(!source.includes(marker))errors.push(`missing ${marker}`);
   // Six visible top-level routes; secondary activity routes remain in a separate tab hub.
   const sixMenu=REQUIRED_MISSION_MENU.every(([href,label])=>
-    source.includes("Object.freeze({href:'"+href+"',label:'"+label+"'})"));
-  const ordered=REQUIRED_MISSION_MENU.map(([href])=>source.indexOf("href:'"+href+"'"));
+    source.includes("Object.freeze({href:'"+viewPath(href)+"',label:'"+label+"'})"));
+  const ordered=REQUIRED_MISSION_MENU.map(([href])=>source.indexOf("href:'"+viewPath(href)+"'"));
   if(!sixMenu||ordered.some(index=>index<0)||ordered.some((index,i)=>i>0&&index<=ordered[i-1]))
     errors.push('missing canonical six-link Mission menu order');
   const tabbedNav=[

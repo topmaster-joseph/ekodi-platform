@@ -184,11 +184,12 @@
       box.querySelectorAll('[data-cmd]').forEach(b=>b.addEventListener('mousedown',e=>e.preventDefault()));
       box.querySelectorAll('[data-cmd]').forEach(b=>b.addEventListener('click',()=>{const c=b.dataset.cmd;if(c==='red')markRed(sheet);else if(c==='black')unmarkRed(sheet);else document.execCommand(c);sheet.dispatchEvent(new Event('input'))}));
       box.querySelector('[data-save]').addEventListener('click',()=>{dirty=true;void save()});
-      box.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();dirty=true;void save()}});
+      box.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();dirty=true;void save()}else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='p'){e.preventDefault();e.stopPropagation();void doPrint()}});
       window.addEventListener('beforeunload',warn);
     }
     function warn(e){if(dirty){e.preventDefault();e.returnValue=''}}
-    box.querySelector('[data-print]').addEventListener('click',async()=>{if(dirty)await save();document.body.classList.add('church-doc-printing');window.print();setTimeout(()=>document.body.classList.remove('church-doc-printing'),500)});
+    const doPrint=async()=>{if(dirty)await save();const b=document.body;b.classList.add('church-doc-printing','ekodi-allow-print');const done=()=>{b.classList.remove('church-doc-printing','ekodi-allow-print');window.removeEventListener('afterprint',done)};window.addEventListener('afterprint',done);window.print();setTimeout(done,60000)};
+    box.querySelector('[data-print]').addEventListener('click',()=>{void doPrint()});
     box.querySelector('[data-close]').addEventListener('click',async()=>{if(dirty&&!(await save())&&!confirm('저장되지 않은 내용이 있습니다. 그래도 닫을까요?'))return;window.removeEventListener('beforeunload',warn);if(opts.standalone){try{window.opener?.postMessage({type:'ekodi:church-doc-saved',id},location.origin)}catch{}window.close();const u=new URL(location.href);u.searchParams.delete('edit');history.replaceState(null,'',u.toString())}box.remove();document.body.classList.remove('church-doc-editing');void loadDocuments()});
     if(opts.standalone)document.title=`${doc.title} · 문서 편집`;
     if(w)sheet.focus();
