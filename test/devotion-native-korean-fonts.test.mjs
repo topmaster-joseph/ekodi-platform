@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 const workflow = readFileSync(new URL('../.github/workflows/ekodi-native-devotion-guest.yml', import.meta.url), 'utf8');
 
 test('first-party devotional screenshots explicitly provision Korean sans and serif glyphs', () => {
-  assert.match(workflow, /runs-on:\s*ubuntu-latest/);
+  assert.match(workflow, /runs-on:\s*ubuntu-24\.04/);
   assert.match(workflow, /apt-get install -y --no-install-recommends fonts-noto-cjk/);
   assert.match(workflow, /fc-cache -f/);
   assert.match(workflow, /fc-match -f '[^']+' 'Noto Sans CJK KR:lang=ko'/);

@@ -52,7 +52,8 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
   chromium:
-    runs-on: ubuntu-latest
+    # Playwright 1.55.x Chromium does not install on ubuntu-26.04 (ubuntu-latest); keep browser jobs on LTS.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7

@@ -57,7 +57,8 @@ jobs:
   verify:
     if: github.ref == 'refs/heads/main' && needs.reservation_window.outputs.active == 'true'
     needs: reservation_window
-    runs-on: ubuntu-latest
+    # Playwright 1.55.x Chromium does not install on ubuntu-26.04 (ubuntu-latest); keep browser jobs on LTS.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: development
     env:

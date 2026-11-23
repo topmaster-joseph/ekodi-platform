@@ -20,7 +20,8 @@ concurrency:
 jobs:
   chromium-geometry:
     name: Independent desktop/mobile geometry (read-only)
-    runs-on: ubuntu-latest
+    # Playwright 1.55.x Chromium does not install on ubuntu-26.04 (ubuntu-latest); keep browser jobs on LTS.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4

@@ -24,7 +24,8 @@ concurrency:
 jobs:
   tenant-live-e2e:
     if: github.actor == 'topmaster-joseph' && inputs.acknowledge_public_synthetic_broadcast == 'yes'
-    runs-on: ubuntu-latest
+    # Playwright 1.55.x Chromium does not install on ubuntu-26.04 (ubuntu-latest); keep browser jobs on LTS.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

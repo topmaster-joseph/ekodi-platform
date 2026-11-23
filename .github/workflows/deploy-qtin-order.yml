@@ -48,7 +48,8 @@ env:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    # Playwright 1.55.x Chromium does not install on ubuntu-26.04 (ubuntu-latest); keep browser jobs on LTS.
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
@@ -109,7 +110,8 @@ jobs:
   release:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     needs: [validate, staging_gate]
-    runs-on: ubuntu-latest
+    # Playwright 1.55.x Chromium does not install on ubuntu-26.04 (ubuntu-latest); keep browser jobs on LTS.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
