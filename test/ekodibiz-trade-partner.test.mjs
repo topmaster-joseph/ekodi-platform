@@ -24,7 +24,7 @@ test('trade partner and trade admin routes are apex workspace routes',async()=>{
   assert.ok(portal.includes('/ekodibiz\\/trade'));
   assert.ok(admin.includes('/trade\\/admin'));
   // Worker-first route globs must still cover the same two Trade JS assets and critical CSS.
-  const firstRules=JSON.parse(wrangler.match(/run_worker_first\\s*=\\s*(\\[[^\\]]*\\])/)[1]);
+  const firstRules=JSON.parse(wrangler.match(/run_worker_first\s*=\s*(\[[^\]]*\])/)[1]);
   const matches=(rule,path)=>rule===path||(rule.includes('*')&&path.startsWith(rule.split('*')[0])&&path.endsWith(rule.split('*').at(-1)));
   for(const asset of ['/workspace-trade-admin.js','/workspace-trade-portal.css','/workspace-trade-portal.js']){
     assert.ok(firstRules.some(rule=>!rule.startsWith('!')&&matches(rule,asset)),asset);
