@@ -3,8 +3,8 @@
 (function(){
 const $=id=>document.getElementById(id);
 const STORE={
-  bbq:{title:'비비큐 무안청계점',kind:'store',name:'박은희',phone:'061 453 8295',bank:'신한 110 248 100718',url:'https://ekodi.kr/bbq'},
-  pizza:{title:'피자마루 목포대점',kind:'store',name:'박은희',phone:'061 453 8295',bank:'신한 110 248 100718',url:'https://pizzamaru.ekodi.kr/'},
+  bbq:{title:'비비큐 무안청계점',kind:'store',name:'박은희',phone:'061 453 8295',bank:'신한 110 248 100718',url:'https://ekodi.kr/bbqcg'},
+  pizza:{title:'피자마루 목포대점',kind:'store',name:'박은희',phone:'061 453 8295',bank:'신한 110 248 100718',url:'https://ekodi.kr/pizzamaru'},
   cgma:{title:'청계면상인회',kind:'association',name:'정찬균',role:'회장',phone:'010 3501 8542',business:'자담치킨&피자마루',email:'cgma4989@gmail.com',bank:'신한 100 037 318876',url:'http://cgma.or.kr'}
 };
 const MISSION={title:'에코디선교회',name:'정찬균',phone:'010 3501 8542',url:'https://ekodi.kr/mission'};
