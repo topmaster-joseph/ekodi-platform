@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { missionPublicReferences } from '../mission-public-path.js';
 
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export const REQUIRED_MISSION_MENU=Object.freeze([
@@ -157,8 +158,12 @@ export function validateMissionManifest(manifest,entries){
     const request=byPath.get(key);
     if(!request){errors.push(`production manifest missing ${key}`);continue}
     const expects=new Set(Array.isArray(request.expect)?request.expect:[]);
-    // Source files retain stable /ekodimission tenant paths; responses must expose /mission.
-    for(const marker of REQUIRED_SHELL_MARKERS){const rendered=marker.replace('/ekodimission/','/mission/');if(!expects.has(rendered))errors.push(`${key} manifest must verify ${rendered}`);}
+    // Source page assets remain /ekodimission/*; the public Worker projects all
+    // response-body links to /mission/*. Verify the bytes clients actually see.
+    for(const marker of REQUIRED_SHELL_MARKERS){
+      const runtimeMarker=missionPublicReferences(marker);
+      if(!expects.has(runtimeMarker))errors.push(`${key} manifest must verify ${runtimeMarker}`);
+    }
     const headers=new Set(Array.isArray(request.headerExpect)?request.headerExpect:[]);
     for(const header of ['x-ekodi-route: ekodimission-public','x-ekodi-independent-site: true','x-ekodi-publication-status: published'])if(!headers.has(header))errors.push(`${key} manifest must verify ${header}`);
     if(request.rollbackVerify!==false)errors.push(`${key} must set rollbackVerify=false so public mission verification is explicit`);
