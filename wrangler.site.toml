@@ -36,6 +36,13 @@ pattern = "ekodi.kr"
 custom_domain = true
 
 
+# First-party EKODI Mission short URL is a native Shared Site route, not a redirect.
+# Preserve all existing worker_first entries at the Cloudflare 100-route cap;
+# the Mission path has no directly emitted static assets at this root.
+[[routes]]
+pattern = "ekodi.kr/mission*"
+zone_name = "ekodi.kr"
+
 # Canonical Mail contact and send API must reach the Shared Site Worker before asset fallback.
 [[routes]]
 pattern = "ekodi.kr/mail*"

@@ -14,7 +14,7 @@ Effective policy (owner-approved C3 migration, 2026-10-23): **all first-party we
 | EKODI Business | `https://ekodi.kr/ekodibiz/` |
 | EKODI Mall | `https://ekodi.kr/ekodimall/` |
 | EKODI Church | `https://ekodi.kr/ekodichurch/` |
-| EKODI Mission | `https://ekodi.kr/ekodimission/` |
+| EKODI Mission | `https://ekodi.kr/mission/` |
 | EKODI Lab | `https://ekodi.kr/ekodilab/` |
 | Books / publishing | `https://ekodi.kr/books/` and `https://ekodi.kr/publishing/` |
 | Education | `https://ekodi.kr/edu/` |
@@ -45,3 +45,7 @@ Production HTTP routing is apex-only after per-service verification. Development
 A browser gateway like `mail.biz.ekodi.kr` is retired in favor of `ekodi.kr/mail`. Real email identities (`user@biz.ekodi.kr`), however, are **email address domains**, not browser hostnames. Never delete their MX/SPF/DKIM/DMARC or domain verification DNS records without a separate mail migration and verified continuity. Customer-owned domains (for example `cgma.or.kr`) are independent branded contracts; do not delete, hijack or silently rewrite their DNS because EKODI changes its own zone.
 
 This policy supersedes the old "first-level service subdomain", nested function subdomain, customer AI subdomain and webmail redirect architecture described in prior revisions. Cloudflare production DNS retirement is a separate, evidence-gated operation — a source-only change is not proof of retirement.
+
+## EKODI-native brand short paths (2026-11-23)
+
+The owner selected `/mission`, `/church`, `/biz`, `/lab` and `/mall` as the **public URL naming standard** for EKODI-owned brands. `/edu`, `/publishing` and `/volunteer` stay unchanged. Mission is the first implementation slice; the other four are gated by dedicated service-owner reviews. Backend tenant keys and accounting scopes must not be renamed. See `docs/operations/brand-short-paths-20261123.md`.

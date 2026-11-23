@@ -52,9 +52,11 @@ export function resolveSiteBoardRoute(input){
   if(host==='ekodi.kr'||host===INTERNAL_BOARD_SERVICE_HOST){
     const match=url.pathname.match(/^\/([a-z0-9-]+)\/board(?:\/(.*))?\/?$/i);
     if(match){
-      const siteId=safeSiteId(match[1]);
+      const publicSlug=safeSiteId(match[1]);
+      // The short Mission URL must resolve the existing board, not create a new tenant.
+      const siteId=publicSlug==='mission'?'ekodimission':publicSlug;
       const rest=match[2]?'/'+match[2]:'/';
-      return Object.freeze({siteId,tenantSlug:tenantSlugFor(siteId),basePath:`/${siteId}/board`,subPath:rest});
+      return Object.freeze({siteId,tenantSlug:tenantSlugFor(siteId),basePath:`/${publicSlug}/board`,subPath:rest});
     }
   }
   return null;
