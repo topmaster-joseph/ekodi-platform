@@ -6,7 +6,7 @@ export function tenantLivePage(tenant){
   const name=esc(tenant.name),title=esc(tenant.title),home=esc(tenant.home),path=esc(tenant.path),robots=esc(tenant.robots||'index,follow');
   const missionShell=tenant.workspace==='ekodimission';
   const churchShell=tenant.apiTenant==='ekodichurch'&&tenant.path==='/live/church/';
-  const assetVersion=churchShell?'20261123-fresh-language':'20261107-1';
+  const assetVersion=churchShell?'20261123-publication-gate':'20261107-1';
   const shellHead=churchShell?'<link rel="stylesheet" href="/tenant-live-church.css">':missionShell?'<link rel="stylesheet" href="/ekodimission/assets/shell.css">':'';
   const header=churchShell?"<header class=\"church-live-site-header site-header\" id=\"top\">\n    <a class=\"church-live-brand\" href=\"/ekodichurch/\" aria-label=\"에코디교회 홈\"><span class=\"brand-mark\" aria-hidden=\"true\">E</span><span><strong>에코디교회</strong><small>EKODI CHURCH</small></span></a>\n    <button type=\"button\" id=\"churchLiveMenu\" class=\"church-live-menu\" aria-controls=\"churchLiveNav\" aria-expanded=\"false\" aria-label=\"메뉴 열기\"><span></span><span></span></button>\n    <nav id=\"churchLiveNav\" aria-label=\"에코디교회 주요 메뉴\">\n      <a href=\"/ekodichurch/#worship\">예배안내</a>\n      <a href=\"/ekodichurch/#online\" aria-current=\"page\">온라인</a>\n      <a href=\"/ekodichurch/#location\">오시는 길</a>\n      <a href=\"/qtin/church\">큐티인 신청</a>\n      <a href=\"/ekodichurch/my/\">마이페이지</a>\n    </nav>\n    <div class=\"church-live-actions\"><span id=\"liveState\">방송 확인 중</span><a href=\"/ekodichurch/#online\">교회 홈</a></div>\n  </header>"
     :missionShell
@@ -47,7 +47,7 @@ export function tenantLivePage(tenant){
     <section id="churchGuideSlides" role="tabpanel" aria-labelledby="churchGuideSlidesTab" hidden>
       <div class="church-guide-slide" aria-live="polite"><small id="churchGuideSlideKicker"></small><h3 id="churchGuideSlideTitle">발표자료 준비 중</h3><div id="churchGuideSlideLines"></div></div>
     </section>
-    <div class="church-guide-bottom"><span id="churchGuideCount" aria-live="polite">안내 준비 중</span><div><button type="button" id="churchGuideFollow">진행자 따라가기</button><button type="button" id="churchGuidePrev" aria-label="이전 자료">이전</button><button type="button" id="churchGuideNext" aria-label="다음 자료">다음</button></div></div>
+    <div class="church-guide-bottom"><span id="churchGuideCount" aria-live="polite">안내 준비 중</span><div><button type="button" id="churchGuideFollow" aria-pressed="true">진행자 따라가기</button><button type="button" id="churchGuidePrev" aria-label="이전 자료">이전</button><button type="button" id="churchGuideNext" aria-label="다음 자료">다음</button></div></div>
     <p class="church-guide-sync" id="churchGuideStatus" role="status" aria-live="polite">공개된 예배자료를 연결하고 있습니다.</p>
     <a class="church-guide-source" id="churchGuideSource" href="/ekodichurch/#worship">공식 예배자료 열기</a>
   </section>`:'';
@@ -55,7 +55,7 @@ export function tenantLivePage(tenant){
     <p>로그인 권한을 확인한 방송 진행자만 서버에 현재 순서를 공유할 수 있습니다. 자료는 교회에서 발행한 원본을 사용합니다.</p>
     <div class="church-host-guide-actions"><button type="button" id="churchHostPrev" disabled>← 이전</button><strong id="churchHostProgress">자료 준비 중</strong><button type="button" id="churchHostNext" disabled>다음 →</button></div>
     <p id="churchHostGuideStatus" role="status">방송 시작 뒤 진행자 조작이 활성화됩니다.</p>
-    <a href="/ekodichurch/#worship">교회 예배자료 관리 · 보기</a>
+    <a href="/ekodichurch/mypage/">교회 마이페이지 · 예배자료 검토·공개</a>
   </details>`:'';
   const shellScript=churchShell?'<script src="/tenant-live-church.js" defer></script>':missionShell?'<script src="/ekodimission/assets/shell.js" defer></script>':'';
   const body=`<!doctype html><html lang="ko-KR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="${robots}"><title>${title}</title><meta name="description" content="${name} 실시간 방송"><link rel="stylesheet" href="/tenant-live.css?v=${assetVersion}"><link rel="stylesheet" href="/live-interpretation.css?v=20261107-1">${shellHead}</head>
