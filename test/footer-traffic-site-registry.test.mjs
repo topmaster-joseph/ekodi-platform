@@ -12,6 +12,7 @@ const NON_SITE_PREFIXES = new Set([
   'deployment-probe', 'health', 'mail', 'mcp', 'my', 'privacy', 'terms', 'preview', 'shell',
   'webhooks', 'google-origin-bridge', 'verify', 'o2o', 'admin-menu-', 'index',
   'auth-center', 'oauth-consent', 'admin-shell', 'workspace-admin',
+  'workspace-trade-', // Worker-first /workspace-trade-*.js routes only serve JS; not a site root
   'cg', // glob fragment of "/cg*" (cgma, cgmurrc are registered individually)
 ]);
 
