@@ -21,6 +21,6 @@ Already concise roots `/edu`, `/publishing`, `/volunteer` are unchanged. Custome
 5. Advance each remaining root in its own guarded owner-specific release; do not substitute a broad global string-replacement or a catchall redirect. Block full-completion status until all five roots and external links are tested.
 
 ## Operational caveats
-The Shared Site `assets.run_worker_first` list contains 100 rules. The Mission Worker-first entry uses the slot of the retired `/ekodi-church*` alias, rather than exceeding the Cloudflare limit. The retired alias must not become an independently supported public entry.
+The Shared Site `assets.run_worker_first` list contains 100 rules. Preserve the existing Church legacy routing during the Church migration. Mission has its own `ekodi.kr/mission*` custom route, dispatched in Shared Site before static asset fallback; do not add a 101st Worker-first rule. Confirm Cloudflare route ownership and staging response behavior before release.
 
 GitHub change/PR is **not** proof of deployment. Inspect protected checks, promotion run, service-worker release SHA and real production public/request probes before asserting completion.
