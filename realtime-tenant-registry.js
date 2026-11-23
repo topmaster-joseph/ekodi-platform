@@ -1,6 +1,6 @@
 const TENANTS = Object.freeze([
   {id:'ekodi-church',apiTenant:'ekodichurch',aliases:['ekodichurch','church'],name:'\uC5D0\uCF54\uB514\uAD50\uD68C',path:'/ekodichurch/live/',home:'/ekodichurch/',mode:'worship',title:'\uC5D0\uCF54\uB514\uAD50\uD68C \uC2E4\uC2DC\uAC04 \uC608\uBC30',authSite:'church',dedicated:true},
-  {id:'ekodimission',apiTenant:'ekodimission',aliases:['mission'],name:'\uC5D0\uCF54\uB514\uC120\uAD50\uD68C',path:'/ekodimission/live/',home:'/ekodimission/',mode:'public_broadcast',title:'\uC5D0\uCF54\uB514\uC120\uAD50\uD68C LIVE',authSite:'mission',robots:'index, follow',route:'ekodimission-public',publicationStatus:'published',independentSite:true,workspace:'ekodimission'},
+  {id:'ekodimission',apiTenant:'ekodimission',aliases:['mission'],name:'\uC5D0\uCF54\uB514\uC120\uAD50\uD68C',path:'/mission/live/',home:'/mission/',legacyPaths:['/ekodimission/live/'],mode:'public_broadcast',title:'\uC5D0\uCF54\uB514\uC120\uAD50\uD68C LIVE',authSite:'mission',robots:'index, follow',route:'ekodimission-public',publicationStatus:'published',independentSite:true,workspace:'ekodimission'},
   {id:'ekodi-biz',apiTenant:'ekodi-biz',aliases:['ekodibiz','biz'],name:'\uC5D0\uCF54\uB514\uBE44\uC988',path:'/ekodibiz/live/',home:'/ekodibiz/',mode:'public_broadcast',title:'\uC5D0\uCF54\uB514\uBE44\uC988 LIVE',authSite:'biz'},
   {id:'ekodi-lab',apiTenant:'ekodi-lab',aliases:['ekodilab','lab'],name:'\uC5D0\uCF54\uB514\uC5F0\uAD6C\uC18C',path:'/ekodilab/live/',home:'/ekodilab/',mode:'education',title:'\uC5D0\uCF54\uB514\uC5F0\uAD6C\uC18C LIVE',authSite:'lab'},
   {id:'cgma',apiTenant:'cgma',aliases:['cheonggye'],name:'\uCCAD\uACC4\uBA74\uC0C1\uC778\uD68C',path:'/cgma/live/',home:'/cgma/',mode:'meeting',title:'\uCCAD\uACC4\uBA74\uC0C1\uC778\uD68C LIVE',authSite:'cgma'},
@@ -22,11 +22,11 @@ export function realtimeTenant(value='') {
 }
 export function realtimeTenantFromPath(pathname='') {
   const path=String(pathname||'');
-  return TENANTS.find(tenant=>path===tenant.path||path===tenant.path.slice(0,-1)||path===`${tenant.path}index.html`)||null;
+  return TENANTS.find(tenant=>[tenant.path,...(tenant.legacyPaths||[])].some(p=>path===p||path===p.slice(0,-1)||path===`${p}index.html`))||null;
 }
 export function realtimeTenantAdminFromPath(pathname='') {
   const path=String(pathname||'').replace(/\/+$/,'');
-  return TENANTS.find(tenant=>path===`${tenant.path.replace(/\/$/,'')}/admin`)||null;
+  return TENANTS.find(tenant=>[tenant.path,...(tenant.legacyPaths||[])].some(p=>path===`${p.replace(/\/$/,'')}/admin`))||null;
 }
 export function realtimeTenantAliases(value='') {
   const tenant=realtimeTenant(value);return tenant?new Set([tenant.id,tenant.apiTenant,...tenant.aliases]):new Set();

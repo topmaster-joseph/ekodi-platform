@@ -62,7 +62,8 @@ test('Mission devotion route keeps independent header/footer, stylesheet and ren
  assert.match(page,/data-ekodi-devotion/);
  assert.match(page,/class="mission-site-header"/);
  assert.match(page,/class="site-footer"/);
- assert.match(page,/href="\/ekodimission\/assets\/shell.css"/);
+ assert.match(page,/href="\/mission\/assets\/shell.css"/);
+  assert.match(page,/href="https:\/\/ekodi\.kr\/mission\/devotion"/);
  assert.match(page,/src="\/bible\/devotion.js"/);
 });
 

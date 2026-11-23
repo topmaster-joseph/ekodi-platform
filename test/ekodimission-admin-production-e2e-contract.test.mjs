@@ -105,6 +105,6 @@ test('generated Workspace Admin runtime is executable JavaScript with nosniff-sa
   assert.doesNotThrow(()=>new Function(source));
   assert.equal(/<html[\s>]/i.test(source),false);
   assert.match(source,/__EKODI_WORKSPACE_ADMIN_RUNTIME__/);
-  assert.match(source,/\/ekodimission\/api\/admin\/activity-rpc/);
+  assert.match(source,/\/mission\/api\/admin\/activity-rpc/);
   assert.doesNotMatch(source,/^const __name=/m);
 });
