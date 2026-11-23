@@ -50,7 +50,7 @@ export function trafficSiteIdForHost(value) {
 // Cloudflare zone request aggregates remain host-scoped and are not split here.
 export const ROOT_PATH_SITE_IDS = Object.freeze({
   ai:'ai', bible:'bible', books:'books', ekodibooks:'books', community:'community',
-  ekodichurch:'church', ekodimission:'mission', ekodibiz:'biz',
+  ekodichurch:'church', ekodimission:'mission', mission:'mission', ekodibiz:'biz',
   ekodimall:'mall', ekodilab:'lab', cgma:'cgma', cheonggye:'cheonggye',
   seonammedi:'seonammedi', pgm:'pgm', jadam:'jadam', bbqcg:'bbqcg',
   pizzamaru:'pizzamaru', yogurt:'yogurt', cmpmyi:'cmpmyi',
