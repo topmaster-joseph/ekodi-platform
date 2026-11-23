@@ -1,5 +1,6 @@
 import { missionPageEntries, REQUIRED_SHELL_MARKERS, validateMissionShellCss, validateMissionShellSource } from './validate-ekodimission-shell-contract.mjs';
 import { readFile } from 'node:fs/promises';
+import { missionPublicReferences } from '../mission-public-path.js';
 
 const origin=String(process.env.EKODI_PRODUCTION_ORIGIN||'https://ekodi.kr').replace(/\/+$/,'');
 const worker=await readFile(new URL('../space-worker.js',import.meta.url),'utf8');
@@ -22,13 +23,16 @@ for(const route of routes){
   };
   for(const [name,value] of Object.entries(expectedHeaders))if(response.headers.get(name)!==value)failures.push(`${route}: ${name}=${response.headers.get(name)} expected ${value}`);
   const html=await response.text();
-  for(const marker of REQUIRED_SHELL_MARKERS)if(!html.includes(marker))failures.push(`${route}: missing ${marker}`);
+  for(const marker of REQUIRED_SHELL_MARKERS){
+    const projected=missionPublicReferences(marker);
+    if(!html.includes(projected))failures.push(`${route}: missing ${projected}`);
+  }
   if(/>\s*언어\s*</.test(html))failures.push(`${route}: visible 언어 label found`);
   if(/준비\s*중/.test(html))failures.push(`${route}: preparing language text found`);
 }
 
 for(const [asset,validator] of [
-  ['/ekodimission/assets/shell.js',validateMissionShellSource],
+  ['/ekodimission/assets/shell.js',data=>validateMissionShellSource(data,{publicProjection:true})],
   ['/ekodimission/assets/shell.css',validateMissionShellCss],
 ]){
   try{
