@@ -31,7 +31,9 @@ export function validateEkodiCloudRegistry(registry){
   if(registry?.owner!=='EKODI Orchestrator'||registry?.schemaVersion!==1||
      registry?.timezone!=='Asia/Seoul'||registry?.approvedReadOnly!==true||
      registry?.noAutomaticChatgptDisable!==true||registry?.noAutomatedDeployment!==true||
-     !Array.isArray(registry.tasks)||registry.tasks.length!==26)
+     !Array.isArray(registry.tasks)||registry.tasks.length!==29||
+     registry?.accountSnapshot?.taskCount!==25||
+     registry?.accountSnapshot?.archivedPriorSnapshotCount!==3)
     throw Error('EKODI_CLOUD_TASK_REGISTRY_INVALID');
   const ids=new Set();
   for(const task of registry.tasks){
@@ -47,7 +49,18 @@ export function validateEkodiCloudRegistry(registry){
       throw Error('EKODI_CLOUD_WORKFLOW_NOT_ALLOWED');
   }
   if(!ids.has('points-staging-e2e')||!ids.has('education-release')||
-     !ids.has('institution-ai-security'))throw Error('EKODI_CLOUD_TASK_REGISTRY_INCOMPLETE');
+     !ids.has('institution-ai-security')||
+     !ids.has('church-weekly-notice-deploy-watch')||
+     !ids.has('church-weekly-notice-publisher')||
+     !ids.has('live-anonymous-viewer-e2e'))
+    throw Error('EKODI_CLOUD_TASK_REGISTRY_INCOMPLETE');
+  // Archived legacy snapshots stay audit-only and never silently re-activate.
+  const archived=registry.tasks.filter(t=>t.archivedFromCurrentAccountSnapshot===true);
+  const current=registry.tasks.filter(t=>!t.archivedFromCurrentAccountSnapshot&&t.id!=='points-staging-e2e');
+  if(archived.length!==3||archived.some(t=>t.state==='active_shadow')||
+     current.length!==registry.accountSnapshot.taskCount||
+     registry.tasks.some(t=>t.cadence==='weekly'&&t.state==='active_shadow'&&t.weekday!=='MO'))
+    throw Error('EKODI_CLOUD_TASK_REGISTRY_SNAPSHOT_MISMATCH');
   return registry;
 }
 
@@ -57,7 +70,13 @@ export function evaluateTaskWindow(task,{date,profile='hourly'}){
   if(date<task.startDate||date>task.endDate)return 'outside_period';
   if(task.state!=='active_shadow')return task.state;
   if(task.cadence==='daily'&&profile!=='daily')return 'not_due';
-  if(task.cadence==='weekly'||task.cadence==='once')return 'not_due';
+  // Native daily 08:45 KST is the only weekly observation window.
+  // This is evidence inspection, NEVER an authorization to publish notices.
+  if(task.cadence==='weekly'){
+    if(profile!=='daily'||task.weekday!=='MO'||
+       new Date(date+'T00:00:00Z').getUTCDay()!==1)return 'not_due';
+  }
+  if(task.cadence==='once')return 'not_due';
   return 'observe_read_only';
 }
 
