@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-16T06:11:57.529Z",
-  "startedAt": "2026-11-16T06:10:28.196Z",
+  "generatedAt": "2026-11-23T07:22:36.928Z",
+  "startedAt": "2026-11-23T07:21:32.546Z",
   "repository": "topmaster-joseph/ekodi-platform",
   "branch": "main",
-  "head": "bdbdc3da1b5bc3a8be0b44736ac101234942eeb6",
+  "head": "2b6a54d5b15c1574df7cc2f487871581809b71b6",
   "overallScore": 82.5,
   "status": "watch",
   "thresholds": {
@@ -18,19 +18,19 @@
       "weight": 25,
       "score": 25,
       "status": "ok",
-      "detail": "1835개 테스트 파일 · 전체 테스트 통과"
+      "detail": "1910개 테스트 파일 · 전체 테스트 통과"
     },
     "duplication": {
       "weight": 15,
       "score": 1.5,
       "status": "error",
-      "detail": "교차 파일 중복 군집 30개 · 겹침 창 308개 정규화"
+      "detail": "교차 파일 중복 군집 30개 · 겹침 창 264개 정규화"
     },
     "complexity": {
       "weight": 15,
       "score": 11,
       "status": "ok",
-      "detail": "대형 파일 5개 · 매우 큰 파일 0개 · TODO/FIXME 55건"
+      "detail": "대형 파일 5개 · 매우 큰 파일 0개 · TODO/FIXME 56건"
     },
     "security": {
       "weight": 15,
@@ -48,7 +48,7 @@
       "weight": 10,
       "score": 10,
       "status": "ok",
-      "detail": "322개 Workflow · 배포 가드 검증 통과"
+      "detail": "335개 Workflow · 배포 가드 검증 통과"
     },
     "documentation": {
       "weight": 5,
@@ -58,15 +58,15 @@
     }
   },
   "metrics": {
-    "runtimeFiles": 1709,
-    "runtimeLines": 286501,
-    "testFiles": 1835,
-    "workflows": 322,
+    "runtimeFiles": 1755,
+    "runtimeLines": 296622,
+    "testFiles": 1910,
+    "workflows": 335,
     "largeFiles": 5,
     "veryLargeFiles": 0,
-    "todoMarkers": 55,
+    "todoMarkers": 56,
     "duplicateGroups": 30,
-    "duplicateWindows": 308
+    "duplicateWindows": 264
   },
   "technicalDebt": [
     {
@@ -194,7 +194,7 @@
       "severity": "low",
       "category": "complexity",
       "title": "임시 작업 표식 누적",
-      "detail": "TODO/FIXME/HACK/TEMP 표식이 55건입니다.",
+      "detail": "TODO/FIXME/HACK/TEMP 표식이 56건입니다.",
       "recommendation": "오래된 항목부터 제거 조건과 책임 영역을 정리하세요.",
       "evidence": [
         "admin-sidebar.js:1252",
@@ -213,7 +213,7 @@
       "ok": true,
       "status": 0,
       "timedOut": false,
-      "summary": "✔ fresh citizen opinions keep independent queue-first storage and never direct-write from public handler (5.826693ms)\n✔ explicit Brand Account OAuth requires an authenticated single YouTube channel and registry identity (1.323474ms)\n✔ Brand Account opt-in is scoped and never disables signed OAuth, code exchange or email-based standard mode (6.702197ms)\n✔ account linked banner uses registry ID or explicit connection IDs, never coincident email (3.622456ms)\nℹ tests 9328\nℹ suites 0\nℹ pass 9324\nℹ fail 0\nℹ cancelled 0\nℹ skipped 4\nℹ todo 0\nℹ duration_ms 87180.845916"
+      "summary": "✔ fresh citizen opinions keep independent queue-first storage and never direct-write from public handler (3.113755ms)\n✔ explicit Brand Account OAuth requires an authenticated single YouTube channel and registry identity (0.703866ms)\n✔ Brand Account opt-in is scoped and never disables signed OAuth, code exchange or email-based standard mode (4.017387ms)\n✔ account linked banner uses registry ID or explicit connection IDs, never coincident email (5.310828ms)\nℹ tests 9749\nℹ suites 0\nℹ pass 9745\nℹ fail 0\nℹ cancelled 0\nℹ skipped 4\nℹ todo 0\nℹ duration_ms 63052.705342"
     },
     "security": {
       "ok": true,
