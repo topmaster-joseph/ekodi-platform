@@ -23,6 +23,14 @@ const NON_DEPLOY_SURFACE=Object.freeze([
   /^[^/]+\.md$/,/^docs?\/.*\.md$/,
   /^\.github\/workflows\/(?!deploy-)[^/]+\.ya?ml$/,
   /^scripts\/(?:validate|verify|audit|detect)-[^/]+\.mjs$/,
+  // CI/operations scripts: no deployed runtime imports scripts/ (guarded by
+  // test/orchestrator-no-deploy-surface.test.mjs), so they change only when a
+  // workflow next runs them.
+  /^scripts\/(?:lib\/)?[^/]+\.m?js$/,
+  // Local PC/device agent tooling, never deployed to EKODI production.
+  /^tools\//,
+  // Staging-only Wrangler configs; production uses the non-staging file.
+  /^wrangler\.[^/]*staging[^/]*\.toml$/,
 ]);
 export function isNonDeploySurface(files){
   return Array.isArray(files)&&files.length>0&&files.every(file=>typeof file==='string'&&NON_DEPLOY_SURFACE.some(rule=>rule.test(file)));
