@@ -109,7 +109,7 @@ function renderIdentity(){
   // EKODI common Shell owns header account actions; member body owns logout.
   const start=document.querySelector('.cta-row .button');if(start)start.href=authUrl();
   if(member){
-    $('memberMeta').textContent=`무료등급 · ${state.session?.user?.email||'회원'} · 기능 선택형`;
+    $('memberMeta').textContent=`에코디 회원 · ${state.session?.user?.email||'회원'} · 기능 선택형`;
     setManagementView(state.managementView);
   }else if($('workbenchScope'))$('workbenchScope').textContent='현재 공간 미선택';
 }

@@ -369,3 +369,7 @@ body{background:var(--mg-paper);color:var(--mg-ink);font-feature-settings:"kern"
   .workbench-next-note{font-size:.73rem}
 }
 @media(prefers-reduced-motion:reduce){.workbench-next-button{transition:none}}
+
+/* Member identity may include long emails; never imply a tier not verified by the server. */
+#memberMeta{max-width:100%;overflow-wrap:anywhere;word-break:break-word}
+@media(max-width:600px){.member-head>div:first-child{min-width:0;flex:1}}

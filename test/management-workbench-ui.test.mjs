@@ -182,3 +182,14 @@ test('next action panel is responsive and never presents hypothetical business r
   assert.match(css,/@media\(max-width:600px\)/);
   assert.doesNotMatch(html,/임의 매출|예상 매출 \d/);
 });
+
+test('official brand and neutral membership display do not invent an unverified subscription tier',async()=>{
+  assert.match(html,/<footer class="shell footer">에코디경영 · 하나의 계정/);
+  assert.match(html,/<meta name="theme-color" content="#143337">/);
+  assert.match(html,/id="memberMeta">에코디 회원 · 기능 선택형/);
+  assert.doesNotMatch(script,/memberMeta'\)\.textContent=\x60무료등급/);
+  assert.match(css,/#memberMeta\{max-width:100%;overflow-wrap:anywhere/);
+  const p=page();await p.flush();
+  assert.match(p.get('memberMeta').textContent,/에코디 회원 · member@example\.test · 기능 선택형/);
+  assert.doesNotMatch(p.get('memberMeta').textContent,/무료등급/);
+});
