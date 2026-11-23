@@ -3,7 +3,7 @@
 // can be unit-tested without D1, network or the Toss SDK.
 
 export const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
-export const OPEN_DAY = 20;
+export const OPEN_DAY = 15;
 export const CLOSE_DAY = 25;
 export const MAX_QTY_PER_ITEM = 50;
 export const MAX_ITEMS_PER_ORDER = 30;
@@ -56,7 +56,7 @@ export function addMonth(year, month, delta) {
   return { year: Math.floor(zero / 12), month: (zero % 12) + 1 };
 }
 
-/** Default intake window for target issue year/month: prior month 20th 00:00 → 25th 23:59:59 KST. */
+/** Default intake window for target issue year/month: prior month 15th 00:00 → 25th 23:59:59 KST. */
 export function defaultWindow(targetYear, targetMonth) {
   const prev = addMonth(targetYear, targetMonth, -1);
   return {
@@ -65,16 +65,29 @@ export function defaultWindow(targetYear, targetMonth) {
   };
 }
 
+/** Normalize only persisted legacy 20th-opening defaults, not custom windows. */
+export function effectiveCampaignWindow(campaign) {
+  if (!campaign) return campaign;
+  const year = Number(campaign.target_year), month = Number(campaign.target_month);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) return campaign;
+  const prev = addMonth(year, month, -1);
+  const legacyOpen = kstToUtc(prev.year, prev.month, 20).toISOString();
+  const standard = defaultWindow(year, month);
+  return campaign.opens_at === legacyOpen && campaign.closes_at === standard.closesAt
+    ? { ...campaign, opens_at: standard.opensAt }
+    : campaign;
+}
+
 /** The issue whose intake is current or next relative to `now`. */
 export function targetIssueFor(now = new Date()) {
-  // Every intake window (20th–25th of month M) is for issue M+1, so the
+  // Every intake window (15th–25th of month M) is for issue M+1, so the
   // current-or-next window always belongs to next month's issue.
   const { year, month } = kstParts(now);
   const next = addMonth(year, month, 1);
   return { ...next, id: campaignId(next.year, next.month) };
 }
 
-/** Should the scheduler prepare/sync the next issue now? (KST 19th–25th) */
+/** Should the scheduler prepare/sync the next issue now? (KST 14th–25th) */
 export function inPreparationWindow(now = new Date()) {
   const { day } = kstParts(now);
   return day >= OPEN_DAY - 1 && day <= CLOSE_DAY;

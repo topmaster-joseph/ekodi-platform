@@ -1,12 +1,12 @@
 // EKODI-QTIN-GROUP-ORDER-001
 // 큐티인(QTIN) 월간 공동구매 — 에코디교회·에코디선교회 공용 신청서.
-//  • 매월 20일(KST) 다음달호 신청을 열고 25일 23:59에 마감한다.
+//  • 매월 15일(KST) 다음달호 신청을 열고 25일 23:59에 마감한다.
 //  • 신청 도서와 가격·표지는 QTM 쇼핑몰(qtm.or.kr)의 온라인 판매가격 그대로 자동 수집한다.
 //  • 토스페이먼츠 결제 승인이 서버에서 확인된 신청만 '완료(paid)'로 기록·집계한다.
 //  • 관리자(ekodi.kr/qtin/admin)는 월별·기관별 발주 수량, 결제, 수령 현황을 관리한다.
 import {
   ORGS, FULFILLMENT, QTM_ORIGIN, PENDING_TTL_MS,
-  clean, escapeHtml, kstParts, campaignId, parseCampaignId, addMonth, defaultWindow, targetIssueFor,
+  clean, escapeHtml, kstParts, kstToUtc, campaignId, parseCampaignId, addMonth, defaultWindow, effectiveCampaignWindow, targetIssueFor,
   inPreparationWindow, campaignState, formatKst, formatWon, parseIssueTitle, titleMatchesIssue, isQtinFamily,
   extractItemIds, parseProductDetail, parseProductIntro, seriesSortOrder, qtinAudienceGroup, buildOrderDraft, newOrderId, isValidTossOrderId,
   assessConfirmation, maskName, csvEscape, absoluteQtmUrl, SHIPPING_FEE, DELIVERY_METHODS, CHURCH_PICKUP_ADDRESS,
@@ -107,12 +107,21 @@ async function audit(env, targetId, actor, action, detail = '') {
 
 // ---------- campaigns & products ----------
 async function getCampaign(env, id) {
-  return env.DB.prepare('SELECT * FROM qtin_campaigns WHERE id=?').bind(id).first();
+  const row = await env.DB.prepare('SELECT * FROM qtin_campaigns WHERE id=?').bind(id).first();
+  return effectiveCampaignWindow(row);
 }
 async function ensureCampaign(env, year, month) {
   const id = campaignId(year, month);
   const existing = await getCampaign(env, id);
-  if (existing) return existing;
+  if (existing) {
+    // Upgrade only the historical default 20th opening (never a custom window).
+    const previous = addMonth(year, month, -1);
+    const legacyOpen = kstToUtc(previous.year, previous.month, 20).toISOString();
+    const canonical = defaultWindow(year, month);
+    await env.DB.prepare('UPDATE qtin_campaigns SET opens_at=?, updated_at=? WHERE id=? AND opens_at=? AND closes_at=?')
+      .bind(canonical.opensAt, new Date().toISOString(), id, legacyOpen, canonical.closesAt).run();
+    return existing;
+  }
   const { opensAt, closesAt } = defaultWindow(year, month);
   const now = new Date().toISOString();
   await env.DB.prepare(`INSERT OR IGNORE INTO qtin_campaigns (id, target_year, target_month, opens_at, closes_at, status, created_at, updated_at)
@@ -133,7 +142,7 @@ async function currentCampaign(env, now = new Date()) {
     if (row && campaignState(row, now) === 'open') return row;
   }
   const forced = await env.DB.prepare("SELECT * FROM qtin_campaigns WHERE manual_state='force_open' ORDER BY id DESC LIMIT 1").first();
-  if (forced) return forced;
+  if (forced) return effectiveCampaignWindow(forced);
   const row = await getCampaign(env, target.id);
   if (row) return row;
   const { opensAt, closesAt } = defaultWindow(target.year, target.month);
@@ -257,7 +266,9 @@ async function anonymizeOld(env, now = new Date()) {
 
 export async function runScheduled(env, now = new Date(), options = {}) {
   if (isStaging(env)) return { skipped: 'isolated-staging' };
-  const report = { expired: await expirePending(env, now), anonymized: 0, sync: null };
+  const report = { expired: await expirePending(env, now), anonymized: 0, sync: null, operatorNotices: null };
+  try { report.operatorNotices = await dispatchDueQtinNotices(env, now); }
+  catch { report.operatorNotices = { error: 'OUTBOX_UNAVAILABLE' }; }
   if (kstParts(now).day === 1) report.anonymized = await anonymizeOld(env, now);
   if (inPreparationWindow(now)) {
     const target = targetIssueFor(now);
@@ -274,13 +285,80 @@ async function tossRequest(env, path, options = {}, profileId) {
   // EKODIPAY-CORE-001: every Toss call goes through the shared module with the order's merchant profile.
   return ekodipay.tossRequest(env, profileId || ekodipay.activeProfileId(env), path, options);
 }
+// QTIN source events use the pre-existing private Control API OperatorNotifier.
+// The outbox has NO applicant name, phone, email, payment key, or receipt token.
+export async function dispatchDueQtinNotices(env, now = new Date(), onlyOrderId = null) {
+  if (isStaging(env) || !flag(env?.QTIN_OPERATOR_NOTIFY_ENABLED)) return { skipped: 'disabled', sent: 0 };
+  const at = now.toISOString();
+  const leaseUntil = new Date(now.getTime() + 5 * 60 * 1000).toISOString();
+  // Recover any worker lost after reserving a send (Cron retries are bounded).
+  await env.DB.prepare("UPDATE qtin_operator_notice_outbox SET status='retry' WHERE status='sending' AND next_attempt_at <= ?").bind(at).run();
+  const sql = `SELECT n.order_id, n.attempt_count, o.org, o.campaign_id, o.total_quantity, o.total_amount
+    FROM qtin_operator_notice_outbox n JOIN qtin_orders o ON o.id=n.order_id
+    WHERE n.status IN ('pending','retry') AND n.next_attempt_at <= ? AND o.status='paid'
+      AND o.id NOT LIKE '${TEST_ORDER_PREFIX}%'
+      ${onlyOrderId ? 'AND n.order_id=?' : ''}
+    ORDER BY n.created_at ASC LIMIT 20`;
+  const query = env.DB.prepare(sql).bind(...(onlyOrderId ? [at, onlyOrderId] : [at]));
+  const rows = (await query.all()).results || [];
+  let sent = 0, failed = 0;
+  for (const row of rows) {
+    const reserved = await env.DB.prepare(`UPDATE qtin_operator_notice_outbox
+      SET status='sending', attempt_count=attempt_count+1, next_attempt_at=?
+      WHERE order_id=? AND status IN ('pending','retry') AND next_attempt_at <= ?`)
+      .bind(leaseUntil, row.order_id, at).run();
+    if (!reserved?.meta?.changes) continue;
+    let outcome = { ok: false, code: 'NOTIFIER_UNAVAILABLE' };
+    try {
+      if (env.OPERATOR_NOTIFY?.notify) {
+        outcome = await env.OPERATOR_NOTIFY.notify({
+          source: 'qtin',
+          subject: '큐티인 결제완료 신청 1건',
+          lines: [
+            `${row.campaign_id}월호 · ${ORGS[row.org]?.label || '기타'}`,
+            `${Number(row.total_quantity)}권 · ${formatWon(row.total_amount)} · 결제승인 완료`
+          ],
+          link: 'https://ekodi.kr/qtin/admin'
+        });
+      }
+    } catch { outcome = { ok: false, code: 'NOTIFIER_RPC_FAILED' }; }
+    // Only gateway-accepted Web Push counts as phone alert; email alone is insufficient.
+    if (outcome?.push === true) {
+      await env.DB.prepare("UPDATE qtin_operator_notice_outbox SET status='sent', sent_at=?, last_error='' WHERE order_id=? AND status='sending'")
+        .bind(at, row.order_id).run();
+      sent += 1;
+    } else {
+      const tries = Number(row.attempt_count) + 1;
+      const retryAt = new Date(now.getTime() + Math.min(12 * 60, 5 * 2 ** Math.min(tries - 1, 7)) * 60 * 1000).toISOString();
+      const reason = clean(outcome?.code || 'NOTIFIER_FAILED', 60);
+      await env.DB.prepare("UPDATE qtin_operator_notice_outbox SET status='retry', next_attempt_at=?, last_error=? WHERE order_id=? AND status='sending'")
+        .bind(retryAt, reason, row.order_id).run();
+      failed += 1;
+      console.warn('qtin paid operator push queued for retry', reason);
+    }
+  }
+  return { sent, failed };
+}
+
 async function markPaid(env, order, payment, actor) {
   const now = new Date().toISOString();
   const result = await env.DB.prepare(`UPDATE qtin_orders SET status='paid', payment_key=?, payment_method=?, approved_at=?, receipt_url=?, updated_at=?
     WHERE id=? AND status IN ('payment_pending','expired','payment_failed')`)
     .bind(clean(payment.paymentKey, 220), clean(payment.method, 60), clean(payment.approvedAt, 60) || now, clean(payment.receipt?.url, 500), now, order.id).run();
+  const changed = result?.meta?.changes || 0;
   await audit(env, order.id, actor, 'order.paid', { method: payment.method, amount: payment.totalAmount, status: payment.status });
-  return result?.meta?.changes || 0;
+  if (changed && !order.id.startsWith(TEST_ORDER_PREFIX) && flag(env?.QTIN_OPERATOR_NOTIFY_ENABLED)) {
+    try {
+      await env.DB.prepare(`INSERT OR IGNORE INTO qtin_operator_notice_outbox
+        (order_id, status, attempt_count, next_attempt_at, created_at)
+        VALUES (?, 'pending', 0, ?, ?)`).bind(order.id, now, now).run();
+      await dispatchDueQtinNotices(env, new Date(), order.id);
+    } catch (error) {
+      // Payment truth remains authoritative even if the private alert channel fails.
+      console.warn('qtin paid alert outbox unavailable', clean(error?.code || 'OUTBOX_FAILED', 60));
+    }
+  }
+  return changed;
 }
 
 export async function confirmPayment(env, { paymentKey, orderId, amount }, now = new Date()) {
@@ -404,7 +482,7 @@ async function createOrder(env, body, now = new Date(), request = null) {
   }
   const campaign = await currentCampaign(env, now);
   if (campaign.virtual || campaignState(campaign, now) !== 'open' || clean(body?.campaignId, 10) !== campaign.id) {
-    return { status: 409, data: { error: '지금은 신청 기간이 아닙니다. 매월 20일~25일에 다음달호를 신청할 수 있습니다.' } };
+    return { status: 409, data: { error: '지금은 신청 기간이 아닙니다. 매월 15일~25일에 다음달호를 신청할 수 있습니다.' } };
   }
   const products = await listProducts(env, campaign.id);
   const result = buildOrderDraft({ ...body, email: clean(body?.email, 160) || buyer.data.email }, products);
@@ -509,7 +587,7 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
   const issue = `${campaign.year}년 ${campaign.month}월호`;
   const statusLine = open
     ? `신청 중 · ${escapeHtml(formatKst(campaign.closesAt))} 마감`
-    : state === 'scheduled' ? `${escapeHtml(formatKst(campaign.opensAt))} 신청 시작` : `신청 마감 · 다음 신청은 매월 20일에 열립니다`;
+    : state === 'scheduled' ? `${escapeHtml(formatKst(campaign.opensAt))} 신청 시작` : `신청 마감 · 다음 신청은 매월 15일에 열립니다`;
   const cards = products.map(p => `<article class="book" data-id="${escapeHtml(p.id)}" data-price="${p.salePrice}" data-audience="${qtinAudienceGroup(p.series,p.name)}">
     <button type="button" class="cover" data-intro="${escapeHtml(p.qtmItemId || '')}" data-name="${escapeHtml(p.name)}" data-img="${escapeHtml(p.imageUrl || '')}" aria-label="${escapeHtml(p.name)} 책 소개 보기">${p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" alt="${escapeHtml(p.name)} 표지" loading="lazy" referrerpolicy="no-referrer">` : `<span class="ph">표지 준비 중</span>`}<span class="peek">책 소개</span></button>
     <div class="info"><h3>${escapeHtml(p.name)}</h3>
@@ -1069,7 +1147,7 @@ async function handleAdminApi(request, env, url) {
     const rows = await env.DB.prepare('SELECT * FROM qtin_campaigns ORDER BY id DESC LIMIT 36').all();
     // Operators see which binding supplied each Toss key and its shape — never the key itself.
     const keys = me.canWrite ? ekodipay.keyDiagnostics(env) : undefined;
-    return json({ campaigns: (rows.results || []).map(c => ({ ...c, state: campaignState(c) })), payment: paymentReadiness(env), keys, me }, 200, env);
+    return json({ campaigns: (rows.results || []).map(raw => { const c = effectiveCampaignWindow(raw); return { ...c, state: campaignState(c) }; }), payment: paymentReadiness(env), keys, me }, 200, env);
   }
   let match = /^\/campaigns\/(\d{4}-\d{2})(\/.*)?$/.exec(path);
   if (match) {
@@ -1194,7 +1272,7 @@ export function renderAdminPage(scriptNonce = '') {
 <div class="fields" style="margin-top:12px"><label class="f">QTM 상품 주소로 직접 추가<input id="addUrl" placeholder="https://www.qtm.or.kr/shop/..."></label>
 <div class="f" style="justify-content:flex-end"><button class="btn alt" id="add" type="button">추가</button></div></div></section>
 <section class="panel"><h2>신청 내역</h2><div class="fields"><label class="f">검색<input id="filter" placeholder="이름·전화·신청번호"></label></div><div id="orders"></div></section>
-<section class="panel"><h2>신청 기간 수동 조정</h2><p class="note">자동: 매월 20일 00:00 ~ 25일 23:59(KST). 필요할 때만 강제 열기/닫기를 사용하세요.</p>
+<section class="panel"><h2>신청 기간 수동 조정</h2><p class="note">자동: 매월 15일 00:00 ~ 25일 23:59(KST). 필요할 때만 강제 열기/닫기를 사용하세요.</p>
 <div class="pay"><button class="btn alt" data-state="force_open" type="button">강제 열기</button><button class="btn alt" data-state="force_closed" type="button">강제 마감</button><button class="btn alt" data-state="" type="button">자동으로 되돌리기</button></div></section>
 </div>
 </main>
