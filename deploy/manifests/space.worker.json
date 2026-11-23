@@ -149,6 +149,38 @@
         ]
       },
       {
+        "url": "https://ekodi.kr/bbqcg",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": [
+          "BBQ 무안청계점",
+          "전화 주문하기",
+          "메뉴·주문 방법",
+          "자체 온라인 결제는 준비 중입니다."
+        ],
+        "headerExpect": [
+          "x-ekodi-route: space-storefront",
+          "x-robots-tag: index, follow",
+          "cache-control: no-store"
+        ],
+        "rollbackVerify": false
+      },
+      {
+        "url": "https://ekodi.kr/bbqcg/order",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": [
+          "QR 메뉴·주문 안내",
+          "온라인 결제 및 매장 자동 접수는 아직 준비 중입니다.",
+          "현재 이 화면에서 금액을 결제하거나 주문을 매장으로 전송할 수 없습니다."
+        ],
+        "headerExpect": [
+          "x-ekodi-route: bbqcg-qr-order",
+          "x-robots-tag: noindex, nofollow, noarchive",
+          "cache-control: no-store"
+        ]
+      },
+      {
         "url": "https://ekodi.kr/ekodimission",
         "statuses": [
           200
