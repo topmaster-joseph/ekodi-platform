@@ -24,3 +24,22 @@ test('Brand URLs change; tenant, RPC and workspace identities do not',()=>{
   assert.equal(missionPublicReferences('/ekodimissionary /ekodimission-assets.js'),'/ekodimissionary /ekodimission-assets.js');
   assert.equal(missionPublicReferences(output),output);
 });
+
+test('Mission board routes preserve the original database site key',async()=>{
+  const {resolveSiteBoardRoute}=await import('../site-board-control.js');
+  const route=resolveSiteBoardRoute('https://ekodi.kr/mission/board/api/posts');
+  assert.equal(route?.siteId,'ekodimission');
+  assert.equal(route?.tenantSlug,'ekodimission');
+  assert.equal(route?.basePath,'/mission/board');
+  assert.equal(route?.subPath,'/api/posts');
+  assert.equal(resolveSiteBoardRoute('https://ekodi.kr/ekodimission/board/api/posts')?.siteId,'ekodimission');
+});
+test('Mission live browser path changes without changing API tenant identity',async()=>{
+  const {realtimeTenantFromPath,realtimeTenant}=await import('../realtime-tenant-registry.js');
+  const site=realtimeTenantFromPath('/mission/live');
+  assert.equal(site?.id,'ekodimission');
+  assert.equal(site?.apiTenant,'ekodimission');
+  assert.equal(site?.home,'/mission/');
+  assert.equal(realtimeTenantFromPath('/ekodimission/live')?.id,'ekodimission');
+  assert.equal(realtimeTenant('mission')?.apiTenant,'ekodimission');
+});
