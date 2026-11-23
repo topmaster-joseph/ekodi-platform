@@ -41,7 +41,10 @@ test('board runtime contract is site-scoped, AI-independent and exportable',asyn
   assert.match(source,/api\/export/);
   const router=await readFile(new URL('../platform-router-entry-worker.js',import.meta.url),'utf8');
   assert.match(router,/handleSiteBoardRequest/);
-  assert.match(router,/const siteBoard=await handleSiteBoardRequest\(request,env\);if\(siteBoard\)return siteBoard/);
+  assert.match(router,/const siteBoard=await handleSiteBoardRequest\(request,env\)/);
+  assert.match(router,/if\(siteBoard\)/);
+  assert.match(router,/missionPublicReferences\(await siteBoard\.text\(\)\)/);
+  assert.match(router,/siteBoard\.headers\.get\('content-type'\)/);
 });
 
 
