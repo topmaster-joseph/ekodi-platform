@@ -248,3 +248,12 @@ body.church-doc-editing{overflow:hidden}
 .church-doc-sheet table.auto{table-layout:auto}
 .church-doc-subhead{margin:6px 0 6px;font-size:.9rem}
 .church-doc-subhead small{font-weight:400;color:#667085}
+
+/* 표 안 글자 자동 줄바꿈(관리자 공통 표 스타일의 nowrap 등을 덮어씀) + 드래그 크기 조절 */
+.church-doc-sheet table{width:100%;max-width:100%;border-collapse:collapse!important;display:table!important;overflow:visible!important}
+.church-doc-sheet table:not(.auto){table-layout:fixed!important}
+.church-doc-sheet table.auto{table-layout:auto!important}
+.church-doc-sheet td,.church-doc-sheet th,.church-doc-sheet td *,.church-doc-sheet th *{white-space:normal!important;word-break:keep-all;overflow-wrap:anywhere!important;min-width:0;max-width:100%}
+.church-doc-sheet td,.church-doc-sheet th{overflow:hidden;position:relative}
+.church-doc-sheet.church-doc-resize-cursor,.church-doc-sheet.church-doc-resize-cursor *{cursor:col-resize!important}
+body.church-doc-resizing,body.church-doc-resizing *{cursor:col-resize!important;user-select:none!important}
