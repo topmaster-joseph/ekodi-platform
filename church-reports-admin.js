@@ -99,6 +99,49 @@
   // 빨간 글씨는 인라인 스타일 대신 .need 클래스로 표시한다(관리자 화면 보안정책: style 속성 금지).
   function markRed(sheet){const sel=window.getSelection();if(!sel||!sel.rangeCount)return;const range=sel.getRangeAt(0);if(range.collapsed||!sheet.contains(range.commonAncestorContainer))return;const span=document.createElement('span');span.className='need';span.append(range.extractContents());range.insertNode(span);sel.removeAllRanges();const r=document.createRange();r.selectNodeContents(span);sel.addRange(r)}
   function unmarkRed(sheet){const sel=window.getSelection();if(!sel||!sel.rangeCount)return;const range=sel.getRangeAt(0);const hits=[...sheet.querySelectorAll('.need')].filter(el=>range.intersectsNode(el));hits.forEach(el=>{if(el.tagName==='SPAN')el.replaceWith(...el.childNodes);else el.classList.remove('need')})}
+  // 표 크기 조절: 칸 경계를 끌면 열 너비, 표 오른쪽 끝을 끌면 표 전체 너비가 바뀐다(퍼센트로 저장되어 인쇄에도 그대로).
+  function enableTableResize(sheet,onChange){
+    const EDGE=5;let drag=null;
+    const colsOf=table=>{let cg=table.querySelector(':scope>colgroup');const first=table.rows[0];if(!first)return [];
+      const count=[...first.cells].reduce((n,c)=>n+(Number(c.colSpan)||1),0);
+      if(!cg||cg.children.length!==count){const widths=[];const probe=[...table.rows].find(r=>r.cells.length===count)||first;
+        if(probe.cells.length===count)[...probe.cells].forEach(c=>widths.push(c.getBoundingClientRect().width));else for(let i=0;i<count;i++)widths.push(table.getBoundingClientRect().width/count);
+        const total=widths.reduce((a,b)=>a+b,0)||1;cg?.remove();cg=document.createElement('colgroup');widths.forEach(w=>{const col=document.createElement('col');col.style.width=`${(w/total*100).toFixed(2)}%`;cg.append(col)});table.prepend(cg);table.classList.remove('auto')}
+      return [...cg.children]};
+    const colIndexEnd=cell=>{const row=cell.parentElement;let idx=0;for(const c of row.cells){idx+=Number(c.colSpan)||1;if(c===cell)return idx-1}return idx-1};
+    const hit=e=>{const cell=e.target.closest?.('td,th');if(!cell||!sheet.contains(cell))return null;const r=cell.getBoundingClientRect();if(Math.abs(e.clientX-r.right)>EDGE)return null;const table=cell.closest('table');const tr=table.getBoundingClientRect();return {cell,table,outer:Math.abs(r.right-tr.right)<=EDGE+1}};
+    sheet.addEventListener('mousemove',e=>{if(drag)return;sheet.classList.toggle('church-doc-resize-cursor',Boolean(hit(e)))});
+    sheet.addEventListener('mousedown',e=>{const h=hit(e);if(!h||e.button!==0)return;e.preventDefault();
+      const tw=h.table.getBoundingClientRect().width,sw=sheet.clientWidth-parseFloat(getComputedStyle(sheet).paddingLeft)-parseFloat(getComputedStyle(sheet).paddingRight);
+      if(h.outer){drag={mode:'table',table:h.table,startX:e.clientX,startW:tw,base:sw}}
+      else{const cols=colsOf(h.table);const i=colIndexEnd(h.cell);if(i<0||i>=cols.length-1)return;drag={mode:'col',cols,i,startX:e.clientX,a:parseFloat(cols[i].style.width)||0,b:parseFloat(cols[i+1].style.width)||0,tw}}
+      document.body.classList.add('church-doc-resizing')});
+    window.addEventListener('mousemove',e=>{if(!drag)return;const dx=e.clientX-drag.startX;
+      if(drag.mode==='table'){const pct=Math.max(30,Math.min(100,(drag.startW+dx)/drag.base*100));drag.table.style.width=`${pct.toFixed(1)}%`}
+      else{const d=dx/drag.tw*100;const a=Math.max(3,Math.min(drag.a+drag.b-3,drag.a+d));drag.cols[drag.i].style.width=`${a.toFixed(2)}%`;drag.cols[drag.i+1].style.width=`${(drag.a+drag.b-a).toFixed(2)}%`}});
+    window.addEventListener('mouseup',()=>{if(!drag)return;drag=null;document.body.classList.remove('church-doc-resizing');onChange()});
+  }
+  // 표 안 ↑·↓: 칸의 첫·마지막 줄에서 누르면 옆 칸이 아니라 바로 위·아래 칸(같은 세로 위치)으로 이동한다.
+  function enableTableArrows(sheet){
+    sheet.addEventListener('keydown',e=>{
+      if((e.key!=='ArrowDown'&&e.key!=='ArrowUp')||e.shiftKey||e.ctrlKey||e.metaKey||e.altKey)return;
+      const sel=window.getSelection();if(!sel||!sel.rangeCount)return;
+      const node=sel.focusNode;const cell=(node?.nodeType===1?node:node?.parentElement)?.closest?.('td,th');if(!cell||!sheet.contains(cell))return;
+      const range=sel.getRangeAt(0).cloneRange();range.collapse(true);let rect=range.getClientRects()[0]||range.getBoundingClientRect();
+      if(!rect||(!rect.width&&!rect.height&&!rect.top))rect=(node.nodeType===1?node:node.parentElement).getBoundingClientRect();
+      const box=cell.getBoundingClientRect();const line=parseFloat(getComputedStyle(cell).lineHeight)||16;
+      const down=e.key==='ArrowDown';
+      if(down?(rect.bottom+line<box.bottom-2):(rect.top-line>box.top+2))return; // 칸 안에 아래·위 줄이 더 있으면 기본 이동
+      const row=cell.parentElement.getBoundingClientRect();const x=Math.min(Math.max(rect.left||box.left+4,box.left+2),box.right-2);
+      const y=down?row.bottom+3:row.top-3;const target=document.elementFromPoint(x,y)?.closest?.('td,th');
+      if(!target||target===cell||target.closest('table')!==cell.closest('table'))return;
+      e.preventDefault();
+      const r=document.createRange();const tb=target.getBoundingClientRect();let placed=false;
+      if(document.caretRangeFromPoint){const c=document.caretRangeFromPoint(x,down?tb.top+Math.min(line/2+2,tb.height/2):tb.bottom-Math.min(line/2+2,tb.height/2));if(c&&target.contains(c.startContainer)){r.setStart(c.startContainer,c.startOffset);placed=true}}
+      if(!placed){r.selectNodeContents(target);r.collapse(down)}
+      r.collapse(true);sel.removeAllRanges();sel.addRange(r);
+    });
+  }
   async function openDocEditor(id){
     let doc;
     try{const r=await fetch(`${DOC_API}/${encodeURIComponent(id)}/content`,{headers:docHeaders(),cache:'no-store'});doc=await r.json().catch(()=>({}));if(!r.ok)throw new Error(doc.error||`HTTP ${r.status}`)}
@@ -123,6 +166,8 @@
     }
     if(w){
       sheet.addEventListener('input',()=>{dirty=true;setStatus('고치는 중… (잠시 멈추면 자동 저장)');clearTimeout(timer);timer=setTimeout(save,2500)});
+      enableTableResize(sheet,()=>{sheet.dispatchEvent(new Event('input'))});
+      enableTableArrows(sheet);
       try{document.execCommand('styleWithCSS',false,false)}catch{}
       box.querySelectorAll('[data-cmd]').forEach(b=>b.addEventListener('mousedown',e=>e.preventDefault()));
       box.querySelectorAll('[data-cmd]').forEach(b=>b.addEventListener('click',()=>{const c=b.dataset.cmd;if(c==='red')markRed(sheet);else if(c==='black')unmarkRed(sheet);else document.execCommand(c);sheet.dispatchEvent(new Event('input'))}));

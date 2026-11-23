@@ -31,3 +31,12 @@ test('admin documents open in an in-page editor with autosave and print', () => 
   assert.ok(css.includes('.church-doc-sheet{width:210mm'));
   assert.ok(css.includes('body.church-doc-printing>*:not(#churchDocEditor){display:none!important}'));
 });
+
+test('editor wraps text inside cells and lets tables and columns be resized by dragging', () => {
+  const js = read('church-reports-admin.js');
+  for (const s of ['function enableTableArrows(sheet)', 'enableTableArrows(sheet);', 'function enableTableResize(sheet,onChange)', "drag={mode:'table'", "drag={mode:'col'", 'enableTableResize(sheet,'])  assert.ok(js.includes(s), s);
+  const css = read('church-reports-admin.css');
+  assert.ok(css.includes('white-space:normal!important'));
+  assert.ok(css.includes('overflow-wrap:anywhere!important'));
+  assert.ok(css.includes('cursor:col-resize!important'));
+});
