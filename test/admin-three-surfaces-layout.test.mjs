@@ -37,7 +37,7 @@ test('church Sunday operator keeps server-owned controls and responsive list/edi
   const page = await read('church-pastor-admin-page.js');
   assert.match(page, /id="worshipForm"/);
   assert.match(page, /id="churchAiCommand"/);
-  assert.match(page, /church-reports-admin\.css\?v=20261114-worship-layout1/);
+  assert.match(page, /church-reports-admin\.css\?v=20261124-cell1/);
   assert.match(css, /CHURCH-WORSHIP-LAYOUT-20261114/);
   assert.match(css, /#mainPanel:has\(> #worshipForm\)/);
   assert.match(css, /#worshipForm \.trade-grid/);

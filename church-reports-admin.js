@@ -113,23 +113,44 @@
       const cols=[...cg.children];const sum=cols.reduce((x,c)=>x+(parseFloat(c.style.width)||0),0);
       if(!sum||Math.abs(sum-100)>0.5){const each=100/cols.length;cols.forEach(c=>{const w=parseFloat(c.style.width);c.style.width=`${(sum&&w?w/sum*100:each).toFixed(2)}%`})}
       return cols};
-    // 칸 경계(왼쪽·오른쪽 어느 쪽이든)에 가까우면 그 경계를 돌려준다. 합쳐진 칸이 있어도 화면 좌표로 판단한다.
-    const hit=(x,target)=>{const cell=target?.closest?.('td,th');if(!cell||!sheet.contains(cell))return null;const table=cell.closest('table');const r=cell.getBoundingClientRect(),t=table.getBoundingClientRect();
-      let edge=null;if(Math.abs(x-r.right)<=EDGE)edge=r.right;else if(Math.abs(x-r.left)<=EDGE&&r.left-t.left>EDGE)edge=r.left;if(edge===null)return null;
-      return {table,edge,outer:Math.abs(edge-t.right)<=EDGE+1}};
-    const start=(x,h)=>{const t=h.table.getBoundingClientRect();
-      if(h.outer){const cs=getComputedStyle(sheet);drag={mode:'table',table:h.table,startX:x,startW:t.width,base:sheet.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight)};return true}
-      const cols=colsOf(h.table);if(cols.length<2)return false;let acc=t.left,best=-1,dist=1e9;
-      cols.forEach((c,k)=>{acc+=(parseFloat(c.style.width)||0)/100*t.width;if(k<cols.length-1&&Math.abs(acc-h.edge)<dist){dist=Math.abs(acc-h.edge);best=k}});
+    const topTable=t=>{let top=t;for(let p=t.parentElement?.closest('table');p&&sheet.contains(p);p=p.parentElement?.closest('table'))top=p;return top};
+    // 칸 경계(왼쪽·오른쪽·아래)에 가까우면 그 경계를 돌려준다. 합쳐진 칸이 있어도 화면 좌표로 판단한다.
+    const hit=(x,y,target)=>{const cell=target?.closest?.('td,th');if(!cell||!sheet.contains(cell)||cell.classList.contains('cdoc-rowsplit'))return null;const table=cell.closest('table');const top=topTable(table);
+      const r=cell.getBoundingClientRect(),t=table.getBoundingClientRect(),T=top.getBoundingClientRect();
+      let edge=null;if(Math.abs(x-r.right)<=EDGE)edge=r.right;else if(Math.abs(x-r.left)<=EDGE&&r.left-T.left>EDGE)edge=r.left;
+      if(edge!==null)return {kind:'x',cell,table,top,edge,outer:Math.abs(edge-T.right)<=EDGE+1};
+      if(Math.abs(y-r.bottom)<=EDGE&&x>r.left+EDGE&&x<r.right-EDGE)return {kind:'y',cell,table,top};
+      return null};
+    // 한 줄(행)만 따로 조절할 수 있게: 그 줄의 칸들을 한 칸짜리 안쪽 표로 옮긴다. 세로로 합쳐진 칸이 걸린 줄은 열 전체 조절로 대신한다.
+    const splitRow=cell=>{const table=cell.closest('table');if(table.classList.contains('cdoc-rowsplit-inner'))return table;
+      const tr=cell.parentElement;const cells=[...tr.cells];if(cells.length<2||cells.some(c=>(Number(c.rowSpan)||1)>1))return null;
+      const rows=[...table.rows],i=rows.indexOf(tr);for(let j=0;j<i;j++)for(const c of rows[j].cells)if((Number(c.rowSpan)||1)>i-j)return null;
+      const widths=cells.map(c=>c.getBoundingClientRect().width),total=widths.reduce((x,y)=>x+y,0)||1,span=cells.reduce((n,c)=>n+(Number(c.colSpan)||1),0);
+      const inner=document.createElement('table');inner.className='cdoc-rowsplit-inner';const cg=document.createElement('colgroup');
+      widths.forEach(w=>{const col=document.createElement('col');col.style.width=`${(w/total*100).toFixed(2)}%`;cg.append(col)});inner.append(cg);
+      const itr=document.createElement('tr');cells.forEach(c=>{c.colSpan=1;itr.append(c)});inner.createTBody().append(itr);
+      const holder=document.createElement('td');holder.className='cdoc-rowsplit';holder.colSpan=span;holder.append(inner);tr.append(holder);return inner};
+    const colDrag=(table,x,edge)=>{const cols=colsOf(table);if(cols.length<2)return false;const t=table.getBoundingClientRect();let acc=t.left,best=-1,dist=1e9;
+      cols.forEach((c,k)=>{acc+=(parseFloat(c.style.width)||0)/100*t.width;if(k<cols.length-1&&Math.abs(acc-edge)<dist){dist=Math.abs(acc-edge);best=k}});
       if(best<0||dist>EDGE*3)return false;drag={mode:'col',cols,i:best,startX:x,a:parseFloat(cols[best].style.width)||0,b:parseFloat(cols[best+1].style.width)||0,tw:t.width};return true};
-    const move=x=>{const dx=x-drag.startX;
+    // 기본: 그 줄의 칸만 조절 · Shift: 열 전체 조절 · 표 오른쪽 끝: 표 너비 · 칸 아래쪽: 줄 높이
+    const start=(x,y,h,shift)=>{
+      if(h.kind==='y'){let tr=h.cell.parentElement;const own=h.cell.closest('table');if(own.classList.contains('cdoc-rowsplit-inner'))tr=own.closest('tr');
+        else{const rows=[...own.rows];tr=rows[Math.min(rows.length-1,rows.indexOf(tr)+(Number(h.cell.rowSpan)||1)-1)]}
+        drag={mode:'row',tr,startY:y,startH:tr.getBoundingClientRect().height};return true}
+      if(h.outer){const cs=getComputedStyle(sheet);drag={mode:'table',table:h.top,startX:x,startW:h.top.getBoundingClientRect().width,base:sheet.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight)};return true}
+      if(!shift){const inner=splitRow(h.cell);if(inner&&colDrag(inner,x,h.edge))return true}
+      return colDrag(h.table,x,h.edge)};
+    const move=(x,y)=>{
+      if(drag.mode==='row'){drag.tr.style.height=`${Math.max(18,drag.startH+(y-drag.startY)).toFixed(0)}px`;return}
+      const dx=x-drag.startX;
       if(drag.mode==='table'){const pct=Math.max(30,Math.min(100,(drag.startW+dx)/drag.base*100));drag.table.style.width=`${pct.toFixed(1)}%`}
       else{const d=dx/drag.tw*100;const a=Math.max(3,Math.min(drag.a+drag.b-3,drag.a+d));drag.cols[drag.i].style.width=`${a.toFixed(2)}%`;drag.cols[drag.i+1].style.width=`${(drag.a+drag.b-a).toFixed(2)}%`}};
-    sheet.addEventListener('pointermove',e=>{if(drag)return;sheet.classList.toggle('church-doc-resize-cursor',Boolean(hit(e.clientX,e.target)))});
-    sheet.addEventListener('pointerdown',e=>{if(e.button!==0)return;const h=hit(e.clientX,e.target);if(!h)return;if(!start(e.clientX,h))return;e.preventDefault();
-      try{sheet.setPointerCapture(e.pointerId)}catch{}document.body.classList.add('church-doc-resizing')});
-    sheet.addEventListener('pointermove',e=>{if(drag){e.preventDefault();move(e.clientX)}});
-    const end=()=>{if(!drag)return;drag=null;document.body.classList.remove('church-doc-resizing');onChange()};
+    sheet.addEventListener('pointermove',e=>{if(drag)return;const h=hit(e.clientX,e.clientY,e.target);sheet.classList.toggle('church-doc-resize-cursor',h?.kind==='x');sheet.classList.toggle('church-doc-resize-row',h?.kind==='y')});
+    sheet.addEventListener('pointerdown',e=>{if(e.button!==0)return;const h=hit(e.clientX,e.clientY,e.target);if(!h)return;if(!start(e.clientX,e.clientY,h,e.shiftKey))return;e.preventDefault();
+      try{sheet.setPointerCapture(e.pointerId)}catch{}document.body.classList.add(drag.mode==='row'?'church-doc-resizing-row':'church-doc-resizing')});
+    sheet.addEventListener('pointermove',e=>{if(drag){e.preventDefault();move(e.clientX,e.clientY)}});
+    const end=()=>{if(!drag)return;drag=null;document.body.classList.remove('church-doc-resizing','church-doc-resizing-row');onChange()};
     sheet.addEventListener('pointerup',end);sheet.addEventListener('pointercancel',end);
   }
   // 표 안 ↑·↓: 칸의 첫·마지막 줄에서 누르면 옆 칸이 아니라 바로 위·아래 칸(같은 세로 위치)으로 이동한다.
