@@ -10,7 +10,7 @@
 // - Public promotional pages are left untouched for SEO/AEO, accessibility and
 //   payment-review visibility. Inputs, textareas and contenteditable stay copyable.
 
-export const CONTENT_PROTECTION_VERSION='v1';
+export const CONTENT_PROTECTION_VERSION='v2';
 export const CONTENT_GUARD_SCRIPT_PATH='/__ekodi/content-guard.js';
 export const CONTENT_GUARD_STYLE_PATH='/__ekodi/content-guard.css';
 const ADMIN_SEGMENT=/(^|\/)admin(?:\/|$)/i;
@@ -150,7 +150,10 @@ const CONTENT_GUARD_CLIENT_SOURCE=String.raw`function contentGuardClient(){
   function block(event){if(!editable(event.target)){event.preventDefault();return false;}}
   ['contextmenu','copy','cut','dragstart','selectstart'].forEach(function(type){doc.addEventListener(type,block,true);});
   var shield=null,timer=0;
+  // 관리자 문서 편집기의 [인쇄]처럼 페이지가 명시적으로 허용한 인쇄는 막지 않는다(body.ekodi-allow-print).
+  function printAllowed(){return Boolean(doc.body&&doc.body.classList.contains('ekodi-allow-print'));}
   function showShield(ms){
+    if(printAllowed())return;
     root.classList.add('ekodi-cg-shielded');
     clearTimeout(timer);
     if(ms)timer=setTimeout(hideShield,ms);
@@ -216,7 +219,7 @@ html[data-ekodi-content-guard] :is(input,textarea,select,[contenteditable],[cont
 html[data-ekodi-content-guard] img,html[data-ekodi-content-guard] video{-webkit-user-drag:none}
 .ekodi-cg-watermark{position:fixed;inset:0;pointer-events:none;z-index:2147483646;background-repeat:repeat}
 html.ekodi-cg-shielded body>*:not(.ekodi-cg-watermark){filter:blur(18px)!important;transition:filter .08s}
-@media print{html[data-ekodi-content-guard] body>*{display:none!important}html[data-ekodi-content-guard] body::after{content:"EKODI 보호 화면은 인쇄할 수 없습니다.";display:block;padding:40px;font:16px sans-serif}}
+@media print{html[data-ekodi-content-guard] body:not(.ekodi-allow-print)>*{display:none!important}html[data-ekodi-content-guard] body:not(.ekodi-allow-print)::after{content:"EKODI 보호 화면은 인쇄할 수 없습니다.";display:block;padding:40px;font:16px sans-serif}}
 `;
 
 const ASSET_HEADERS=type=>({
