@@ -11,6 +11,7 @@ const notice = { source: 'mall', subject: '에코디몰 새 주문 1건', lines:
 
 test('only allow-listed sources, no PII, ekodi.kr links only', () => {
   assert.equal(normalizeNotice({ ...notice, source: 'evil' }).error, 'SOURCE_NOT_ALLOWED');
+  assert.equal(normalizeNotice({ ...notice, source: 'qtin', lines: ['12월호 신청 1건 결제완료'] }).source, 'qtin');
   assert.equal(normalizeNotice({ ...notice, lines: ['연락처 010-1234-5678'] }).error, 'PII_REJECTED');
   assert.equal(normalizeNotice({ ...notice, lines: ['메일 a@b.co'] }).error, 'PII_REJECTED');
   assert.equal(normalizeNotice({ ...notice, link: 'https://evil.example/' }).link, '');
