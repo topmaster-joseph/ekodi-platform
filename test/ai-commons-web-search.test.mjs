@@ -118,3 +118,33 @@ test('Naver Search is never used for AI answers, even when keys exist (API HUB t
   assert.doesNotMatch(read('ai-commons-web-search.js'),/openapi\.naver\.com|naverapihub/);
   assert.doesNotMatch(read('.github/workflows/deploy-ai-control.yml'),/NAVER/);
 });
+
+test('the whole web search is bounded by one time budget',async()=>{
+  const never=()=>new Promise(()=>{});
+  const started=Date.now();
+  const original=COMMONS_WEB_LIMITS.budgetMs;
+  assert.equal(original,7000);
+  const result=await Promise.race([
+    searchCommonsWeb('무안군 소식',{},never),
+    new Promise(resolve=>setTimeout(()=>resolve('outer-timeout'),9000)),
+  ]);
+  assert.notEqual(result,'outer-timeout');
+  assert.deepEqual([...result.sources],[]);
+  assert.equal(result.status.budget,'timeout');
+  assert.ok(Date.now()-started<8500);
+});
+
+test('slow first round skips the narrower retry',async()=>{
+  let t=0;const clock=()=>t;const urls=[];
+  const fetchImpl=async url=>{urls.push(String(url));t+=1000;return new Response('',{status:404})};
+  await searchCommonsWeb('무안군 AI 교육 일정',{},fetchImpl,clock);
+  assert.equal(urls.length,4,'no second round after 4s elapsed');
+});
+
+test('worker retries without web evidence and reports secret-free failure codes',()=>{
+  const worker=read('ai-control-worker.js');
+  assert.match(worker,/const prompts=sources\.length\?\[\[prompt,true\],\[buildCommonsChatPrompt\(input\.messages,\{task:input\.task\}\),false\]\]:\[\[prompt,false\]\];/);
+  assert.match(worker,/return json\(\{error:'all_providers_unavailable',failures:failures\.slice\(0,10\)\},503\);/);
+  assert.match(worker,/function commonsProviderFailure\(providerId,error\)/);
+  assert.match(read('ai-control/commons.js'),/error\.data\?\.failures/);
+});
