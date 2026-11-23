@@ -46,3 +46,14 @@ test('continuation stops when the AI returns nothing, and the last section asks 
   assert.match(essayContinuePrompt(nextTopic(0), 'x', true), /작은 실천 하나로/);
   assert.doesNotMatch(essayContinuePrompt(nextTopic(0), 'x', false), /마지막 부분/);
 });
+
+test('an essay submitted mid-run (09:46) is published by the next morning run that starts at 09:40', async () => {
+  const db = createD1(new DatabaseSync(':memory:'));
+  const long = `쉼을 배우는 한 주\n요약입니다.\n\n${'## 소제목\n' + '하루를 멈추고 숨을 고르는 시간이 우리에게 필요합니다. '.repeat(60)}`;
+  const submittedAt = Date.parse('2026-11-23T00:46:32Z');
+  const { submitted } = await essayTick(db, async () => long, { now: submittedAt });
+  const early = await essayTick(db, async () => null, { now: Date.parse('2026-11-23T23:00:00Z') });
+  assert.deepEqual(early.published, [], 'not before the review window');
+  const next = await essayTick(db, async () => null, { now: Date.parse('2026-11-24T00:40:50Z') });
+  assert.deepEqual(next.published, [submitted]);
+});
