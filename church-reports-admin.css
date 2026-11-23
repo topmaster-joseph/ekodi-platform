@@ -241,3 +241,10 @@ body.church-doc-editing{overflow:hidden}
   body.church-doc-printing .church-doc-sheet{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}
   body.church-doc-printing .church-doc-sheet .pb{border:0;margin:0}
 }
+
+/* 서명: 대표자 이름 옆에 필기체 서명(나눔손글씨 펜, OFL — '정찬균' 글자만 담은 작은 글꼴) */
+@font-face{font-family:'EkodiSign';src:url('/church-sign.woff2') format('woff2');font-display:block}
+.church-doc-sheet .sign{display:inline-block;margin:0 4px 0 6px;font-family:'EkodiSign',cursive;font-size:22pt;font-weight:400;line-height:1;color:#1d2a6b;letter-spacing:1px;transform:rotate(-5deg);vertical-align:-4px}
+.church-doc-sheet table.auto{table-layout:auto}
+.church-doc-subhead{margin:6px 0 6px;font-size:.9rem}
+.church-doc-subhead small{font-weight:400;color:#667085}

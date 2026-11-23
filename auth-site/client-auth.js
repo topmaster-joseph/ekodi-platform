@@ -296,7 +296,10 @@ async function handoffExistingSession(s){
   $('serviceBadge').textContent='인증 완료';
   show('googleButtonHost',false);show('googleRetry',false);show('cancelSignedOut',false);
   const who=String(s?.user?.email||'').trim();
-  notice(who?`${who} 계정으로 로그인되어 있습니다. 원래 보던 화면으로 돌아갑니다.`:'로그인이 확인되었습니다. 원래 보던 화면으로 돌아갑니다.');
+  const busyText=who?`${who} 계정으로 로그인되어 있습니다. 원래 보던 화면으로 돌아갑니다. 로그인 중이니 다른 버튼을 누르지 마세요.`:'로그인이 확인되었습니다. 원래 보던 화면으로 돌아갑니다. 로그인 중이니 다른 버튼을 누르지 마세요.';
+  lockLogin('',busyText);
+  document.documentElement.setAttribute('data-ekodi-login-routing','1');
+  const access=$('accessStatus');if(access){access.textContent=busyText;access.className='notice busy';}
   try{
     const proof=await identity('/session/handoff',{method:'POST',authenticated:true,session:s});
     routeTarget(proof);
@@ -304,6 +307,8 @@ async function handoffExistingSession(s){
   }catch(error){
     routing=false;
     lastHandoffError=error;
+    document.documentElement.removeAttribute('data-ekodi-login-routing');
+    unlockLogin();
     console.error('central session handoff',error);
     return false;
   }
@@ -428,7 +433,7 @@ function askContinueOrSwitch(existing){
   if(status){status.textContent=`${who||'현재'} 계정으로 로그인되어 있습니다. 이 계정으로 계속할까요, 다른 계정으로 로그인할까요?`;status.className='notice';}
   show('accountChoice',true);
   const go=$('continueSignedIn'),other=$('switchAccount');
-  if(go)go.onclick=async()=>{awaitingAccountChoice=false;show('accountChoice',false);show('signedIn',false);show('signedOut',true);await continueExistingSession(existing)};
+  if(go)go.onclick=async()=>{awaitingAccountChoice=false;show('accountChoice',false);await continueExistingSession(existing);if(!routing){show('signedIn',false);show('signedOut',true);}};
   if(other)other.onclick=async()=>{
     awaitingAccountChoice=false;
     show('accountChoice',false);
