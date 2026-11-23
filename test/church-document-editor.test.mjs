@@ -26,7 +26,7 @@ test('content API keeps the previous version on every save and checks conflicts'
 
 test('admin documents open in an in-page editor with autosave and print', () => {
   const js = read('church-reports-admin.js');
-  for (const s of ['function openDocEditor(id)', 'data-doc-edit', 'contenteditable="true"', "method:'PUT'", 'timer=setTimeout(save,2500)', 'church-doc-printing', 'function importDocHtml(sheet,html)', 'el.style.cssText=']) assert.ok(js.includes(s), s);
+  for (const s of ['function openDocEditor(id,opts={})', 'data-doc-edit', 'contenteditable="true"', "method:'PUT'", 'timer=setTimeout(save,2500)', 'church-doc-printing', 'function importDocHtml(sheet,html)', 'el.style.cssText=']) assert.ok(js.includes(s), s);
   const css = read('church-reports-admin.css');
   assert.ok(css.includes('.church-doc-sheet{width:210mm'));
   assert.ok(css.includes('body.church-doc-printing>*:not(#churchDocEditor){display:none!important}'));
@@ -34,7 +34,7 @@ test('admin documents open in an in-page editor with autosave and print', () => 
 
 test('editor wraps text inside cells and lets tables and columns be resized by dragging', () => {
   const js = read('church-reports-admin.js');
-  for (const s of ['function enableTableArrows(sheet)', 'enableTableArrows(sheet);', 'function enableTableResize(sheet,onChange)', "drag={mode:'table'", "drag={mode:'col'", 'enableTableResize(sheet,'])  assert.ok(js.includes(s), s);
+  for (const s of ['window.open(url.toString()', "get('edit')", 'standalone:true', 'function enableTableArrows(sheet)', 'enableTableArrows(sheet);', 'function enableTableResize(sheet,onChange)', "drag={mode:'table'", "drag={mode:'col'", 'setPointerCapture', 'enableTableResize(sheet,'])  assert.ok(js.includes(s), s);
   const css = read('church-reports-admin.css');
   assert.ok(css.includes('white-space:normal!important'));
   assert.ok(css.includes('overflow-wrap:anywhere!important'));

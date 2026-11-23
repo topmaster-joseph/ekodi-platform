@@ -82,7 +82,10 @@
       try{const r=await fetch(`${DOC_API}/import`,{method:'POST',headers,body:fd});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);st.textContent='';await loadDocuments();await openDocEditor(d.id)}catch(err){st.textContent=`실패: ${err.message}`}};
     imp?.addEventListener('submit',e=>{e.preventDefault();void doImport(false)});
     imp?.querySelector('[data-doc-blank]')?.addEventListener('click',()=>void doImport(true));
-    root.querySelectorAll('[data-doc-edit]').forEach(btn=>btn.addEventListener('click',()=>openDocEditor(btn.dataset.docEdit)));
+    // 열기·편집은 새 창에서 연다(문서함은 그대로 두고 문서만 크게). 새 창이 막히면 이 화면에서 연다.
+    root.querySelectorAll('[data-doc-edit]').forEach(btn=>btn.addEventListener('click',()=>{const id=btn.dataset.docEdit;const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('edit',id);const w=window.open(url.toString(),`ekodi-doc-${id}`);if(!w)openDocEditor(id)}));
+    const editParam=new URLSearchParams(location.search).get('edit');
+    if(editParam&&/^cdoc-[A-Za-z0-9-]{1,80}$/.test(editParam)&&!window.__ekodiDocEditOpened){window.__ekodiDocEditOpened=true;void openDocEditor(editParam,{standalone:true})}
     void loadIssued();
     root.querySelectorAll('[data-doc-archive]').forEach(button=>button.addEventListener('click',async()=>{if(!confirm('이 문서를 목록에서 내릴까요? 드라이브 원본은 그대로 남습니다.'))return;try{const r=await fetch(`${DOC_API}/${encodeURIComponent(button.dataset.docArchive)}/archive`,{method:'POST',headers:docHeaders()});if(!r.ok)throw new Error(`HTTP ${r.status}`);await loadDocuments()}catch(err){alert(`처리 실패: ${err.message}`)}}));
     root.querySelector('#churchDocForm')?.addEventListener('submit',async event=>{event.preventDefault();const body=Object.fromEntries(new FormData(event.target).entries());try{const r=await fetch(DOC_API,{method:'POST',headers:docHeaders(),body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);await loadDocuments()}catch(err){alert(`등록 실패: ${err.message}`)}});
@@ -101,25 +104,33 @@
   function unmarkRed(sheet){const sel=window.getSelection();if(!sel||!sel.rangeCount)return;const range=sel.getRangeAt(0);const hits=[...sheet.querySelectorAll('.need')].filter(el=>range.intersectsNode(el));hits.forEach(el=>{if(el.tagName==='SPAN')el.replaceWith(...el.childNodes);else el.classList.remove('need')})}
   // 표 크기 조절: 칸 경계를 끌면 열 너비, 표 오른쪽 끝을 끌면 표 전체 너비가 바뀐다(퍼센트로 저장되어 인쇄에도 그대로).
   function enableTableResize(sheet,onChange){
-    const EDGE=5;let drag=null;
+    const EDGE=6;let drag=null;
     const colsOf=table=>{let cg=table.querySelector(':scope>colgroup');const first=table.rows[0];if(!first)return [];
-      const count=[...first.cells].reduce((n,c)=>n+(Number(c.colSpan)||1),0);
-      if(!cg||cg.children.length!==count){const widths=[];const probe=[...table.rows].find(r=>r.cells.length===count)||first;
-        if(probe.cells.length===count)[...probe.cells].forEach(c=>widths.push(c.getBoundingClientRect().width));else for(let i=0;i<count;i++)widths.push(table.getBoundingClientRect().width/count);
-        const total=widths.reduce((a,b)=>a+b,0)||1;cg?.remove();cg=document.createElement('colgroup');widths.forEach(w=>{const col=document.createElement('col');col.style.width=`${(w/total*100).toFixed(2)}%`;cg.append(col)});table.prepend(cg);table.classList.remove('auto')}
-      return [...cg.children]};
-    const colIndexEnd=cell=>{const row=cell.parentElement;let idx=0;for(const c of row.cells){idx+=Number(c.colSpan)||1;if(c===cell)return idx-1}return idx-1};
-    const hit=e=>{const cell=e.target.closest?.('td,th');if(!cell||!sheet.contains(cell))return null;const r=cell.getBoundingClientRect();if(Math.abs(e.clientX-r.right)>EDGE)return null;const table=cell.closest('table');const tr=table.getBoundingClientRect();return {cell,table,outer:Math.abs(r.right-tr.right)<=EDGE+1}};
-    sheet.addEventListener('mousemove',e=>{if(drag)return;sheet.classList.toggle('church-doc-resize-cursor',Boolean(hit(e)))});
-    sheet.addEventListener('mousedown',e=>{const h=hit(e);if(!h||e.button!==0)return;e.preventDefault();
-      const tw=h.table.getBoundingClientRect().width,sw=sheet.clientWidth-parseFloat(getComputedStyle(sheet).paddingLeft)-parseFloat(getComputedStyle(sheet).paddingRight);
-      if(h.outer){drag={mode:'table',table:h.table,startX:e.clientX,startW:tw,base:sw}}
-      else{const cols=colsOf(h.table);const i=colIndexEnd(h.cell);if(i<0||i>=cols.length-1)return;drag={mode:'col',cols,i,startX:e.clientX,a:parseFloat(cols[i].style.width)||0,b:parseFloat(cols[i+1].style.width)||0,tw}}
-      document.body.classList.add('church-doc-resizing')});
-    window.addEventListener('mousemove',e=>{if(!drag)return;const dx=e.clientX-drag.startX;
+      const count=Math.max(...[...table.rows].map(r=>[...r.cells].reduce((n,c)=>n+(Number(c.colSpan)||1),0)));
+      if(!cg||cg.children.length!==count){const tw=table.getBoundingClientRect().width||1;const probe=[...table.rows].find(r=>r.cells.length===count);
+        const widths=probe?[...probe.cells].map(c=>c.getBoundingClientRect().width):Array(count).fill(tw/count);
+        const total=widths.reduce((x,y)=>x+y,0)||1;cg?.remove();cg=document.createElement('colgroup');widths.forEach(w=>{const col=document.createElement('col');col.style.width=`${(w/total*100).toFixed(2)}%`;cg.append(col)});table.prepend(cg);table.classList.remove('auto')}
+      const cols=[...cg.children];const sum=cols.reduce((x,c)=>x+(parseFloat(c.style.width)||0),0);
+      if(!sum||Math.abs(sum-100)>0.5){const each=100/cols.length;cols.forEach(c=>{const w=parseFloat(c.style.width);c.style.width=`${(sum&&w?w/sum*100:each).toFixed(2)}%`})}
+      return cols};
+    // 칸 경계(왼쪽·오른쪽 어느 쪽이든)에 가까우면 그 경계를 돌려준다. 합쳐진 칸이 있어도 화면 좌표로 판단한다.
+    const hit=(x,target)=>{const cell=target?.closest?.('td,th');if(!cell||!sheet.contains(cell))return null;const table=cell.closest('table');const r=cell.getBoundingClientRect(),t=table.getBoundingClientRect();
+      let edge=null;if(Math.abs(x-r.right)<=EDGE)edge=r.right;else if(Math.abs(x-r.left)<=EDGE&&r.left-t.left>EDGE)edge=r.left;if(edge===null)return null;
+      return {table,edge,outer:Math.abs(edge-t.right)<=EDGE+1}};
+    const start=(x,h)=>{const t=h.table.getBoundingClientRect();
+      if(h.outer){const cs=getComputedStyle(sheet);drag={mode:'table',table:h.table,startX:x,startW:t.width,base:sheet.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight)};return true}
+      const cols=colsOf(h.table);if(cols.length<2)return false;let acc=t.left,best=-1,dist=1e9;
+      cols.forEach((c,k)=>{acc+=(parseFloat(c.style.width)||0)/100*t.width;if(k<cols.length-1&&Math.abs(acc-h.edge)<dist){dist=Math.abs(acc-h.edge);best=k}});
+      if(best<0||dist>EDGE*3)return false;drag={mode:'col',cols,i:best,startX:x,a:parseFloat(cols[best].style.width)||0,b:parseFloat(cols[best+1].style.width)||0,tw:t.width};return true};
+    const move=x=>{const dx=x-drag.startX;
       if(drag.mode==='table'){const pct=Math.max(30,Math.min(100,(drag.startW+dx)/drag.base*100));drag.table.style.width=`${pct.toFixed(1)}%`}
-      else{const d=dx/drag.tw*100;const a=Math.max(3,Math.min(drag.a+drag.b-3,drag.a+d));drag.cols[drag.i].style.width=`${a.toFixed(2)}%`;drag.cols[drag.i+1].style.width=`${(drag.a+drag.b-a).toFixed(2)}%`}});
-    window.addEventListener('mouseup',()=>{if(!drag)return;drag=null;document.body.classList.remove('church-doc-resizing');onChange()});
+      else{const d=dx/drag.tw*100;const a=Math.max(3,Math.min(drag.a+drag.b-3,drag.a+d));drag.cols[drag.i].style.width=`${a.toFixed(2)}%`;drag.cols[drag.i+1].style.width=`${(drag.a+drag.b-a).toFixed(2)}%`}};
+    sheet.addEventListener('pointermove',e=>{if(drag)return;sheet.classList.toggle('church-doc-resize-cursor',Boolean(hit(e.clientX,e.target)))});
+    sheet.addEventListener('pointerdown',e=>{if(e.button!==0)return;const h=hit(e.clientX,e.target);if(!h)return;if(!start(e.clientX,h))return;e.preventDefault();
+      try{sheet.setPointerCapture(e.pointerId)}catch{}document.body.classList.add('church-doc-resizing')});
+    sheet.addEventListener('pointermove',e=>{if(drag){e.preventDefault();move(e.clientX)}});
+    const end=()=>{if(!drag)return;drag=null;document.body.classList.remove('church-doc-resizing');onChange()};
+    sheet.addEventListener('pointerup',end);sheet.addEventListener('pointercancel',end);
   }
   // 표 안 ↑·↓: 칸의 첫·마지막 줄에서 누르면 옆 칸이 아니라 바로 위·아래 칸(같은 세로 위치)으로 이동한다.
   function enableTableArrows(sheet){
@@ -142,7 +153,8 @@
       r.collapse(true);sel.removeAllRanges();sel.addRange(r);
     });
   }
-  async function openDocEditor(id){
+  window.addEventListener('message',e=>{if(e.origin===location.origin&&e.data?.type==='ekodi:church-doc-saved'&&document.querySelector('#churchDocumentsRoot'))void loadDocuments()});
+  async function openDocEditor(id,opts={}){
     let doc;
     try{const r=await fetch(`${DOC_API}/${encodeURIComponent(id)}/content`,{headers:docHeaders(),cache:'no-store'});doc=await r.json().catch(()=>({}));if(!r.ok)throw new Error(doc.error||`HTTP ${r.status}`)}
     catch(err){alert(`문서를 열지 못했습니다: ${err.message}`);return}
@@ -177,7 +189,8 @@
     }
     function warn(e){if(dirty){e.preventDefault();e.returnValue=''}}
     box.querySelector('[data-print]').addEventListener('click',async()=>{if(dirty)await save();document.body.classList.add('church-doc-printing');window.print();setTimeout(()=>document.body.classList.remove('church-doc-printing'),500)});
-    box.querySelector('[data-close]').addEventListener('click',async()=>{if(dirty&&!(await save())&&!confirm('저장되지 않은 내용이 있습니다. 그래도 닫을까요?'))return;window.removeEventListener('beforeunload',warn);box.remove();document.body.classList.remove('church-doc-editing');void loadDocuments()});
+    box.querySelector('[data-close]').addEventListener('click',async()=>{if(dirty&&!(await save())&&!confirm('저장되지 않은 내용이 있습니다. 그래도 닫을까요?'))return;window.removeEventListener('beforeunload',warn);if(opts.standalone){try{window.opener?.postMessage({type:'ekodi:church-doc-saved',id},location.origin)}catch{}window.close();const u=new URL(location.href);u.searchParams.delete('edit');history.replaceState(null,'',u.toString())}box.remove();document.body.classList.remove('church-doc-editing');void loadDocuments()});
+    if(opts.standalone)document.title=`${doc.title} · 문서 편집`;
     if(w)sheet.focus();
   }
   // 발급서류: 업로드해 두고 다음 제출 때 '최근서류'를 그대로 다시 쓴다.
