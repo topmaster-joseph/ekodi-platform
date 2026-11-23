@@ -43,6 +43,7 @@ import { workspaceRouteFromPublicPath } from './workspace-route-policy.js';
 import { isInsurancePublicPath, routeInsurancePublic } from './insurance-public-route.js';
 import { marketingProjectionForPath, proxyCanonicalMarketing } from './marketing-canonical-projection.js';
 import { routeCanonicalSurface } from './canonical-surface-router.js';
+import { isMissionCanonicalPath } from './mission-public-path.js';
 import { handlePreviewRequest } from './preview-page.js';
 import { storeGatewayPage } from './store-gateway-page.js';
 import { isEkodiIndexNowKeyPath, ekodiIndexNowKeyResponse } from './platform-indexnow.js';
@@ -352,9 +353,10 @@ async function routePublicWorkspace(request,env){
 function isEkodiMissionSpacePath(pathname){
   const raw=String(pathname||'').toLowerCase();
   const path=raw.length>1?raw.replace(/\/+$/,''):raw;
-  if(path!==EKODIMISSION_APEX_PREFIX&&!path.startsWith(EKODIMISSION_APEX_PREFIX+'/'))return false;
-  if(path===EKODIMISSION_APEX_PREFIX+'/live'||path.startsWith(EKODIMISSION_APEX_PREFIX+'/live/'))return false;
-  if(path===EKODIMISSION_APEX_PREFIX+'/admin'||path.startsWith(EKODIMISSION_APEX_PREFIX+'/admin/'))return false;
+  const prefix=isMissionCanonicalPath(path)?'/mission':EKODIMISSION_APEX_PREFIX;
+  if(path!==prefix&&!path.startsWith(prefix+'/'))return false;
+  if(path===prefix+'/live'||path.startsWith(prefix+'/live/'))return false;
+  if(path===prefix+'/admin'||path.startsWith(prefix+'/admin/'))return false;
   return true;
 }
 async function routeEkodiMissionSpace(request,env){
