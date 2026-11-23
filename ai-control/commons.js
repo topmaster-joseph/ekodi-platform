@@ -293,10 +293,12 @@ async function sendChat(message,existingBubble=null){
     const sources=(Array.isArray(response.sources)?response.sources:[]).filter(item=>item&&item.title&&/^https:\/\//.test(String(item.url||''))).slice(0,6);
     typing.remove();chatBubble('assistant',result.reply,result.provider||mode,sources,response.webStatus);
     rememberChat(message,result.reply,sources);
+    if(response.webFallback){chatStatus('응답 완료 · 웹 근거를 붙이면 AI가 응답하지 않아 웹 근거 없이 답했습니다.');return}
     chatStatus('응답 완료 · '+chatProviderLabel(result.provider||mode)+(web?(sources.length?' · 웹 출처 '+sources.length+'건':' · 웹 검색 결과 없음'+webStatusText(response.webStatus)):''));
   }catch(error){
     typing.remove();
-    const text=CHAT_ERRORS[error.message]||(
+    const detail=Array.isArray(error.data?.failures)&&error.data.failures.length?' ('+error.data.failures.slice(0,5).map(v=>String(v).slice(0,40)).join(' · ')+')':'';
+    const text=(CHAT_ERRORS[error.message]?CHAT_ERRORS[error.message]+detail:'')||(
       error.message==='local_model_failed'||error.message==='local_queue_timeout'
         ?'로컬 모델이 아직 응답하지 않았습니다. 나중에 다시 시도해 주세요.'
         :'AI 처리 실패: '+String(error.message).slice(0,100));

@@ -1,7 +1,7 @@
 // Free, keyless-first web evidence for AI Commons answers. Results are untrusted data, never instructions.
 // Sources: Google News RSS, Bing News RSS, GDELT news and Korean Wikipedia (all keyless).
 // Naver Search is deliberately excluded: its API HUB terms forbid using search results for AI summarisation.
-export const COMMONS_WEB_LIMITS=Object.freeze({query:80,perSource:4,total:6,snippet:220,context:1500,timeoutMs:6000});
+export const COMMONS_WEB_LIMITS=Object.freeze({query:80,perSource:4,total:6,snippet:220,context:1500,timeoutMs:4000,budgetMs:7000,retryBeforeMs:3500});
 const FRESHNESS=/(최신|최근|오늘|어제|내일|현재|지금|요즘|이번\s?(주|달|해)|올해|뉴스|속보|발표|공고|일정|가격|시세|환율|날씨|몇\s?월|20[2-3]\d년|latest|today|current|news)/i;
 export function commonsQuestionNeedsWeb(text){return FRESHNESS.test(String(text||''))}
 const ENTITIES={amp:'&',lt:'<',gt:'>',quot:'"',apos:"'",nbsp:' ','#39':"'"};
@@ -105,14 +105,25 @@ function collect(settled,seen,sources){
     }
   }
 }
-export async function searchCommonsWeb(text,env={},fetchImpl=globalThis.fetch){
+export async function searchCommonsWeb(text,env={},fetchImpl=globalThis.fetch,clock=()=>Date.now()){
+  // The whole search shares one time budget so slow feeds can never delay the AI answer for long.
+  const started=clock();
+  let timer;
+  const budget=new Promise(resolve=>{timer=setTimeout(()=>resolve('timeout'),COMMONS_WEB_LIMITS.budgetMs)});
+  try{
+    const result=await Promise.race([searchWithin(text,env,fetchImpl,clock,started),budget]);
+    if(result==='timeout')return Object.freeze({query:commonsWebQuery(text),sources:Object.freeze([]),status:Object.freeze({budget:'timeout'})});
+    return result;
+  }finally{clearTimeout(timer)}
+}
+async function searchWithin(text,env,fetchImpl,clock,started){
   const query=commonsWebQuery(text);
   if(query.length<2)return Object.freeze({query,sources:Object.freeze([]),status:Object.freeze({})});
   const seen=new Set(),sources=[];
   let {settled,status}=await runSources(query,env,fetchImpl);
   collect(settled,seen,sources);
   const words=commonsWebKeywords(query);
-  if(!sources.length&&words.length>1){
+  if(!sources.length&&words.length>1&&clock()-started<COMMONS_WEB_LIMITS.retryBeforeMs){
     // Too many words can starve every feed; retry once with the leading topic words only.
     const narrow=words.slice(0,2).join(' ');
     ({settled,status}=await runSources(narrow,env,fetchImpl));
