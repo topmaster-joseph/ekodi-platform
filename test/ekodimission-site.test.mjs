@@ -257,7 +257,8 @@ test('mission production smoke covers every published subservice route',async()=
   const eventPage=await readFile(new URL('../space/ekodimission-open-table-apply.page',import.meta.url),'utf8');
   const eventProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/ekodimission/apply/260926-open-table');
   assert.ok(eventProbe,'missing Open Table production probe');
-  for(const marker of eventProbe.expect||[])assert.ok(eventPage.includes(marker),`Open Table probe marker drifted from page source: ${marker}`);
+  // Source templates remain keyed under the immutable ekodimission tenant; HTTP responses expose /mission.
+  for(const marker of eventProbe.expect||[]){const sourceMarker=marker.replace(/^\/mission(?=\/|$)/,'/ekodimission');assert.ok(eventPage.includes(sourceMarker),`Open Table probe marker drifted from rendered/source contract: ${marker}`);}
 });
 
 test('mission authentication and service registry use only the canonical ekodi.kr path',async()=>{
