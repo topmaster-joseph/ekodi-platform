@@ -7,7 +7,7 @@ const read=name=>readFile(new URL(name,root),'utf8');
 const env={ASSETS:{fetch:async request=>{try{return new Response(await readFile(new URL('.'+new URL(request.url).pathname,root)),{status:200,headers:{'content-type':'text/html; charset=utf-8'}})}catch{return new Response('Not Found',{status:404})}}}};
 
 test('mission history is a first-class public route and slash variants agree',async()=>{
- const path='/ekodimission/history';
+ const path='/mission/history';
  const a=await spaceWorker.fetch(new Request('https://ekodi.kr'+path),env);
  const b=await spaceWorker.fetch(new Request('https://ekodi.kr'+path+'/'),env);
  assert.equal(a.status,200);assert.equal(b.status,200);
@@ -16,8 +16,9 @@ test('mission history is a first-class public route and slash variants agree',as
  assert.equal(a.headers.get('x-robots-tag'),'index, follow');
  const html=await a.text();
  assert.equal(html,await b.text());
- assert.match(html,/href="https:\/\/ekodi.kr\/ekodimission\/history"/);
- assert.match(html,/data-mission-nav/);
+ assert.match(html,/href="https:\/\/ekodi.kr\/mission\/history"/);
+ assert.doesNotMatch(html,/href="https:\/\/ekodi.kr\/ekodimission\/history"/);
+  assert.match(html,/data-mission-nav/);
  assert.match(html,/id="history-2018"/);
  assert.match(html,/id="history-2026"/);
  assert.match(html,/<time class="history-day" datetime="2026-08-21">08\.21–23<\/time><span>제주 여름캠프<\/span>/);
