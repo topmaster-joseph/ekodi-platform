@@ -371,6 +371,7 @@ const qtinOrderTouched=changedFiles.some(file=>[
   'migrations/0203_qtin_product_intros.sql',
   'migrations/0204_qtin_order_delivery.sql',
   'migrations/0205_qtin_operator_notice_outbox.sql',
+  'migrations/202611240210_qtin_order_approval.sql',
   'wrangler.qtin-order.toml',
   'wrangler.qtin-order.staging.toml',
   '.github/workflows/deploy-qtin-order.yml',

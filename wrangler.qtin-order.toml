@@ -12,7 +12,8 @@ zone_name = "ekodi.kr"
 # 00:00 KST(15:00 UTC) and 12:00 KST(03:00 UTC): prepare next issue on the 14th–25th,
 # sync QTM prices/covers, expire unpaid applications, anonymize old personal data.
 [triggers]
-crons = ["0 15 * * *", "0 3 * * *"]
+# Every 30 min (:15/:45): paid-order and final-order-approval phone notices only.
+crons = ["0 15 * * *", "0 3 * * *", "15,45 * * * *"]
 
 [vars]
 ENVIRONMENT = "production"

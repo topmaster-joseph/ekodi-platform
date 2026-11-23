@@ -42,6 +42,8 @@ function paymentReadiness(env, profileId) {
 // operators/staff may create (clearly labelled) test orders; the public page stays closed
 // and test orders are kept out of order totals, product counts and the CSV export.
 const TEST_ORDER_PREFIX = 'QTINTEST-';
+// 30분마다: 결제완료·발주승인 알림만 처리(QTM 동기화·만료 처리는 하루 두 번 cron에서만).
+export const NOTICE_CRON = '15,45 * * * *';
 const NOT_TEST_ORDER = `o.id NOT LIKE '${TEST_ORDER_PREFIX}%'`;
 const publicPaymentReady = env => paymentReadiness(env).publicReady;
 const testPaymentReady = env => paymentReadiness(env).testReady;
@@ -269,6 +271,9 @@ export async function runScheduled(env, now = new Date(), options = {}) {
   const report = { expired: await expirePending(env, now), anonymized: 0, sync: null, operatorNotices: null };
   try { report.operatorNotices = await dispatchDueQtinNotices(env, now); }
   catch { report.operatorNotices = { error: 'OUTBOX_UNAVAILABLE' }; }
+  try { report.approvals = await runApprovalCycle(env, now); }
+  catch { report.approvals = { error: 'APPROVAL_UNAVAILABLE' }; }
+  if (options.noticesOnly) return report;
   if (kstParts(now).day === 1) report.anonymized = await anonymizeOld(env, now);
   if (inPreparationWindow(now)) {
     const target = targetIssueFor(now);
@@ -278,6 +283,109 @@ export async function runScheduled(env, now = new Date(), options = {}) {
     }
   }
   return report;
+}
+
+// ---------- 마감 후 최종 발주 승인 (EKODI-QTIN-ORDER-APPROVAL-001) ----------
+// 신청이 마감되면 결제완료 집계를 만들어 운영자 휴대폰(웹 푸시)으로 알리고,
+// 관리자 화면에서 '최종 발주 승인'을 눌러야 QTM 단체 발주를 진행한다.
+// 알림에는 건수·권수·금액·도서명만 담는다(개인정보 없음). 승인 전까지 하루 한 번 다시 알린다.
+const APPROVAL_LOOKBACK_MS = 20 * 86400000;
+const APPROVAL_REMINDER_MS = 24 * 3600000;
+const APPROVAL_MAX_NOTICES = 7;
+
+export async function approvalSnapshot(env, id) {
+  const paid = `o.campaign_id=? AND o.status='paid' AND ${NOT_TEST_ORDER}`;
+  const total = await env.DB.prepare(`SELECT COUNT(*) AS orders, COALESCE(SUM(o.total_quantity),0) AS qty, COALESCE(SUM(o.total_amount),0) AS amount FROM qtin_orders o WHERE ${paid}`).bind(id).first();
+  const books = await env.DB.prepare(`SELECT i.product_name AS name, SUM(i.quantity) AS qty FROM qtin_order_items i JOIN qtin_orders o ON o.id=i.order_id WHERE ${paid} GROUP BY i.product_name ORDER BY qty DESC, name ASC`).bind(id).all();
+  const parcel = await env.DB.prepare(`SELECT COUNT(*) AS n FROM qtin_order_delivery d JOIN qtin_orders o ON o.id=d.order_id WHERE ${paid} AND d.method='parcel'`).bind(id).first().catch(() => ({ n: 0 }));
+  return {
+    orders: Number(total?.orders || 0), quantity: Number(total?.qty || 0), amount: Number(total?.amount || 0),
+    parcel: Number(parcel?.n || 0),
+    books: (books.results || []).map(b => ({ name: clean(b.name, 120), qty: Number(b.qty) })),
+  };
+}
+
+function approvalNotice(id, snap, reminder) {
+  const parsed = parseCampaignId(id);
+  const issue = parsed ? `${parsed.year}년 ${parsed.month}월호` : id;
+  const link = `https://ekodi.kr/qtin/admin?campaign=${id}#approval`;
+  if (!snap.orders) {
+    return { source: 'qtin', subject: `큐티인 ${issue} 신청 마감 · 결제완료 신청 없음`, lines: ['결제완료 신청이 없어 발주할 도서가 없습니다.'], link };
+  }
+  return {
+    source: 'qtin',
+    subject: `${reminder ? '[다시 알림] ' : ''}큐티인 ${issue} 마감 · 최종 발주 승인 필요`,
+    lines: [
+      `결제완료 ${snap.orders}건 · ${snap.quantity}권 · ${formatWon(snap.amount)}${snap.parcel ? ` · 택배 ${snap.parcel}건` : ''}`,
+      ...snap.books.slice(0, 6).map(b => `${b.name} ${b.qty}권`),
+      '관리자 화면에서 최종 발주 승인을 눌러 주세요. 승인 전에는 발주하지 않습니다.',
+    ],
+    link,
+  };
+}
+
+/** 마감된 신청 월마다 승인 대기 항목을 한 번 만든다. */
+export async function prepareClosedApprovals(env, now = new Date()) {
+  const since = new Date(now.getTime() - APPROVAL_LOOKBACK_MS).toISOString();
+  const rows = (await env.DB.prepare('SELECT * FROM qtin_campaigns WHERE closes_at >= ? ORDER BY id').bind(since).all()).results || [];
+  let created = 0;
+  for (const raw of rows) {
+    const campaign = effectiveCampaignWindow(raw);
+    if (campaign.status === 'cancelled' || campaignState(campaign, now) !== 'closed') continue;
+    const at = now.toISOString();
+    const result = await env.DB.prepare(`INSERT OR IGNORE INTO qtin_order_approvals (campaign_id, status, summary_json, notice_next_at, created_at, updated_at) VALUES (?, 'pending', '{}', ?, ?, ?)`)
+      .bind(campaign.id, at, at, at).run();
+    if (result?.meta?.changes) created += 1;
+  }
+  return created;
+}
+
+/** 승인 대기 알림 발송. 휴대폰 푸시가 실제로 접수돼야만 '보냄'으로 기록한다. */
+export async function dispatchApprovalNotices(env, now = new Date()) {
+  if (isStaging(env) || !flag(env?.QTIN_OPERATOR_NOTIFY_ENABLED)) return { skipped: 'disabled', sent: 0 };
+  const at = now.toISOString();
+  const lease = new Date(now.getTime() + 5 * 60000).toISOString();
+  const rows = (await env.DB.prepare(`SELECT * FROM qtin_order_approvals WHERE status='pending' AND notice_next_at <= ? AND notice_count < ? ORDER BY campaign_id LIMIT 10`)
+    .bind(at, APPROVAL_MAX_NOTICES).all()).results || [];
+  let sent = 0, failed = 0;
+  for (const row of rows) {
+    const reserved = await env.DB.prepare(`UPDATE qtin_order_approvals SET notice_next_at=?, updated_at=? WHERE campaign_id=? AND status='pending' AND notice_next_at <= ?`)
+      .bind(lease, at, row.campaign_id, at).run();
+    if (!reserved?.meta?.changes) continue;
+    const snap = await approvalSnapshot(env, row.campaign_id);
+    const empty = snap.orders === 0;
+    let outcome = { ok: false, code: 'NOTIFIER_UNAVAILABLE' };
+    try { if (env.OPERATOR_NOTIFY?.notify) outcome = await env.OPERATOR_NOTIFY.notify(approvalNotice(row.campaign_id, snap, Number(row.notice_count) > 0)); }
+    catch { outcome = { ok: false, code: 'NOTIFIER_RPC_FAILED' }; }
+    if (outcome?.push === true) {
+      await env.DB.prepare(`UPDATE qtin_order_approvals SET status=?, summary_json=?, notice_count=notice_count+1, notified_at=?, notice_next_at=?, notice_last_error='', updated_at=? WHERE campaign_id=? AND status='pending'`)
+        .bind(empty ? 'empty' : 'pending', JSON.stringify(snap), at, new Date(now.getTime() + APPROVAL_REMINDER_MS).toISOString(), at, row.campaign_id).run();
+      sent += 1;
+    } else {
+      // 발송 실패는 횟수에 넣지 않고 짧은 간격으로 다시 시도한다(최대 1시간 간격).
+      const tries = Math.max(1, Number(row.notice_count) + 1);
+      const retryAt = new Date(now.getTime() + Math.min(60, 5 * 2 ** Math.min(tries, 4)) * 60000).toISOString();
+      await env.DB.prepare(`UPDATE qtin_order_approvals SET summary_json=?, notice_next_at=?, notice_last_error=?, updated_at=? WHERE campaign_id=? AND status='pending'`)
+        .bind(JSON.stringify(snap), retryAt, clean(outcome?.code || 'NOTIFIER_FAILED', 60), at, row.campaign_id).run();
+      failed += 1;
+      console.warn('qtin approval push queued for retry', clean(outcome?.code, 60));
+    }
+  }
+  return { sent, failed };
+}
+
+export async function runApprovalCycle(env, now = new Date()) {
+  if (isStaging(env)) return { skipped: 'isolated-staging' };
+  const created = await prepareClosedApprovals(env, now);
+  const notices = await dispatchApprovalNotices(env, now);
+  return { created, ...notices };
+}
+
+async function approvalState(env, id) {
+  const row = await env.DB.prepare('SELECT * FROM qtin_order_approvals WHERE campaign_id=?').bind(id).first().catch(() => null);
+  if (!row) return null;
+  let summary = {}; try { summary = JSON.parse(row.summary_json || '{}'); } catch {}
+  return { status: row.status, summary, noticeCount: Number(row.notice_count), notifiedAt: row.notified_at, noticeError: row.notice_last_error, approvedBy: row.approved_by, approvedAt: row.approved_at };
 }
 
 // ---------- Toss Payments ----------
@@ -614,7 +722,7 @@ export function renderOrderPage(data, { org = '', scriptNonce = '' } = {}) {
   ${data.dataMode === 'isolated-staging' ? '<div class="staging">ISOLATED STAGING · 샘플 데이터이며 신청·결제가 저장되지 않습니다.</div>' : ''}
 </div></header>
 <main class="wrap">
-  ${products.length ? `<section class="qtin-catalog" aria-labelledby="qtinCatalogTitle"><div class="qtin-catalog-head"><div><p>BOOK SELECTION · ${escapeHtml(issue)}</p><h2 id="qtinCatalogTitle">도서 선택</h2><p>대상별 탭으로 찾아보세요. 탭을 바꿔도 선택한 도서와 수량은 유지됩니다.</p></div><span class="qtin-catalog-count">전체 ${products.length}종</span></div><div class="qtin-catalog-tabs" role="tablist" aria-label="대상별 큐티인 도서">${catalogTabs}</div><p class="qtin-catalog-result" id="qtinCatalogResult" role="status" aria-live="polite">전체 ${products.length}종</p><div id="qtinBookGrid" class="grid" role="tabpanel" aria-labelledby="qtin-tab-all" tabindex="0">${cards}</div></section>` : `<div class="empty">${open || state === 'scheduled' ? `${escapeHtml(issue)} 도서 정보를 QTM에서 확인하고 있습니다. 잠시 후 다시 열어 주세요.` : '이번 달 신청이 마감되었습니다. 다음달 20일에 새 큐티인 신청이 열립니다.'}</div>`}
+  ${products.length ? `<section class="qtin-catalog" aria-labelledby="qtinCatalogTitle"><div class="qtin-catalog-head"><div><p>BOOK SELECTION · ${escapeHtml(issue)}</p><h2 id="qtinCatalogTitle">도서 선택</h2><p>대상별 탭으로 찾아보세요. 탭을 바꿔도 선택한 도서와 수량은 유지됩니다.</p></div><span class="qtin-catalog-count">전체 ${products.length}종</span></div><div class="qtin-catalog-tabs" role="tablist" aria-label="대상별 큐티인 도서">${catalogTabs}</div><p class="qtin-catalog-result" id="qtinCatalogResult" role="status" aria-live="polite">전체 ${products.length}종</p><div id="qtinBookGrid" class="grid" role="tabpanel" aria-labelledby="qtin-tab-all" tabindex="0">${cards}</div></section>` : `<div class="empty">${open || state === 'scheduled' ? `${escapeHtml(issue)} 도서 정보를 QTM에서 확인하고 있습니다. 잠시 후 다시 열어 주세요.` : '이번 달 신청이 마감되었습니다. 매월 15일에 다음달호 큐티인 신청이 열립니다.'}</div>`}
   <section class="panel" id="account" aria-labelledby="accountTitle"><h2 id="accountTitle">구글 계정으로 신청하기</h2>
     <div id="signedOut">
       <p class="note">책을 고르신 뒤 구글 계정으로 로그인하면 연락처를 입력하고 바로 결제하실 수 있습니다. 다음 달에는 입력하신 정보가 자동으로 채워집니다.</p>
@@ -1116,7 +1224,7 @@ async function campaignSummary(env, id) {
   const orders = await env.DB.prepare(`SELECT o.id, o.org, o.applicant_name, o.phone, o.email, o.department, o.memo, o.total_amount, o.total_quantity, o.order_name, o.status, o.payment_method, o.approved_at, o.receipt_url, o.fulfillment_status, o.created_at,
       COALESCE(d.method, 'pickup') AS delivery_method, COALESCE(d.shipping_fee, 0) AS shipping_fee, d.recipient_name, d.recipient_phone, d.postal_code, d.address1, d.address2
     FROM qtin_orders o LEFT JOIN qtin_order_delivery d ON d.order_id=o.id WHERE o.campaign_id=? AND o.status IN ('paid','cancelled','payment_pending') ORDER BY o.created_at DESC LIMIT 1000`).bind(id).all();
-  return { campaign: { ...campaign, state: campaignState(campaign) }, products, byProduct: byProduct.results || [], totals: totals.results || [], orders: orders.results || [] };
+  return { campaign: { ...campaign, state: campaignState(campaign) }, products, byProduct: byProduct.results || [], totals: totals.results || [], orders: orders.results || [], approval: await approvalState(env, id), approvalLive: await approvalSnapshot(env, id) };
 }
 
 async function exportCsv(env, id) {
@@ -1182,6 +1290,31 @@ async function handleAdminApi(request, env, url) {
       await env.DB.prepare('UPDATE qtin_campaigns SET manual_state=?, updated_at=? WHERE id=?').bind(manual, new Date().toISOString(), id).run();
       await audit(env, id, me.email, 'campaign.state', manual || 'auto');
       return json({ ok: true }, 200, env);
+    }
+    if (request.method === 'POST' && sub === '/approve') {
+      const denied = write(); if (denied) return denied;
+      const campaign = await getCampaign(env, id);
+      if (!campaign || campaignState(campaign) !== 'closed') return json({ error: '신청이 마감된 뒤에 최종 발주를 승인할 수 있습니다.' }, 409, env);
+      const body = await readJson(request);
+      const snap = await approvalSnapshot(env, id);
+      if (!snap.orders) return json({ error: '결제완료 신청이 없어 발주할 도서가 없습니다.' }, 409, env);
+      // 화면을 본 뒤 결제취소 등으로 집계가 바뀌었으면 다시 확인하게 한다.
+      if (Number(body?.expectedOrders) !== snap.orders || Number(body?.expectedAmount) !== snap.amount) return json({ error: '집계가 바뀌었습니다. 화면을 새로 고친 뒤 다시 확인해 주세요.', approvalLive: snap }, 409, env);
+      const at = new Date().toISOString();
+      await env.DB.prepare(`INSERT INTO qtin_order_approvals (campaign_id, status, summary_json, notice_next_at, approved_by, approved_at, created_at, updated_at) VALUES (?, 'approved', ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(campaign_id) DO UPDATE SET status='approved', summary_json=excluded.summary_json, approved_by=excluded.approved_by, approved_at=excluded.approved_at, updated_at=excluded.updated_at`)
+        .bind(id, JSON.stringify(snap), at, me.email, at, at, at).run();
+      await audit(env, id, me.email, 'campaign.order_approve', JSON.stringify({ orders: snap.orders, quantity: snap.quantity, amount: snap.amount }));
+      return json({ ok: true, approval: await approvalState(env, id) }, 200, env);
+    }
+    if (request.method === 'POST' && sub === '/mark-ordered') {
+      const denied = write(); if (denied) return denied;
+      const approval = await approvalState(env, id);
+      if (approval?.status !== 'approved') return json({ error: '최종 발주 승인 후에 발주 완료로 표시할 수 있습니다.' }, 409, env);
+      const at = new Date().toISOString();
+      const result = await env.DB.prepare(`UPDATE qtin_orders SET fulfillment_status='ordered', updated_at=? WHERE campaign_id=? AND status='paid' AND fulfillment_status='waiting' AND id NOT LIKE '${TEST_ORDER_PREFIX}%'`).bind(at, id).run();
+      await audit(env, id, me.email, 'campaign.mark_ordered', String(result?.meta?.changes || 0));
+      return json({ ok: true, updated: Number(result?.meta?.changes || 0) }, 200, env);
     }
     if (request.method === 'POST' && sub === '/products') {
       const denied = write(); if (denied) return denied;
@@ -1267,6 +1400,7 @@ export function renderAdminPage(scriptNonce = '') {
 <div class="f" style="justify-content:flex-end;gap:8px;flex-direction:row;align-items:flex-end;flex-wrap:wrap">
 <button class="btn alt" id="sync" type="button">QTM 도서 다시 불러오기</button><button class="btn alt" id="csv" type="button">엑셀(CSV) 내려받기</button></div></div>
 <p class="note" id="meta"></p><p class="msg" id="msg" role="alert"></p></section>
+<section class="panel" id="approval"><h2>최종 발주 승인</h2><div id="approvalBox"><p class="note">신청이 마감되면 집계를 휴대폰으로 알려 드리고, 여기서 승인하신 뒤에 QTM 단체 발주를 진행합니다.</p></div></section>
 <section class="panel"><h2>발주 수량 (결제 완료 기준)</h2><div id="summary"></div></section>
 <section class="panel"><h2>도서 목록</h2><div id="products"></div>
 <div class="fields" style="margin-top:12px"><label class="f">QTM 상품 주소로 직접 추가<input id="addUrl" placeholder="https://www.qtm.or.kr/shop/..."></label>
@@ -1436,7 +1570,21 @@ function adminClient() {
     const stateLabel = { open: '신청 중', scheduled: '신청 예정', closed: '마감' }[c.state] || c.state;
     let detail = {}; try { detail = JSON.parse(c.last_sync_detail || '{}'); } catch {}
     $('meta').textContent = `${stateLabel} · 기간 ${kst(c.opens_at)} ~ ${kst(c.closes_at)}${c.manual_state ? ` (수동: ${c.manual_state})` : ''} · 최근 QTM 동기화 ${c.last_sync_at ? kst(c.last_sync_at) : '없음'} (${c.last_sync_status || '-'}, 발견 ${detail.found ?? '-'}종)`;
-    renderSummary(); renderProducts(); renderOrders();
+    renderSummary(); renderProducts(); renderOrders(); renderApproval();
+  }
+  function renderApproval() {
+    const c = data.campaign, a = data.approval, live = data.approvalLive || { orders: 0, quantity: 0, amount: 0, books: [] };
+    const totalLine = `결제완료 <b>${live.orders}건</b> · <b>${live.quantity}권</b> · <b>${won(live.amount)}</b>${live.parcel ? ` · 택배 ${live.parcel}건` : ''}`;
+    let html = '';
+    if (c.state !== 'closed') html = `<p class="note">신청 ${c.state === 'open' ? '진행 중' : '예정'}입니다. 마감(${esc(kst(c.closes_at))}) 직후 휴대폰으로 승인 요청을 보내 드립니다.</p><p>현재 ${totalLine}</p>`;
+    else if (a?.status === 'approved') html = `<p><b>승인 완료</b> · ${esc(kst(a.approvedAt))} · ${esc(a.approvedBy)}</p><p>${totalLine}</p><p class="note">QTM에 단체 주문을 넣으신 뒤 아래 버튼으로 결제완료 신청을 'QTM 발주'로 한꺼번에 표시할 수 있습니다.</p><div class="pay"><button class="btn alt" id="markOrdered" type="button">QTM 발주 완료로 표시</button></div>`;
+    else if (!live.orders) html = '<p class="note">마감되었습니다. 결제완료 신청이 없어 발주할 도서가 없습니다.</p>';
+    else html = `<p><b>승인 대기</b>${a?.notifiedAt ? ` · 휴대폰 알림 ${esc(kst(a.notifiedAt))}` : a?.noticeError ? ` · 알림 재시도 중(${esc(a.noticeError)})` : ''}</p><p>${totalLine}</p>${live.books.length ? `<ul>${live.books.map(b => `<li>${esc(b.name)} <b>${b.qty}권</b></li>`).join('')}</ul>` : ''}<div class="pay"><button class="btn" id="approveOrder" type="button">최종 발주 승인</button></div>`;
+    $('approvalBox').innerHTML = html;
+    const approve = $('approveOrder');
+    if (approve) { approve.disabled = !me.canWrite; approve.onclick = async () => { if (!confirm(`${live.orders}건 · ${live.quantity}권 · ${won(live.amount)}\n이 내용으로 최종 발주를 승인할까요?`)) return; try { await api('/campaigns/' + c.id + '/approve', { method: 'POST', body: JSON.stringify({ expectedOrders: live.orders, expectedAmount: live.amount }) }); setMsg('최종 발주를 승인했습니다.', true); await load(); } catch (e) { setMsg(e.message); await load().catch(() => {}); } }; }
+    const mark = $('markOrdered');
+    if (mark) { mark.disabled = !me.canWrite; mark.onclick = async () => { if (!confirm('QTM에 주문을 넣으셨나요? 결제완료 신청을 모두 "QTM 발주"로 표시합니다.')) return; try { const r = await api('/campaigns/' + c.id + '/mark-ordered', { method: 'POST' }); setMsg(`${r.updated}건을 QTM 발주로 표시했습니다.`, true); await load(); } catch (e) { setMsg(e.message); } }; }
   }
   async function boot() {
     try {
@@ -1448,6 +1596,7 @@ function adminClient() {
       const pay = list.payment;
       $('state').innerHTML = `<span class="dot"></span>${esc(me.email)} · ${me.canWrite ? '관리' : '조회'} 권한 · 결제 ${pay.ready ? (pay.mode === 'live' ? '운영 연결' : '테스트 연결 · <a href="/qtin/church">테스트 신청 열기</a>(실제 청구 없음, 집계 제외)') + (pay.mid ? ' · 상점 ' + esc(pay.merchant || '') + ' ' + esc(pay.mid) : '') : '미연결(' + esc(pay.missing.join(', ')) + ')'}${keyNote(list.keys, pay)}`;
       $('campaign').innerHTML = list.campaigns.map(c => `<option value="${c.id}">${c.target_year}년 ${c.target_month}월호 · ${({ open: '신청 중', scheduled: '예정', closed: '마감' })[c.state] || c.state}</option>`).join('');
+      try { const want = new URLSearchParams(location.search).get('campaign'); if (want && [...$('campaign').options].some(o => o.value === want)) $('campaign').value = want; } catch {}
       $('campaign').onchange = () => load().catch(e => setMsg(e.message));
       $('filter').oninput = renderOrders;
       $('sync').onclick = async () => { setMsg('QTM에서 도서를 확인하는 중입니다…', true); try { const r = await api('/campaigns/' + $('campaign').value + '/sync', { method: 'POST' }); setMsg(`동기화 ${r.sync.status}: ${r.sync.found}종 발견`, r.sync.found > 0); await load(); } catch (e) { setMsg(e.message); } };
@@ -1574,7 +1723,8 @@ const ekodiWorkerEntry={
     }
   },
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(runScheduled(env, new Date(event.scheduledTime || Date.now())).then(report => console.log('qtin scheduled', JSON.stringify(report))).catch(error => console.error('qtin scheduled', error)));
+    const noticesOnly = event?.cron === NOTICE_CRON;
+    ctx.waitUntil(runScheduled(env, new Date(event.scheduledTime || Date.now()), { noticesOnly }).then(report => console.log('qtin scheduled', JSON.stringify(report))).catch(error => console.error('qtin scheduled', error)));
   },
 };
 // FOOTER-TRAFFIC-GUARANTEE: public HTML from this route always carries footer visit stats.
