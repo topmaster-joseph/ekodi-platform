@@ -356,6 +356,7 @@ function isEkodiMissionSpacePath(pathname){
   const prefix=isMissionCanonicalPath(path)?'/mission':EKODIMISSION_APEX_PREFIX;
   if(path!==prefix&&!path.startsWith(prefix+'/'))return false;
   // The dedicated Mission LIVE viewer is directly owned by SPACE on the new path.
+  if(path===prefix+'/live/admin'||path.startsWith(prefix+'/live/admin/'))return false;
   if(prefix!== '/mission'&&(path===prefix+'/live'||path.startsWith(prefix+'/live/')))return false;
   if(path===prefix+'/admin'||path.startsWith(prefix+'/admin/'))return false;
   return true;
