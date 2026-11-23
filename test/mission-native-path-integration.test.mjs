@@ -44,11 +44,11 @@ test('Cloudflare routes Mission through Worker before static fallback without sa
   const entries=JSON.parse(wrangler.match(/run_worker_first\s*=\s*(\[[^\]]*\])/)[1]);
   assert.equal(entries.length,100,'Cloudflare worker-first budget must stay <= 100');
   const runs=path=>{
-    const regex=pattern=>new RegExp('^'+pattern.split('*').map(part=>part.replace(/[.*+?^\\$\\{\\}()|[\\]\\\\]/g,'\\\\$&')).join('.*')+'$').test(path);
+    const regex=pattern=>pattern.includes('*')?(path.startsWith(pattern.split('*')[0])&&path.endsWith(pattern.split('*').at(-1))):path===pattern;
     return entries.some(p=>!p.startsWith('!')&&regex(p))&&!entries.some(p=>p.startsWith('!')&&regex(p.slice(1)));
   };
   for(const p of ['/mission','/mission/','/mission/devotion','/mission/assets/site.js','/ekodi-church','/ekodichurch/admin','/system-health-admin.js','/system-health-admin.css','/auth-bootstrap.js','/auth-entry.js','/auth-router.js','/auth.js','/workspace-trade-admin.js','/workspace-trade-portal.js','/workspace-trade-portal.css'])assert.equal(runs(p),true,p);
-  assert.match(wrangler,/pattern = "ekodi\\.kr\\/mission\\*"/);
+  assert.match(wrangler,/pattern = "ekodi\.kr\/mission\*"/);
 });
 test('Mission production acceptance checks the canonical links even on legacy compatibility paths',async()=>{
   const {readFile}=await import('node:fs/promises');
