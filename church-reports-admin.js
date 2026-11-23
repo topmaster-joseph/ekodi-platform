@@ -65,7 +65,7 @@
     const docs=Array.isArray(data.documents)?data.documents:[];
     const bundles=[];for(const d of docs){const name=d.bundle||'기타 문서';let b=bundles.find(x=>x.name===name);if(!b){b={name,url:d.bundleUrl||'',items:[]};bundles.push(b)}b.items.push(d)}
     // 한눈에 보이는 탭 + 카드 배치(모바일·웹 공통). 표 대신 카드라 가로로 넘치지 않는다.
-    const card=d=>`<article class="church-doc-card"><div class="church-doc-card-head"><span class="church-doc-tag">${esc(d.category||'문서')}</span><span class="church-doc-year">${esc(d.year||'')}</span></div><h4>${esc(d.title)}</h4>${d.note?`<p class="church-doc-note">${esc(d.note)}</p>`:''}<div class="church-doc-actions">${safeUrl(d.gdocUrl)?`<a class="button primary" href="${esc(safeUrl(d.gdocUrl))}" target="_blank" rel="noopener noreferrer">열기</a>`:''}${safeUrl(d.hwpxUrl)?`<a class="button" href="${esc(safeUrl(d.hwpxUrl))}" target="_blank" rel="noopener noreferrer">한글 내려받기</a>`:''}${data.canWrite?`<button class="button quiet" type="button" data-doc-archive="${esc(d.id)}">내리기</button>`:''}</div></article>`;
+    const card=d=>`<article class="church-doc-card"><div class="church-doc-card-head"><span class="church-doc-tag">${esc(d.category||'문서')}</span><span class="church-doc-year">${esc(d.year||'')}</span></div><h4>${esc(d.title)}</h4>${d.note?`<p class="church-doc-note">${esc(d.note)}</p>`:''}<div class="church-doc-actions">${d.editable?`<button class="button primary" type="button" data-doc-edit="${esc(d.id)}">${data.canWrite?'열기·편집':'열기'}</button>`:(safeUrl(d.gdocUrl)?`<a class="button primary" href="${esc(safeUrl(d.gdocUrl))}" target="_blank" rel="noopener noreferrer">열기</a>`:'')}${safeUrl(d.hwpxUrl)?`<a class="button" href="${esc(safeUrl(d.hwpxUrl))}" target="_blank" rel="noopener noreferrer">${d.editable?'한글(이전본)':'한글 내려받기'}</a>`:''}${data.canWrite?`<button class="button quiet" type="button" data-doc-archive="${esc(d.id)}">내리기</button>`:''}</div></article>`;
     const shortName=n=>/자립화/.test(n)?'자립화 지원신청':/대표자/.test(n)?'대표자 서류':(n.length>10?n.slice(0,10)+'…':n);
     const tabs=bundles.map((b,i)=>({key:`bundle-${i}`,label:shortName(b.name),count:b.items.length,html:`<div class="church-doc-panel-head"><strong>${esc(b.name)}</strong>${safeUrl(b.url)?link(b.url,'드라이브 폴더 열기'):''}</div><div class="church-doc-grid">${b.items.map(card).join('')}</div>`}));
     tabs.push({key:'issued',label:'발급서류',count:null,html:'<section id="churchIssuedRoot" class="church-issued-in-tab"><p class="loading">발급서류를 불러오고 있습니다.</p></section>'});
@@ -76,9 +76,58 @@
       <div class="church-doc-tabs" role="tablist">${tabs.map(t=>`<button type="button" role="tab" class="church-doc-tab${t.key===active?' active':''}" data-doc-tab="${t.key}" aria-selected="${t.key===active}" title="${esc(t.label)}"><span>${esc(t.label)}</span>${t.count!=null?`<b>${t.count}</b>`:''}</button>`).join('')}</div>
       ${tabs.map(t=>`<div class="church-doc-panel" role="tabpanel" data-doc-panel="${t.key}"${t.key===active?'':' hidden'}>${t.html}</div>`).join('')}${bundles.length?'':'<p class="empty">등록된 문서가 없습니다.</p>'}`;
     root.querySelectorAll('[data-doc-tab]').forEach(btn=>btn.addEventListener('click',()=>{const key=btn.dataset.docTab;try{sessionStorage.setItem('ekodi:church-doc-tab',key)}catch{}root.querySelectorAll('[data-doc-tab]').forEach(x=>{const on=x===btn;x.classList.toggle('active',on);x.setAttribute('aria-selected',String(on))});root.querySelectorAll('[data-doc-panel]').forEach(p=>{p.hidden=p.dataset.docPanel!==key})}));
+    root.querySelectorAll('[data-doc-edit]').forEach(btn=>btn.addEventListener('click',()=>openDocEditor(btn.dataset.docEdit)));
     void loadIssued();
     root.querySelectorAll('[data-doc-archive]').forEach(button=>button.addEventListener('click',async()=>{if(!confirm('이 문서를 목록에서 내릴까요? 드라이브 원본은 그대로 남습니다.'))return;try{const r=await fetch(`${DOC_API}/${encodeURIComponent(button.dataset.docArchive)}/archive`,{method:'POST',headers:docHeaders()});if(!r.ok)throw new Error(`HTTP ${r.status}`);await loadDocuments()}catch(err){alert(`처리 실패: ${err.message}`)}}));
     root.querySelector('#churchDocForm')?.addEventListener('submit',async event=>{event.preventDefault();const body=Object.fromEntries(new FormData(event.target).entries());try{const r=await fetch(DOC_API,{method:'POST',headers:docHeaders(),body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);await loadDocuments()}catch(err){alert(`등록 실패: ${err.message}`)}});
+  }
+
+  // ── 문서 바로 편집: 열어서 고치고 바로 저장(입력이 멈추면 자동 저장, 이전본은 서버에 보관) ──
+  function importDocHtml(sheet,html){
+    const parsed=new DOMParser().parseFromString(`<body>${html}</body>`,'text/html');
+    const styled=[];parsed.body.querySelectorAll('[style]').forEach(el=>{styled.push([el,el.getAttribute('style')]);el.removeAttribute('style')});
+    styled.forEach(([el,css])=>el.setAttribute('data-ekodi-css',css));
+    sheet.replaceChildren(...Array.from(parsed.body.childNodes).map(n=>document.importNode(n,true)));
+    sheet.querySelectorAll('[data-ekodi-css]').forEach(el=>{el.style.cssText=el.getAttribute('data-ekodi-css');el.removeAttribute('data-ekodi-css')});
+  }
+  // 빨간 글씨는 인라인 스타일 대신 .need 클래스로 표시한다(관리자 화면 보안정책: style 속성 금지).
+  function markRed(sheet){const sel=window.getSelection();if(!sel||!sel.rangeCount)return;const range=sel.getRangeAt(0);if(range.collapsed||!sheet.contains(range.commonAncestorContainer))return;const span=document.createElement('span');span.className='need';span.append(range.extractContents());range.insertNode(span);sel.removeAllRanges();const r=document.createRange();r.selectNodeContents(span);sel.addRange(r)}
+  function unmarkRed(sheet){const sel=window.getSelection();if(!sel||!sel.rangeCount)return;const range=sel.getRangeAt(0);const hits=[...sheet.querySelectorAll('.need')].filter(el=>range.intersectsNode(el));hits.forEach(el=>{if(el.tagName==='SPAN')el.replaceWith(...el.childNodes);else el.classList.remove('need')})}
+  async function openDocEditor(id){
+    let doc;
+    try{const r=await fetch(`${DOC_API}/${encodeURIComponent(id)}/content`,{headers:docHeaders(),cache:'no-store'});doc=await r.json().catch(()=>({}));if(!r.ok)throw new Error(doc.error||`HTTP ${r.status}`)}
+    catch(err){alert(`문서를 열지 못했습니다: ${err.message}`);return}
+    document.querySelector('#churchDocEditor')?.remove();
+    const box=document.createElement('div');box.id='churchDocEditor';box.className='church-doc-editor';box.setAttribute('role','dialog');box.setAttribute('aria-label',doc.title);
+    const w=doc.canWrite;
+    box.innerHTML=`<div class="church-doc-editor-bar"><strong title="${esc(doc.title)}">${esc(doc.title)}</strong><span class="church-doc-editor-status" data-status>${w?'열림 · 고치면 자동 저장됩니다':'읽기 전용'}</span>
+      <div class="church-doc-editor-tools">${w?`<button type="button" class="button" data-cmd="bold" title="굵게"><b>가</b></button><button type="button" class="button" data-cmd="underline" title="밑줄"><u>가</u></button><button type="button" class="button" data-cmd="red" title="빨간 글씨">빨강</button><button type="button" class="button" data-cmd="black" title="검은 글씨">검정</button><button type="button" class="button" data-cmd="undo" title="되돌리기">↶</button><button type="button" class="button primary" data-save>저장</button>`:''}<button type="button" class="button" data-print>인쇄</button><button type="button" class="button" data-close>닫기</button></div></div>
+      <div class="church-doc-editor-scroll"><article class="church-doc-sheet" ${w?'contenteditable="true" spellcheck="false"':''}></article></div>`;
+    document.body.append(box);document.body.classList.add('church-doc-editing');
+    const sheet=box.querySelector('.church-doc-sheet'),status=box.querySelector('[data-status]');
+    importDocHtml(sheet,doc.html);
+    let base=doc.updatedAt,dirty=false,saving=false,timer=null;
+    const stamp=t=>{try{return new Date(t).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})}catch{return ''}};
+    const setStatus=(t,bad)=>{status.textContent=t;status.classList.toggle('bad',Boolean(bad))};
+    async function save(){
+      if(!w||saving||!dirty)return true;saving=true;clearTimeout(timer);setStatus('저장 중…');
+      try{const r=await fetch(`${DOC_API}/${encodeURIComponent(id)}/content`,{method:'PUT',headers:docHeaders(),body:JSON.stringify({html:sheet.innerHTML,baseUpdatedAt:base})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);base=d.updatedAt||base;dirty=false;setStatus(`저장됨 ${stamp(base)}`);return true}
+      catch(err){setStatus(`저장 안 됨: ${err.message}`,true);return false}
+      finally{saving=false}
+    }
+    if(w){
+      sheet.addEventListener('input',()=>{dirty=true;setStatus('고치는 중… (잠시 멈추면 자동 저장)');clearTimeout(timer);timer=setTimeout(save,2500)});
+      try{document.execCommand('styleWithCSS',false,false)}catch{}
+      box.querySelectorAll('[data-cmd]').forEach(b=>b.addEventListener('mousedown',e=>e.preventDefault()));
+      box.querySelectorAll('[data-cmd]').forEach(b=>b.addEventListener('click',()=>{const c=b.dataset.cmd;if(c==='red')markRed(sheet);else if(c==='black')unmarkRed(sheet);else document.execCommand(c);sheet.dispatchEvent(new Event('input'))}));
+      box.querySelector('[data-save]').addEventListener('click',()=>{dirty=true;void save()});
+      box.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();dirty=true;void save()}});
+      window.addEventListener('beforeunload',warn);
+    }
+    function warn(e){if(dirty){e.preventDefault();e.returnValue=''}}
+    box.querySelector('[data-print]').addEventListener('click',async()=>{if(dirty)await save();document.body.classList.add('church-doc-printing');window.print();setTimeout(()=>document.body.classList.remove('church-doc-printing'),500)});
+    box.querySelector('[data-close]').addEventListener('click',async()=>{if(dirty&&!(await save())&&!confirm('저장되지 않은 내용이 있습니다. 그래도 닫을까요?'))return;window.removeEventListener('beforeunload',warn);box.remove();document.body.classList.remove('church-doc-editing');void loadDocuments()});
+    if(w)sheet.focus();
   }
   // 발급서류: 업로드해 두고 다음 제출 때 '최근서류'를 그대로 다시 쓴다.
   const ISSUED_API=`${API}/api/church/admin/reports/documents/issued`;
