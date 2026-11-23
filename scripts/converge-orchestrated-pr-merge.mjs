@@ -266,6 +266,7 @@ const controlApiTouched=changedFiles.some(file=>
   // An API-only notification update must not silently ship just the static page.
   'notification-control.js',
   'notification-webpush.js',
+  'operator-notify.js',
   // Search Visibility evidence D1 API is part of Control API deployment ownership.
   'search-visibility-control.js',
   // JOURNAL-EDITOR-ALERTS-20261113: 저널 편집부 알림 API(최고관리자 전용)는 Control API에 묶인다.
@@ -369,6 +370,7 @@ const qtinOrderTouched=changedFiles.some(file=>[
   'migrations/0202_qtin_buyer_accounts.sql',
   'migrations/0203_qtin_product_intros.sql',
   'migrations/0204_qtin_order_delivery.sql',
+  'migrations/0205_qtin_operator_notice_outbox.sql',
   'wrangler.qtin-order.toml',
   'wrangler.qtin-order.staging.toml',
   '.github/workflows/deploy-qtin-order.yml',
