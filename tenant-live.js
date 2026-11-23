@@ -507,6 +507,26 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
     const values=Object.fromEntries(new Intl.DateTimeFormat('en',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));
     return values.year+'-'+values.month+'-'+values.day;
   }
+  // The static weekly registry lists prepared drafts too. Its status is not an
+  // authorization decision: the Church's existing public review gate uses
+  // church_worship_materials.is_published, so the LIVE companion must agree.
+  // This is a one-shot, anonymous, read-only check; fail closed on outages.
+  async function publishedSundays(dates){
+    const candidates=[...new Set(dates.filter(day=>ISO.test(day)))].slice(0,16);
+    if(!candidates.length)return new Set();
+    const query=new URLSearchParams({
+      select:'service_date',service_type:'eq.sunday',is_published:'eq.true',
+      service_date:'in.('+candidates.join(',')+')',limit:'16'
+    });
+    const requestUrl=SUPABASE_URL+'/rest/v1/church_worship_materials?'+query;
+    const signal=typeof AbortSignal!=='undefined'&&AbortSignal.timeout?AbortSignal.timeout(8000):undefined;
+    const response=await fetch(requestUrl,{cache:'no-store',credentials:'omit',signal,
+      headers:{apikey:PUBLISHABLE_KEY,authorization:'Bearer '+PUBLISHABLE_KEY,accept:'application/json'}});
+    if(!response.ok)throw Error('publication_lookup_unavailable');
+    const rows=await response.json();
+    if(!Array.isArray(rows))throw Error('publication_lookup_invalid');
+    return new Set(rows.filter(row=>row&&candidates.includes(row.service_date)).map(row=>row.service_date));
+  }
   function tabTo(name){
     if(name==='slides'&&!slides.length)return;
     tab=name;
@@ -522,6 +542,7 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
   }
   function render(){
     index=Math.max(0,Math.min(count()-1,index));
+    $('churchGuideFollow').setAttribute('aria-pressed',String(following));
     $('churchGuideCount').textContent=(index+1)+' / '+count();
     $('churchHostProgress').textContent=(index+1)+' / '+count();
     $('churchGuidePrev').disabled=index===0;$('churchGuideNext').disabled=index>=count()-1;
@@ -560,17 +581,24 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
     try{
       const specified=params.get('date');
       if(specified!==null&&!ISO.test(specified))throw Error('invalid date');
-      if(specified)date=specified;
-      else{
+      if(specified){
+        // Explicitly opening an archive is not permission to show a prepared draft.
+        const approved=await publishedSundays([specified]);
+        if(!approved.has(specified))throw Error('worship_not_approved');
+        date=specified;
+      }else{
         const response=await fetch('/ekodichurch/worship/weekly.json',{cache:'no-store',credentials:'omit'});
         if(!response.ok)throw Error('weekly list unavailable');
         const list=await response.json();
         if(list?.schema!=='ekodi.church.worship.index.v1'||!Array.isArray(list.services))throw Error('invalid weekly list');
         const days=[...new Set(list.services.filter(item=>ISO.test(item?.date)&&item.page==='/ekodichurch/worship/'+item.date+'/').map(item=>item.date))].sort();
         if(!days.length)throw Error('no worship packet');
-        // A published packet is eligible only for this worship week; never label an old Sunday as today's.
         const anchor=Date.parse(todayKst()+'T00:00:00Z');
         const daysAway=item=>Math.round((Date.parse(item+'T00:00:00Z')-anchor)/86400000);
+        // Only the current week's services need a public approval lookup.
+        const candidates=days.filter(item=>daysAway(item)>=-3&&daysAway(item)<=6);
+        const approved=await publishedSundays(candidates);
+        days.splice(0,days.length,...candidates.filter(item=>approved.has(item)));
         const upcoming=days.find(item=>daysAway(item)>=0&&daysAway(item)<=6);
         const recent=days.slice().reverse().find(item=>daysAway(item)<0&&daysAway(item)>=-3);
         date=upcoming||recent||'';
@@ -586,11 +614,12 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
       status('공식 순서지·PPT '+slides.length+'장 연결됨 · 원본 언어로 표시');
       hostStatus('방송 시작 뒤 다음·이전으로 발표 진행상황을 공유할 수 있습니다.');render();
       if(role==='viewer')void readCursor();
-    }catch{
-      steps=[['예배자료 확인','공식 예배자료 게시 여부를 확인해 주세요.']];slides=[];deck='';
-      $('churchGuideDate').textContent='원본 확인 필요';
-      status('이번 주 공개 예배자료가 아직 없습니다. 지난 주보를 오늘 자료로 표시하지 않으며, 오른쪽 영상은 시청 가능합니다.');
-      hostStatus('예배자료 게시 여부를 먼저 확인해 주세요.');render();
+    }catch(error){
+      steps=[['예배자료 확인','최종 검토 후 공개된 주보·PPT만 표시합니다.']];slides=[];deck='';
+      $('churchGuideDate').textContent='공개 자료 확인 필요';
+      const unavailable=error?.message==='publication_lookup_unavailable'||error?.message==='publication_lookup_invalid';
+      status(unavailable?'공개 승인 확인 서버에 연결할 수 없습니다. 자료는 보호되며 방송 영상은 계속 시청할 수 있습니다.':'이번 주 공개 승인된 순서지·PPT가 없습니다. 지난 주보나 미승인 자료는 표시하지 않으며, 영상은 시청할 수 있습니다.');
+      hostStatus('예배자료는 교회 마이페이지에서 최종 검토·공개 승인한 뒤 시청자에게 표시됩니다.');render();
     }
   }
   const endpoint=()=>'/api/realtime/rooms/'+encodeURIComponent(room)+'/presentation';
