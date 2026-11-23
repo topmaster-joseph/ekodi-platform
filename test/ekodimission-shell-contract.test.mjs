@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { missionPublicReferences } from '../mission-public-path.js';
 import {
   REQUIRED_SHELL_MARKERS,
   missionPageEntries,
@@ -79,4 +80,18 @@ test('mission header exposes six canonical links while activity detail routes re
     'nav.replaceChildren(...primary,...(secondary.length?[more]:[]),language)',
     'nav.replaceChildren(language)'
   )),/missing valid six-link desktop and mobile navigation projection/);
+});
+
+
+test('Mission postrelease verification honors canonical /mission shell without weakening original source checks',async()=>{
+  const source=await readFile(new URL('../space/ekodimission-shell.js',import.meta.url),'utf8');
+  const runtime=missionPublicReferences(source);
+  assert.doesNotThrow(()=>validateMissionShellSource(source));
+  assert.doesNotThrow(()=>validateMissionShellSource(runtime,{publicProjection:true}));
+  assert.throws(()=>validateMissionShellSource(runtime),/canonical six-link Mission menu order/);
+  assert.match(runtime,/href:'\/mission\/activities'/);
+  assert.doesNotMatch(runtime,/href:'\/ekodimission\/activities'/);
+  const verifier=await readFile(new URL('../scripts/verify-ekodimission-production.mjs',import.meta.url),'utf8');
+  assert.match(verifier,/missionPublicReferences\(marker\)/);
+  assert.match(verifier,/validateMissionShellSource\(data,\{publicProjection:true\}\)/);
 });
