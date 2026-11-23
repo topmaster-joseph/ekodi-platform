@@ -43,7 +43,7 @@ import { workspaceRouteFromPublicPath } from './workspace-route-policy.js';
 import { isInsurancePublicPath, routeInsurancePublic } from './insurance-public-route.js';
 import { marketingProjectionForPath, proxyCanonicalMarketing } from './marketing-canonical-projection.js';
 import { routeCanonicalSurface } from './canonical-surface-router.js';
-import { isMissionCanonicalPath } from './mission-public-path.js';
+import { isMissionCanonicalPath, missionPublicReferences } from './mission-public-path.js';
 import { handlePreviewRequest } from './preview-page.js';
 import { storeGatewayPage } from './store-gateway-page.js';
 import { isEkodiIndexNowKeyPath, ekodiIndexNowKeyResponse } from './platform-indexnow.js';
@@ -355,7 +355,8 @@ function isEkodiMissionSpacePath(pathname){
   const path=raw.length>1?raw.replace(/\/+$/,''):raw;
   const prefix=isMissionCanonicalPath(path)?'/mission':EKODIMISSION_APEX_PREFIX;
   if(path!==prefix&&!path.startsWith(prefix+'/'))return false;
-  if(path===prefix+'/live'||path.startsWith(prefix+'/live/'))return false;
+  // The dedicated Mission LIVE viewer is directly owned by SPACE on the new path.
+  if(prefix!== '/mission'&&(path===prefix+'/live'||path.startsWith(prefix+'/live/')))return false;
   if(path===prefix+'/admin'||path.startsWith(prefix+'/admin/'))return false;
   return true;
 }
@@ -546,7 +547,14 @@ async function routePlatform(request,env,ctx){
     const legacyStores=legacyStoreGatewayRedirect(request,env);if(legacyStores)return legacyStores;
     const seonamBoard=legacySeonamBoardRedirect(request);if(seonamBoard)return seonamBoard;
     if(host===PUBLIC_HOST&&isSinglesRoute(url.pathname))return routeSinglesSurface(request,env);
-    const siteBoard=await handleSiteBoardRequest(request,env);if(siteBoard)return siteBoard;
+    const siteBoard=await handleSiteBoardRequest(request,env);
+    if(siteBoard){
+      if(!/^\/mission\/board(?:\/|$)/.test(url.pathname)||!['GET','HEAD'].includes(request.method)||!siteBoard.ok)return siteBoard;
+      const type=String(siteBoard.headers.get('content-type')||'').toLowerCase();
+      if(!/(?:text\/html|application\/json)/.test(type))return siteBoard;
+      const headers=new Headers(siteBoard.headers);headers.delete('content-length');headers.delete('content-encoding');
+      return new Response(request.method==='HEAD'?null:missionPublicReferences(await siteBoard.text()),{status:siteBoard.status,headers});
+    }
     if(host===PUBLIC_HOST&&isCgmaAiEducationPath(url.pathname))return routeCgmaAiEducation(request,env);
     if(host===PUBLIC_HOST&&isCgmaMotorFestivalPath(url.pathname))return routeCgmaMotorFestival(request,env);
     if(host===PUBLIC_HOST&&isCgmaEdocSignPath(url.pathname))return routeCgmaEdocSign(request,env);
