@@ -43,3 +43,16 @@ test('Mission live browser path changes without changing API tenant identity',as
   assert.equal(realtimeTenantFromPath('/ekodimission/live')?.id,'ekodimission');
   assert.equal(realtimeTenant('mission')?.apiTenant,'ekodimission');
 });
+
+test('Mission administrative route is a reserved site-owned path, not an untrusted workspace',async()=>{
+  const {isWorkspaceAdminPathShape,workspaceRouteFromPublicPath}=await import('../workspace-route-policy.js');
+  assert.equal(isWorkspaceAdminPathShape('/mission/admin'),true);
+  assert.equal(isWorkspaceAdminPathShape('/mission/admin/activities'),true);
+  assert.equal(workspaceRouteFromPublicPath('/mission/admin'),null);
+  assert.equal(isWorkspaceAdminPathShape('/missionary/admin'),true); // Generic customer sites remain unaffected.
+});
+test('Mission LIVE admin uses the same tenant even on old path',async()=>{
+  const {realtimeTenantAdminFromPath}=await import('../realtime-tenant-registry.js');
+  assert.equal(realtimeTenantAdminFromPath('/mission/live/admin')?.apiTenant,'ekodimission');
+  assert.equal(realtimeTenantAdminFromPath('/ekodimission/live/admin')?.apiTenant,'ekodimission');
+});
