@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import spaceWorker from '../space-worker.js';
 import platformEntry from '../platform-router-entry-worker.js';
+import { missionPublicReferences } from '../mission-public-path.js';
 
 const spaceRoot=new URL('../space/',import.meta.url);
 const contentType=path=>path.endsWith('.css')?'text/css; charset=utf-8':path.endsWith('.js')?'application/javascript; charset=utf-8':path.endsWith('.jpg')?'image/jpeg':path.endsWith('.svg')?'image/svg+xml':'text/html; charset=utf-8';
@@ -257,7 +258,7 @@ test('mission production smoke covers every published subservice route',async()=
   const eventPage=await readFile(new URL('../space/ekodimission-open-table-apply.page',import.meta.url),'utf8');
   const eventProbe=manifest.worker.requests.find(item=>item.url==='https://ekodi.kr/ekodimission/apply/260926-open-table');
   assert.ok(eventProbe,'missing Open Table production probe');
-  for(const marker of eventProbe.expect||[])assert.ok(eventPage.includes(marker),`Open Table probe marker drifted from page source: ${marker}`);
+  for(const marker of eventProbe.expect||[])assert.ok(missionPublicReferences(eventPage).includes(marker),`Open Table runtime probe marker drifted from canonical public response: ${marker}`);
 });
 
 test('mission authentication and service registry use only the canonical ekodi.kr path',async()=>{
