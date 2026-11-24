@@ -67,7 +67,7 @@
     // 한눈에 보이는 탭 + 카드 배치(모바일·웹 공통). 표 대신 카드라 가로로 넘치지 않는다.
     const card=d=>`<article class="church-doc-card"><div class="church-doc-card-head"><span class="church-doc-tag">${esc(d.category||'문서')}</span><span class="church-doc-year">${esc(d.year||'')}</span></div><h4>${esc(d.title)}</h4>${d.note?`<p class="church-doc-note">${esc(d.note)}</p>`:''}<div class="church-doc-actions">${d.editable?`<button class="button primary" type="button" data-doc-edit="${esc(d.id)}">${data.canWrite?'열기·편집':'열기'}</button>`:(safeUrl(d.gdocUrl)?`<a class="button primary" href="${esc(safeUrl(d.gdocUrl))}" target="_blank" rel="noopener noreferrer">열기</a>`:'')}${safeUrl(d.hwpxUrl)?`<a class="button" href="${esc(safeUrl(d.hwpxUrl))}" target="_blank" rel="noopener noreferrer">${d.editable?'한글(이전본)':'한글 내려받기'}</a>`:''}${data.canWrite?`<button class="button quiet" type="button" data-doc-archive="${esc(d.id)}">내리기</button>`:''}</div></article>`;
     const shortName=n=>/자립화/.test(n)?'자립화 지원신청':/대표자/.test(n)?'대표자 서류':(n.length>10?n.slice(0,10)+'…':n);
-    const tabs=bundles.map((b,i)=>({key:`bundle-${i}`,label:shortName(b.name),count:b.items.length,html:`<div class="church-doc-panel-head"><strong>${esc(b.name)}</strong>${safeUrl(b.url)?link(b.url,'드라이브 폴더 열기'):''}</div><div class="church-doc-grid">${b.items.map(card).join('')}</div>`}));
+    const tabs=bundles.map((b,i)=>({key:`bundle-${i}`,label:shortName(b.name),count:b.items.length,html:`<div class="church-doc-panel-head"><strong>${esc(b.name)}</strong><button class="button primary" type="button" data-doc-bundle-print="${i}">전체 인쇄 · PDF 묶음</button>${safeUrl(b.url)?link(b.url,'드라이브 폴더 열기'):''}</div><div class="church-doc-grid">${b.items.map(card).join('')}</div>`}));
     tabs.push({key:'issued',label:'발급서류',count:null,html:'<section id="churchIssuedRoot" class="church-issued-in-tab"><p class="loading">발급서류를 불러오고 있습니다.</p></section>'});
     if(data.canWrite)tabs.push({key:'add',label:'+ 등록',count:null,html:`<h4 class="church-doc-subhead">한글·워드 파일 올려서 바로 편집 <small>(컴퓨터에 한글·워드가 없어도 됩니다)</small></h4><form id="churchDocImport" class="church-doc-form"><label>파일(.hwpx·.docx)<input name="file" type="file" accept=".hwpx,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"></label><label>문서 제목<input name="title" maxlength="200" placeholder="비우면 파일 이름"></label><label>묶음 이름<input name="bundle" maxlength="200" placeholder="예: 2027 목포노회 동반성장 자립화교회 지원신청"></label><label>구분<select name="category">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></label><button class="button primary" type="submit">올리고 열기</button><button class="button" type="button" data-doc-blank>빈 문서 만들기</button><p class="empty" data-import-status></p></form><h4 class="church-doc-subhead">링크로 등록</h4><form id="churchDocForm" class="church-doc-form"><label>묶음 이름<input name="bundle" maxlength="200" placeholder="예: 2027 목포노회 동반성장 자립화교회 지원신청"></label><label>묶음 폴더 링크<input name="bundleUrl" type="url" placeholder="https://drive.google.com/..."></label><label>문서 제목<input name="title" required maxlength="200"></label><label>구분<select name="category">${CATEGORIES.map(c=>`<option>${c}</option>`).join('')}</select></label><label>연도<input name="year" maxlength="20"></label><label>웹페이지 링크<input name="gdocUrl" type="url"></label><label>한글 파일 링크<input name="hwpxUrl" type="url"></label><label>비고<input name="note" maxlength="500"></label><button class="button primary" type="submit">등록</button></form>`});
     let active='';try{active=sessionStorage.getItem('ekodi:church-doc-tab')||''}catch{}
@@ -83,6 +83,7 @@
     imp?.addEventListener('submit',e=>{e.preventDefault();void doImport(false)});
     imp?.querySelector('[data-doc-blank]')?.addEventListener('click',()=>void doImport(true));
     // 열기·편집은 새 창에서 연다(문서함은 그대로 두고 문서만 크게). 새 창이 막히면 이 화면에서 연다.
+    root.querySelectorAll('[data-doc-bundle-print]').forEach(btn=>btn.addEventListener('click',()=>{const b=bundles[Number(btn.dataset.docBundlePrint)];if(b)void openBundlePrint(b,Boolean(data.canWrite))}));
     root.querySelectorAll('[data-doc-edit]').forEach(btn=>btn.addEventListener('click',()=>{const id=btn.dataset.docEdit;const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('edit',id);const w=window.open(url.toString(),`ekodi-doc-${id}`);if(!w)openDocEditor(id)}));
     const editParam=new URLSearchParams(location.search).get('edit');
     if(editParam&&/^cdoc-[A-Za-z0-9-]{1,80}$/.test(editParam)&&!window.__ekodiDocEditOpened){window.__ekodiDocEditOpened=true;void openDocEditor(editParam,{standalone:true})}
@@ -173,6 +174,51 @@
       if(!placed){r.selectNodeContents(target);r.collapse(down)}
       r.collapse(true);sel.removeAllRanges();sel.addRange(r);
     });
+  }
+  // ── 제출서류 전체 인쇄(PDF 묶음): 묶음 안 문서를 순서대로 한 번에 인쇄한다. 편집 문서는 현재 본문, 통장·증명서는 올린 원본(PDF·이미지) ──
+  let pdfjsLib=null;
+  const loadPdfjs=async()=>{if(!pdfjsLib){pdfjsLib=await import('/church-pdf.min.mjs');pdfjsLib.GlobalWorkerOptions.workerSrc='/church-pdf.worker.min.mjs'}return pdfjsLib};
+  const pageCanvas=(w,h)=>{const c=document.createElement('canvas');c.width=Math.max(1,Math.round(w));c.height=Math.max(1,Math.round(h));c.className='church-doc-attach-canvas';return c};
+  async function renderAttachment(target,id){
+    const r=await fetch(`${DOC_API}/${encodeURIComponent(id)}/attachment`,{headers:docHeaders(),cache:'no-store'});
+    if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.error||`HTTP ${r.status}`)}
+    const type=(r.headers.get('content-type')||'').toLowerCase();const blob=await r.blob();
+    if(type.startsWith('image/')){const bmp=await createImageBitmap(blob);const c=pageCanvas(bmp.width,bmp.height);c.getContext('2d').drawImage(bmp,0,0);const page=document.createElement('div');page.className='church-doc-attach-page';page.append(c);target.append(page);return 1}
+    const pdfjs=await loadPdfjs();const pdf=await pdfjs.getDocument({data:new Uint8Array(await blob.arrayBuffer()),isEvalSupported:false}).promise;
+    for(let n=1;n<=pdf.numPages;n++){const pg=await pdf.getPage(n);const vp=pg.getViewport({scale:2});const c=pageCanvas(vp.width,vp.height);await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;const page=document.createElement('div');page.className='church-doc-attach-page';page.append(c);target.append(page)}
+    return pdf.numPages}
+  async function openBundlePrint(bundle,canWrite){
+    document.querySelector('#churchDocBundle')?.remove();
+    const box=document.createElement('div');box.id='churchDocBundle';box.className='church-doc-editor church-doc-bundle';box.setAttribute('role','dialog');box.setAttribute('aria-label',`${bundle.name} 전체 인쇄`);
+    box.innerHTML=`<div class="church-doc-editor-bar"><strong title="${esc(bundle.name)}">전체 인쇄 · ${esc(bundle.name)}</strong><span class="church-doc-editor-status" data-status>문서를 모으는 중…</span>
+      <button class="button primary" type="button" data-print disabled>인쇄 · PDF 저장</button><button class="button" type="button" data-close>닫기</button></div>
+      <div class="church-doc-editor-scroll"><p class="church-doc-bundle-help">순서대로 한 장씩 이어서 인쇄됩니다. PDF로 받으려면 인쇄 창에서 <b>대상: PDF로 저장</b>을 고르세요. 원본 파일이 없는 서류는 회색 칸에 파일을 올리면 함께 인쇄됩니다(빈 칸은 인쇄되지 않습니다).</p><div data-pages></div></div>`;
+    document.body.append(box);document.body.classList.add('church-doc-editing');
+    const status=box.querySelector('[data-status]'),pages=box.querySelector('[data-pages]'),printBtn=box.querySelector('[data-print]');
+    const close=()=>{box.remove();if(!document.querySelector('#churchDocEditor'))document.body.classList.remove('church-doc-editing')};
+    box.querySelector('[data-close]').addEventListener('click',close);
+    const doPrint=()=>{const b=document.body;b.classList.add('church-doc-printing','church-doc-bundle-printing','ekodi-allow-print');const done=()=>{b.classList.remove('church-doc-printing','church-doc-bundle-printing','ekodi-allow-print');window.removeEventListener('afterprint',done)};window.addEventListener('afterprint',done);window.print();setTimeout(done,60000)};
+    printBtn.addEventListener('click',doPrint);
+    box.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='p'){e.preventDefault();e.stopPropagation();if(!printBtn.disabled)doPrint()}else if(e.key==='Escape')close()});
+    let printed=0;const missing=[],failed=[];
+    for(const d of bundle.items){
+      const slot=document.createElement('section');slot.className='church-doc-bundle-item';slot.dataset.docId=d.id;pages.append(slot);
+      status.textContent=`문서를 모으는 중… ${d.title}`;
+      try{
+        if(d.editable){const r=await fetch(`${DOC_API}/${encodeURIComponent(d.id)}/content`,{headers:docHeaders(),cache:'no-store'});const doc=await r.json().catch(()=>({}));if(!r.ok)throw new Error(doc.error||`HTTP ${r.status}`);
+          const sheet=document.createElement('article');sheet.className='church-doc-sheet';importDocHtml(sheet,String(doc.html||''));slot.append(sheet);printed++;continue}
+        if(d.attachmentType){await renderAttachment(slot,d.id);printed++;continue}
+        missing.push(d.title);slot.classList.add('church-doc-bundle-missing');
+        slot.innerHTML=`<div class="church-doc-bundle-slot"><strong>${esc(d.title)}</strong><span>원본 파일(PDF·JPG·PNG)이 아직 없어 이 서류는 인쇄되지 않습니다.</span>${safeUrl(d.gdocUrl||d.hwpxUrl)?`<a href="${esc(safeUrl(d.gdocUrl||d.hwpxUrl))}" target="_blank" rel="noopener noreferrer">드라이브에서 원본 열기</a>`:''}${canWrite?`<label class="button">파일 올리기<input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" data-attach="${esc(d.id)}" hidden></label>`:''}</div>`;
+      }catch(err){failed.push(d.title);slot.innerHTML=`<div class="church-doc-bundle-slot"><strong>${esc(d.title)}</strong><span>불러오지 못했습니다: ${esc(err.message)}</span></div>`;slot.classList.add('church-doc-bundle-missing')}
+    }
+    pages.querySelectorAll('[data-attach]').forEach(input=>input.addEventListener('change',async()=>{const file=input.files?.[0];if(!file)return;const id=input.dataset.attach;const slot=input.closest('.church-doc-bundle-item');
+      const span=slot.querySelector('span');span.textContent='올리는 중…';
+      try{const fd=new FormData();fd.append('file',file);const h=docHeaders();h.delete('content-type');const r=await fetch(`${DOC_API}/${encodeURIComponent(id)}/attachment`,{method:'POST',headers:h,body:fd});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);
+        slot.replaceChildren();slot.classList.remove('church-doc-bundle-missing');await renderAttachment(slot,id);const k=missing.indexOf(bundle.items.find(x=>x.id===id)?.title);if(k>=0)missing.splice(k,1);printed++;report();void loadDocuments()}
+      catch(err){span.textContent=`올리지 못했습니다: ${err.message}`}}));
+    const report=()=>{status.textContent=`${printed}건 인쇄 준비 완료${missing.length?` · 원본 없음 ${missing.length}건(${missing.join(', ')})`:''}${failed.length?` · 오류 ${failed.length}건`:''}`;printBtn.disabled=printed===0};
+    report();printBtn.focus();
   }
   window.addEventListener('message',e=>{if(e.origin===location.origin&&e.data?.type==='ekodi:church-doc-saved'&&document.querySelector('#churchDocumentsRoot'))void loadDocuments()});
   async function openDocEditor(id,opts={}){
