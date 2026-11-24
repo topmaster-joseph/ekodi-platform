@@ -231,6 +231,8 @@ on:
       - 'church-reports-admin.js'
       - 'church-reports-admin.css'
       - 'church-sign.woff2'
+      - 'church-pdf.min.mjs'
+      - 'church-pdf.worker.min.mjs'
       - 'workspace-trade-admin-page.js'
       - 'workspace-trade-portal.js'
       - 'mail-user-page.js'
