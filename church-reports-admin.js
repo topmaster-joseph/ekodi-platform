@@ -65,7 +65,7 @@
     const docs=Array.isArray(data.documents)?data.documents:[];
     const bundles=[];for(const d of docs){const name=d.bundle||'기타 문서';let b=bundles.find(x=>x.name===name);if(!b){b={name,url:d.bundleUrl||'',items:[]};bundles.push(b)}b.items.push(d)}
     // 한눈에 보이는 탭 + 카드 배치(모바일·웹 공통). 표 대신 카드라 가로로 넘치지 않는다.
-    const card=d=>`<article class="church-doc-card"><div class="church-doc-card-head"><span class="church-doc-tag">${esc(d.category||'문서')}</span><span class="church-doc-year">${esc(d.year||'')}</span></div><h4>${esc(d.title)}</h4>${d.note?`<p class="church-doc-note">${esc(d.note)}</p>`:''}<div class="church-doc-actions">${d.editable?`<button class="button primary" type="button" data-doc-edit="${esc(d.id)}">${data.canWrite?'열기·편집':'열기'}</button>`:(safeUrl(d.gdocUrl)?`<a class="button primary" href="${esc(safeUrl(d.gdocUrl))}" target="_blank" rel="noopener noreferrer">열기</a>`:'')}${safeUrl(d.hwpxUrl)?`<a class="button" href="${esc(safeUrl(d.hwpxUrl))}" target="_blank" rel="noopener noreferrer">${d.editable?'한글(이전본)':'한글 내려받기'}</a>`:''}${data.canWrite?`<button class="button quiet" type="button" data-doc-archive="${esc(d.id)}">내리기</button>`:''}</div></article>`;
+    const card=d=>`<article class="church-doc-card"><div class="church-doc-card-head"><span class="church-doc-tag">${esc(d.category||'문서')}</span><span class="church-doc-year">${esc(d.year||'')}</span></div><h4>${esc(d.title)}</h4>${d.note?`<p class="church-doc-note">${esc(d.note)}</p>`:''}<div class="church-doc-actions">${d.editable?`<button class="button primary" type="button" data-doc-edit="${esc(d.id)}">${data.canWrite?'열기·편집':'열기'}</button>`:(safeUrl(d.gdocUrl)?`<a class="button primary" href="${esc(safeUrl(d.gdocUrl))}" target="_blank" rel="noopener noreferrer">열기</a>`:'')}${safeUrl(d.hwpxUrl)?`<a class="button" href="${esc(safeUrl(d.hwpxUrl))}" target="_blank" rel="noopener noreferrer">${d.editable?'한글(이전본)':'한글 내려받기'}</a>`:''}${(d.editable||d.attachmentType||data.canWrite)?`<button class="button" type="button" data-doc-print="${esc(d.id)}">인쇄</button>`:''}${data.canWrite?`<button class="button quiet" type="button" data-doc-archive="${esc(d.id)}">내리기</button>`:''}</div></article>`;
     const shortName=n=>/자립화/.test(n)?'자립화 지원신청':/대표자/.test(n)?'대표자 서류':(n.length>10?n.slice(0,10)+'…':n);
     const tabs=bundles.map((b,i)=>({key:`bundle-${i}`,label:shortName(b.name),count:b.items.length,html:`<div class="church-doc-panel-head"><strong>${esc(b.name)}</strong><button class="button primary" type="button" data-doc-bundle-print="${i}">전체 인쇄 · PDF 묶음</button>${safeUrl(b.url)?link(b.url,'드라이브 폴더 열기'):''}</div><div class="church-doc-grid">${b.items.map(card).join('')}</div>`}));
     tabs.push({key:'issued',label:'발급서류',count:null,html:'<section id="churchIssuedRoot" class="church-issued-in-tab"><p class="loading">발급서류를 불러오고 있습니다.</p></section>'});
@@ -83,6 +83,7 @@
     imp?.addEventListener('submit',e=>{e.preventDefault();void doImport(false)});
     imp?.querySelector('[data-doc-blank]')?.addEventListener('click',()=>void doImport(true));
     // 열기·편집은 새 창에서 연다(문서함은 그대로 두고 문서만 크게). 새 창이 막히면 이 화면에서 연다.
+    root.querySelectorAll('[data-doc-print]').forEach(btn=>btn.addEventListener('click',()=>{const d=docs.find(x=>x.id===btn.dataset.docPrint);if(d)void openBundlePrint({name:d.title,items:[d]},Boolean(data.canWrite))}));
     root.querySelectorAll('[data-doc-bundle-print]').forEach(btn=>btn.addEventListener('click',()=>{const b=bundles[Number(btn.dataset.docBundlePrint)];if(b)void openBundlePrint(b,Boolean(data.canWrite))}));
     root.querySelectorAll('[data-doc-edit]').forEach(btn=>btn.addEventListener('click',()=>{const id=btn.dataset.docEdit;const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('edit',id);const w=window.open(url.toString(),`ekodi-doc-${id}`);if(!w)openDocEditor(id)}));
     const editParam=new URLSearchParams(location.search).get('edit');
@@ -190,7 +191,7 @@
   async function openBundlePrint(bundle,canWrite){
     document.querySelector('#churchDocBundle')?.remove();
     const box=document.createElement('div');box.id='churchDocBundle';box.className='church-doc-editor church-doc-bundle';box.setAttribute('role','dialog');box.setAttribute('aria-label',`${bundle.name} 전체 인쇄`);
-    box.innerHTML=`<div class="church-doc-editor-bar"><strong title="${esc(bundle.name)}">전체 인쇄 · ${esc(bundle.name)}</strong><span class="church-doc-editor-status" data-status>문서를 모으는 중…</span>
+    box.innerHTML=`<div class="church-doc-editor-bar"><strong title="${esc(bundle.name)}">${bundle.items.length>1?'전체 인쇄 · ':'인쇄 미리보기 · '}${esc(bundle.name)}</strong><span class="church-doc-editor-status" data-status>문서를 모으는 중…</span>
       <button class="button primary" type="button" data-print disabled>인쇄 · PDF 저장</button><button class="button" type="button" data-close>닫기</button></div>
       <div class="church-doc-editor-scroll"><p class="church-doc-bundle-help">순서대로 한 장씩 이어서 인쇄됩니다. PDF로 받으려면 인쇄 창에서 <b>대상: PDF로 저장</b>을 고르세요. 원본 파일이 없는 서류는 회색 칸에 파일을 올리면 함께 인쇄됩니다(빈 칸은 인쇄되지 않습니다).</p><div data-pages></div></div>`;
     document.body.append(box);document.body.classList.add('church-doc-editing');
