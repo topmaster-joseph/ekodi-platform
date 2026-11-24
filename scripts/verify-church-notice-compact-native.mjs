@@ -70,7 +70,9 @@ export async function verifyChurchNoticeCompact({executablePath=process.env.CHRO
         assert.ok(index.dateRightEdgeGap<=5,'date must align with right edge');
         assert.ok(index.dateLeft>index.titleLeft,'date must be to the right of title');
         assert.equal(index.horizontalOverflow,false,'no horizontal overflow');
-        assert.match(index.dates[0]||'',/11월 21일/);
+        // '11월 15일 교회소식'처럼 제목에 주간 날짜가 있으면 그 날짜를 표시한다(ekodi-church#200, noticePublishedDay).
+        assert.match(index.dates[0]||'',/11월 15일/);
+        assert.doesNotMatch(index.dates[0]||'',/11월 21일/,'title issue date must win over createdAt');
         await page.screenshot({path:'/tmp/church-notice-compact-proof/'+width+'-list.png',fullPage:false});
         await Promise.all([
           page.waitForNavigation({waitUntil:'domcontentloaded',timeout:20000}),
