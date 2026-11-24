@@ -29,7 +29,7 @@ test('admin documents open in an in-page editor with autosave and print', () => 
   for (const s of ['function openDocEditor(id,opts={})', 'data-doc-edit', 'contenteditable="true"', "method:'PUT'", 'timer=setTimeout(save,2500)', 'church-doc-printing', 'function importDocHtml(sheet,html)', 'el.style.cssText=']) assert.ok(js.includes(s), s);
   const css = read('church-reports-admin.css');
   assert.ok(css.includes('.church-doc-sheet{width:210mm'));
-  assert.ok(css.includes('body.church-doc-printing>*:not(#churchDocEditor){display:none!important}'));
+  assert.ok(css.includes('body.church-doc-printing:not(.church-doc-bundle-printing)>*:not(#churchDocEditor){display:none!important}'));
 });
 
 test('editor wraps text inside cells and lets tables and columns be resized by dragging', () => {
