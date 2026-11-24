@@ -8,7 +8,7 @@ test('documents bundle has a one-click print-all (PDF bundle) button', () => {
   const js = read('church-reports-admin.js');
   for (const s of ['data-doc-bundle-print', '전체 인쇄 · PDF 묶음', 'async function openBundlePrint(bundle,canWrite)', "id='churchDocBundle'",
     'church-doc-bundle-printing', 'ekodi-allow-print', '/attachment`', "import('/church-pdf.min.mjs')", "workerSrc='/church-pdf.worker.min.mjs'",
-    'isEvalSupported:false', 'createImageBitmap', 'data-attach']) {
+    'isEvalSupported:false', 'createImageBitmap', 'data-attach', 'data-doc-print', '인쇄 미리보기 · ']) {
     assert.ok(js.includes(s), s);
   }
   const css = read('church-reports-admin.css');
