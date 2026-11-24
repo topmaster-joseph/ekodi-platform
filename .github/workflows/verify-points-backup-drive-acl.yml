@@ -60,12 +60,18 @@ jobs:
           umask 077
           proof="$(mktemp)"
           trap 'rm -f "$proof"' EXIT
-          status="$(curl --silent --show-error --fail --retry 2 \
+          status="$(curl --silent --show-error --retry 2 --retry-all-errors \
             --connect-timeout 5 --max-time 90 --max-redirs 0 \
             -H "x-ekodi-storage-key: $STORAGE_GATEWAY_KEY" \
             -o "$proof" -w '%{http_code}' \
-            https://ekodi.kr/api/storage/v1/backup-acl)"
-          test "$status" = 200
+            https://ekodi.kr/api/storage/v1/backup-acl || true)"
+          if [ "$status" != 200 ]; then
+            # Error bodies carry only {ok,status,code}; print the machine code, never identities.
+            code="$(jq -r '.code // "unknown"' "$proof" 2>/dev/null | tr -cd 'A-Z0-9_' | head -c 80 || true)"
+            echo "::error title=Backup ACL not verified::HTTP ${status:-000} code=${code:-unknown}"
+            echo "Backup ACL check failed: HTTP ${status:-000}, code ${code:-unknown}" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
           jq -e '.ok==true and
             .status=="private_drive_acl_and_backup_folders_verified" and
             (.approvedMembershipCount|type=="number") and (.approvedMembershipCount>=1) and
