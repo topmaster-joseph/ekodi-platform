@@ -70,12 +70,16 @@ jobs:
             --repo "$GITHUB_REPOSITORY" --env production >/dev/null \
             || { echo '::error title=GitHub secret write refused::EKODI_GITHUB_ADMIN_TOKEN cannot write production environment secrets. Nothing was changed.'; exit 2; }
           GH_TOKEN="$GH_ADMIN_TOKEN" gh secret delete EKODI_SECRET_WRITE_PROBE --repo "$GITHUB_REPOSITORY" --env production >/dev/null || true
-          # Both Workers must already list the secret name (rotation, not first provisioning).
+          # Each Worker's secret listing must succeed (authoritative). A Worker that does not
+          # hold the name yet is provisioned in the same lock-step write — there is no old
+          # value on it that could drift.
           for cfg in wrangler.api.toml wrangler.storage.toml; do
-            npx --yes wrangler@${WRANGLER_VERSION} secret list --config "$cfg" 2>/dev/null | grep -Fq 'EKODI_STORAGE_GATEWAY_KEY' \
-              || { echo "::error::$cfg does not hold EKODI_STORAGE_GATEWAY_KEY; nothing was changed"; exit 2; }
+            names="$(npx --yes wrangler@${WRANGLER_VERSION} secret list --config "$cfg" 2>/tmp/list.err)" \
+              || { sed -E 's/[A-Za-z0-9_-]{24,}/[redacted]/g' /tmp/list.err >&2; echo "::error::Could not list secrets for $cfg; nothing was changed"; exit 2; }
+            if printf '%s' "$names" | grep -Fq 'EKODI_STORAGE_GATEWAY_KEY'; then state=rotate; else state=provision; fi
+            echo "$cfg: $state" | tee -a "$GITHUB_STEP_SUMMARY"
           done
-          echo 'Preflight passed: Cloudflare + GitHub secret write confirmed; both Workers hold the key name.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Preflight passed: Cloudflare + GitHub secret write confirmed; Worker secret listings are authoritative.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Rotate in lock-step (API → Storage → GitHub)
         shell: bash
