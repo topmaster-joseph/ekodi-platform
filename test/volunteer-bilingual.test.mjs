@@ -102,7 +102,7 @@ test('language changes keep typed data, preserve API payload, and translate subm
   BroadcastChannel:class {postMessage(){}close(){}}
  };
  vm.runInNewContext(source,context,{filename:'volunteer.js'});
- await Promise.resolve();await Promise.resolve();await Promise.resolve();
+ for(let i=0;i<10;i++)await Promise.resolve();
  assert.match(checking.textContent,/접수 중/);
  assert.equal(party.value,'2');
  en.listeners.click();
