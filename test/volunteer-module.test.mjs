@@ -39,6 +39,20 @@ test('volunteer index and mobile-friendly application are directly accessible',a
  assert.doesNotMatch(html,/운영주체|대표 정찬균|사업자 소재지/);
  assert.equal((await visit('/volunteer/activities/not-an-event')).status,404);
 });
+test('Volunteer homepage shows supplied signup flyer and one compact application action',async()=>{
+ const response=await visit('/volunteer');const html=await response.text();
+ assert.equal(response.status,200);
+ assert.match(html,/<img[^>]*alt="제12회 사랑의 연탄 배달 행사 안내와 신청서 원본 이미지"/);
+ assert.match(html,/0e814c8e-34ca-4768-b1c0-66c3f6a61a53\.jpg/);
+ assert.match(html,/width="992" height="1403"/);
+ assert.match(html,/class="volunteer-flyer"/);
+ assert.match(html,/href="\/volunteer\/activities\/2026-coal-delivery">봉사·후원 신청하기<\/a>/);
+ assert.doesNotMatch(html,/함께하는 마음이|자원봉사 참여부터 물품 후원까지/);
+ assert.equal((html.match(/class="volunteer-primary"/g)||[]).length,1);
+ const css=await readFile(new URL('../space/volunteer.css',import.meta.url),'utf8');
+ assert.match(css,/\.volunteer-flyer img\s*\{[^}]*width:100%/);
+ assert.match(css,/@media\(max-width:700px\)/);
+});
 test('rejects missing consent, invalid counts, cross-site origins, and untrusted campaigns',async()=>{
  const body={name:'테스트',phone:'010-1234-5678',mode:'both',partySize:1,bricks:10,privacyConsent:false};
  const route='/volunteer/api/campaigns/2026-coal-delivery/apply';
