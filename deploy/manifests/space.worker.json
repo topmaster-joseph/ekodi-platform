@@ -732,6 +732,9 @@
         "expect": [
           "에코디 봉사",
           "제12회 사랑의 연탄 배달",
+          "class=\"volunteer-brand-banner\"",
+          "1d0668d9-71d5-4fd7-8cbe-02a7e0a2e8a3.png",
+          "b92a8103-0ca0-427e-aa18-c2ba667c711c.png",
           "/volunteer/activities/2026-coal-delivery"
         ],
         "headerExpect": [
