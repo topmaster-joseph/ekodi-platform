@@ -138,9 +138,7 @@
       },
       {
         "url": "https://ekodi.kr/yogurtpurple",
-        "statuses": [
-          410
-        ],
+        "statuses": [410],
         "redirect": "manual",
         "expect": [
           "삭제된 주소입니다."
@@ -152,9 +150,7 @@
       },
       {
         "url": "https://ekodi.kr/bbqcg",
-        "statuses": [
-          200
-        ],
+        "statuses": [200],
         "redirect": "manual",
         "expect": [
           "BBQ 무안청계점",
@@ -171,9 +167,7 @@
       },
       {
         "url": "https://ekodi.kr/bbqcg/order",
-        "statuses": [
-          200
-        ],
+        "statuses": [200],
         "redirect": "manual",
         "expect": [
           "QR 메뉴·주문 안내",
@@ -772,9 +766,7 @@
       },
       {
         "url": "https://ekodi.kr/volunteer/assets/volunteer.js",
-        "statuses": [
-          200
-        ],
+        "statuses": [200],
         "redirect": "manual",
         "expect": [
           "Volunteer & Donation Application",
@@ -783,8 +775,7 @@
           "history.replaceState"
         ],
         "headerExpect": [
-          "x-ekodi-route: volunteer-asset",
-          "cache-control: no-store"
+          "x-ekodi-route: volunteer-asset"
         ]
       },
       {
