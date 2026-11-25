@@ -6,6 +6,7 @@ const fmt=v=>new Intl.NumberFormat('ko-KR').format(Number(v)||0);
 const api='/volunteer/api/';
 if(form){
  const english=Object.freeze({
+  skip:'Skip to main content',brand:'EKODI Volunteer',navActivities:'Activities',navAdmin:'Activity management',navEkodi:'EKODI',footer:'Turning goodwill into action for our neighbors.',privacyLink:'Privacy policy',
   back:'← All volunteer activities',adminLink:'Admin',eventTitle:'12th Love Briquette Delivery',
   checking:'Checking registration status',startApplication:'Apply now',formTitle:'Volunteer & Donation Application',
   guestNote:'No login required. Only essential information is collected.',
