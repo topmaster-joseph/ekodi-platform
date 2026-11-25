@@ -52,7 +52,7 @@ test('EKODI volunteer and coal activity use two separate primary images, with or
  assert.match(html,/0e814c8e-34ca-4768-b1c0-66c3f6a61a53\.jpg/);
  assert.match(html,/href="\/volunteer\/activities\/2026-coal-delivery">봉사·후원 신청하기<\/a>/);
  assert.doesNotMatch(html,/함께하는 마음이|자원봉사 참여부터 물품 후원까지/);
- assert.equal((html.match(/class="volunteer-primary"/g)||[]).length,1);
+ assert.equal((html.match(/class="cta volunteer-primary"/g)||[]).length,1);
  const detail=await visit('/volunteer/activities/2026-coal-delivery');
  const detailHtml=await detail.text();
  assert.match(detailHtml,/b92a8103-0ca0-427e-aa18-c2ba667c711c\.png/);
