@@ -7,7 +7,7 @@ const buildReport=(profile,overrides={})=>({
   ok:true,virtualizationProvider:'ekodi-background-browser-worker',
   headless:true,ephemeralContext:true,activeUserProfileReused:false,
   allowMutation:false,deviceProfile:profile,canonicalOrigin:'https://ekodi.kr',
-  blockedExternalNavigationCount:0,blockedMutations:[],pageErrors:[],
+  blockedExternalNavigationCount:0,blockedMutations:[],pageErrors:[],httpErrorResponses:[],
   results:[
     {type:'initial-goto',url:'https://ekodi.kr/bbqcg',status:200},
     {type:'waitFor',visible:true},
@@ -47,6 +47,14 @@ test('receipt passes only real first-party browser, 200 pages and no mobile over
     }),profile).ok,false);
     assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{virtualizationProvider:'external'}),profile).ok,false);
     assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{pageErrors:[{name:'Error'}]}),profile).ok,false);
+    assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{httpErrorResponses:[{status:404,url:'https://ekodi.kr/workspace-api/v1/site-chrome/public?subject_key=bbqcg'}]}),profile).ok,false,
+      'legacy missing native site-chrome 404 must fail');
+    assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{httpErrorResponses:[{status:404,url:'https://ekodi.kr/other-service'}]}),profile).ok,true,
+      'unrelated 404 must not be interpreted as missing native chrome');
+    const withoutHttpLog=buildReport(profile);
+    delete withoutHttpLog.httpErrorResponses;
+    assert.equal(verifyBbqcgNativeReceipt(withoutHttpLog,profile).ok,false,
+      'native browser must provide HTTP response diagnostics');
     assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{blockedMutations:[{method:'POST'}]}),profile).ok,true,
       'telemetry POSTs are safe when the owned browser intercepts and blocks them');
     assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{blockedMutations:[{method:'GET'}]}),profile).ok,false,
