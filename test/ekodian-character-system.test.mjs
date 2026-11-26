@@ -5,6 +5,7 @@ import vm from 'node:vm';
 
 const registrySource=fs.readFileSync(new URL('../shell/character-registry.js',import.meta.url),'utf8');
 const rendererSource=fs.readFileSync(new URL('../shell/user-character.js',import.meta.url),'utf8');
+const characterCss=fs.readFileSync(new URL('../shell/user-character.css',import.meta.url),'utf8');
 const constitution=fs.readFileSync(new URL('../docs/EKODIAN-CHARACTER-CONSTITUTION.md',import.meta.url),'utf8');
 const shellWorkflow=fs.readFileSync(new URL('../.github/workflows/deploy-ekodi-shell.yml',import.meta.url),'utf8');
 
@@ -33,7 +34,10 @@ test('EKODIAN registry exposes constitutional identity and service profiles',()=
 test('EKODIAN renderer remains parseable and registry-aware',()=>{
   assert.doesNotThrow(()=>new vm.Script(rendererSource));
   assert.match(rendererSource,/character-registry\.js/);
-  assert.match(rendererSource,/prefers-reduced-motion/);
+  // Motion accessibility now lives in the CSP-safe external stylesheet.
+  assert.match(rendererSource,/user-character\\.css/);
+  assert.match(characterCss,/prefers-reduced-motion/);
+  assert.match(characterCss,/animation:none!important/);
   assert.match(rendererSource,/payment/);
   assert.match(rendererSource,/complex_admin/);
 });
