@@ -112,6 +112,26 @@ function kisExpiry(data, now) {
 }
 
 class BrokerError extends Error { constructor(code, provider = null) { super(code); this.code = code; this.provider = provider; } }
+// Never permit OAuth or balance requests to follow a provider redirect. Redirects can
+// forward app credentials or account-specific request material to unapproved hosts.
+// A redirected 2xx response is also refused in case an injected fetch implementation
+// silently ignored redirect:'manual'. The only accepted final URL is the direct KIS
+// endpoint (or an empty URL from deterministic synthetic Response fixtures).
+function assertDirectKisResponse(response, endpoint) {
+  const status = Number(response?.status || 0);
+  if (response?.redirected === true || response?.type === 'opaqueredirect' || (status >= 300 && status < 400))
+    throw new BrokerError('KIS_REDIRECT_FORBIDDEN');
+  const finalUrl = String(response?.url || '');
+  if (finalUrl) {
+    try {
+      const actual = new URL(finalUrl), requested = new URL(endpoint);
+      if (actual.origin !== requested.origin || actual.pathname !== requested.pathname)
+        throw new BrokerError('KIS_REDIRECT_FORBIDDEN');
+    } catch {
+      throw new BrokerError('KIS_REDIRECT_FORBIDDEN');
+    }
+  }
+}
 // The provider's own reason code and message are safe to show the owner (no keys, no account number):
 // long digit runs are masked and the text is bounded, so a misconfigured account can be diagnosed.
 export function kisProviderReason(data) {
@@ -127,10 +147,12 @@ async function kisAccessToken({ db, cfg, fetchImpl, now, force = false }) {
   const last = force ? (await readCachedToken(db, cfg, now)).issuedAt : cached.issuedAt;
   if (last && now - last < TOKEN_MIN_REISSUE_MS) throw new BrokerError('KIS_TOKEN_REISSUE_TOO_SOON');
   const origin = READONLY_BROKER_TARGETS.kis[cfg.environment].origin;
-  const response = await fetchImpl(origin + '/oauth2/tokenP', {
-    method: 'POST', headers: { 'content-type': 'application/json; charset=utf-8' },
+  const endpoint = origin + '/oauth2/tokenP';
+  const response = await fetchImpl(endpoint, {
+    method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/json; charset=utf-8' },
     body: JSON.stringify({ grant_type: 'client_credentials', appkey: cfg.appKey, appsecret: cfg.appSecret }),
   });
+  assertDirectKisResponse(response, endpoint);
   const data = await response.json().catch(() => ({}));
   if (!response.ok || typeof data?.access_token !== 'string' || data.access_token.length < 20) throw new BrokerError('KIS_TOKEN_REFUSED', kisProviderReason({ msg_cd: data?.error_code, msg1: data?.error_description }));
   await storeToken(db, cfg, data.access_token, new Date(kisExpiry(data, now)).toISOString(), new Date(now).toISOString());
@@ -156,12 +178,13 @@ async function kisBalancePages({ cfg, token, fetchImpl }) {
     const query = { CANO: cfg.cano, ACNT_PRDT_CD: cfg.productCode, ...KIS_QUERY, CTX_AREA_FK100: fk, CTX_AREA_NK100: nk };
     for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
     const response = await fetchImpl(url.toString(), {
-      method: 'GET',
+      method: 'GET', redirect: 'manual',
       headers: {
         'content-type': 'application/json; charset=utf-8', authorization: 'Bearer ' + token,
         appkey: cfg.appKey, appsecret: cfg.appSecret, tr_id: KIS_TR_ID[cfg.environment], custtype: 'P', tr_cont: cont,
       },
     });
+    assertDirectKisResponse(response, target.canonicalUrl);
     const data = await response.json().catch(() => ({}));
     if (response.status === 401 || data?.msg_cd === 'EGW00121' || data?.msg_cd === 'EGW00123') throw new BrokerError('KIS_TOKEN_EXPIRED');
     if (!response.ok || String(data?.rt_cd) !== '0') throw new BrokerError('KIS_BALANCE_REFUSED', kisProviderReason(data));
