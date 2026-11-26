@@ -6,7 +6,7 @@ import {runInNewContext} from 'node:vm';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 const HEADER_ENTRY='async function siteChrome(){';
 const FOOTER_ENTRY='async function loadSiteConfig(){';
-const NON_TENANT="const NON_TENANT_SITE_CHROME_SUBJECTS=new Set(['edu','education']);";
+const NON_TENANT="const NON_TENANT_SITE_CHROME_SUBJECTS=new Set(['edu','education','bbqcg']);";
 
 function extract(source,start,next){
   const first=source.indexOf(start);
@@ -41,10 +41,10 @@ ${entry===HEADER_ENTRY?'siteChrome()':'loadSiteConfig()'}`;
   const result=await runInNewContext(code,env,{timeout:1000});
   return {result,captured,sourceUrl};
 }
-test('Education canonical /edu and /education do not request a non-existent customer tenant chrome',async()=>{
+test('Education and independent BBQ canonical sites never request missing tenant chrome',async()=>{
   for(const path of ['shell/user-ui-header.js','shell/user-ui-footer.js']){
     const header=path.endsWith('header.js');
-    for(const subject of ['edu','education']){
+    for(const subject of ['edu','education','bbqcg']){
       const {result,captured}=await simulate(path,
         header?HEADER_ENTRY:FOOTER_ENTRY,
         header?'function mode(){':'async function loadBaseConfig()',subject);

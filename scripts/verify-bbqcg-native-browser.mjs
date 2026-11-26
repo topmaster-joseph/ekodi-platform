@@ -43,6 +43,12 @@ export function verifyBbqcgNativeReceipt(report,profile){
   const snapshots=result.filter(x=>x.type==='snapshot');
   const initial=result.find(x=>x.type==='initial-goto');
   const order=result.find(x=>x.type==='goto'&&new URL(x.url).pathname==='/bbqcg/order');
+  // The native BBQ storefront is not a customer-tenant Chrome subject.
+  // A legacy 404 from either shared Shell module is an observable regression.
+  const siteChrome404s=Array.isArray(report?.httpErrorResponses)
+    ?report.httpErrorResponses.filter(item=>Number(item?.status)===404&&
+      /^https:\/\/ekodi\.kr\/workspace-api\/v1\/site-chrome\/public(?:[?#]|$)/.test(String(item?.url||'')))
+    :null;
   const required=['waitFor','assertText','assertDisabled','screenshot'];
   const checks={
     correctProvider:report?.virtualizationProvider==='ekodi-background-browser-worker',
@@ -63,12 +69,14 @@ export function verifyBbqcgNativeReceipt(report,profile){
     // Treat actively blocked attempts as proof of isolation, not as writes.
     noMutation:report?.allowMutation===false&&Array.isArray(report?.blockedMutations)&&
       report.blockedMutations.every(item=>!['GET','HEAD','OPTIONS'].includes(String(item?.method||'').toUpperCase())),
-    noPageErrors:!(report?.pageErrors||[]).length
+    noPageErrors:!(report?.pageErrors||[]).length,
+    noMissingNativeChrome:siteChrome404s!==null&&siteChrome404s.length===0
   };
   return {ok:Object.values(checks).every(Boolean),profile,checks,
     viewport:report?.viewport||null,
     navigationPerformance:report?.performance||null,
     pageErrorCount:report?.pageErrors?.length||0,
+    missingNativeChrome404Count:siteChrome404s?.length??null,
     blockedWriteAttempts:report?.blockedMutations?.length||0,
     screenshots:report?.screenshots?.length||0};
 }

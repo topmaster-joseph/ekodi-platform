@@ -6,8 +6,9 @@ window.__EKODI_USER_UI_HEADER_BOOTED=true;
 const VERSION=8;
 const ACCOUNTING_NOTICE_SITES=new Set(['ekodibiz','ekodichurch','ekodimission','cgma','seonammedi']);
 const SITE_CHROME_URL='https://ekodi.kr/workspace-api/v1/site-chrome/public';
-// Education has no customer-site chrome configuration; keep the shared fallback.
-const NON_TENANT_SITE_CHROME_SUBJECTS=new Set(['edu','education']);
+// Education and the independent BBQ storefront do not have customer-tenant chrome
+// configuration. Their native Shell / service-owned fallback remains authoritative.
+const NON_TENANT_SITE_CHROME_SUBJECTS=new Set(['edu','education','bbqcg']);
 const STYLE_ID='ekodi-user-ui-header-style';
 const USER_SURFACES=new Set(['public','workspace']);
 const DISABLED_MODES=new Set(['off','hidden','immersive']);
