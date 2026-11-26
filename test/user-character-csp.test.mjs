@@ -5,10 +5,11 @@ import { readFile } from 'node:fs/promises';
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('shared user surfaces load EKODIAN presentation from an external CSP-safe stylesheet', async () => {
-  const [injector, css, localCommerceWorker] = await Promise.all([
+  const [injector, css, localCommerceWorker, characterRuntime] = await Promise.all([
     read('ekodi-shell-injector.js'),
     read('shell/user-character.css'),
     read('local-commerce-worker.js'),
+    read('shell/user-character.js'),
   ]);
 
   assert.match(injector, /SHELL_CHARACTER_STYLE=.*user-character\.css/);
@@ -17,6 +18,11 @@ test('shared user surfaces load EKODIAN presentation from an external CSP-safe s
   assert.match(css, /max-width:176px!important/);
   assert.match(css, /\.ekodi-main-ekodian svg\{[^}]*width:100%!important/);
   assert.match(css, /data-ekodi-character-placement="hidden"/);
+  assert.match(characterRuntime, /link\[data-ekodi-user-character-style\]/);
+  assert.match(characterRuntime, /link\.rel='stylesheet'/);
+  assert.match(characterRuntime, /link\.href='\/shell\/user-character\.css'/);
+  assert.doesNotMatch(characterRuntime, /document\.createElement\(['"]style['"]\)/);
+  assert.doesNotMatch(characterRuntime, /style\.textContent\s*=/);
 
   // Local Commerce deliberately keeps inline styles disallowed. The Character Engine
   // must therefore remain correct without weakening the service CSP.
