@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#152b2e">
+<meta name="description" content="에코디인쇄: 명함·현수막·전단지·포스터·스티커·책자 시안 작업과 인쇄 견적 요청">
+<title>에코디인쇄 | 디자인부터 인쇄 요청까지</title>
+<link rel="stylesheet" href="/print/studio.css">
+<script defer src="/print/studio.js"></script>
+</head>
+<body>
+<header class="topbar"><a class="logo" href="/print/">EKODI <span>PRINT</span></a><nav aria-label="상단 이동"><a href="/ekodibiz/">에코디비즈</a><a href="/ekodibiz/cards/">기존 명함 편집기</a></nav></header>
+<main class="container">
+<section class="hero"><div><p class="eyebrow">PRINT & DESIGN WORKSPACE</p><h1>필요한 홍보물, 시안부터 바로 시작하세요.</h1><p>품목을 선택하고 문구·색상·규격을 바꿔 시안을 만듭니다. 파일 확인 후 인쇄 견적을 요청할 수 있습니다.</p></div><div class="hero-badge"><b>한 곳에서</b><span>명함 · 현수막 · 전단지 · 포스터 · 스티커 · 책자</span></div></section>
+<section aria-labelledby="category-title"><div class="heading"><h2 id="category-title">무엇을 만들까요?</h2><p>상품별 화면은 독립적으로, 작업 방식은 동일하게 제공합니다.</p></div>
+<nav class="products" id="products" aria-label="인쇄 상품 선택">
+<a href="/print/cards/" data-product="cards"><span class="symbol" aria-hidden="true">▭</span><strong>명함</strong><small>양면·QR·PDF</small></a>
+<a href="/print/banners/" data-product="banners"><span class="symbol" aria-hidden="true">▰</span><strong>현수막</strong><small>가로형·세로형</small></a>
+<a href="/print/flyers/" data-product="flyers"><span class="symbol" aria-hidden="true">▤</span><strong>전단지</strong><small>A4·A5·3단</small></a>
+<a href="/print/posters/" data-product="posters"><span class="symbol" aria-hidden="true">▥</span><strong>포스터</strong><small>A2·A3</small></a>
+<a href="/print/stickers/" data-product="stickers"><span class="symbol" aria-hidden="true">◈</span><strong>스티커</strong><small>라벨·원형</small></a>
+<a href="/print/booklets/" data-product="booklets"><span class="symbol" aria-hidden="true">▧</span><strong>리플릿·책자</strong><small>표지 시안</small></a>
+</nav></section>
+<section class="card-handoff" id="cardHandoff" hidden aria-labelledby="card-title"><p class="eyebrow">CARD STUDIO</p><h2 id="card-title">명함은 기존 양면 편집기를 이용하세요.</h2><p>비비큐 무안청계점, 피자마루 목포대점, 청계면상인회의 실제 양면 명함 시안과 QR 검토·PDF 내보내기 기능을 그대로 사용합니다.</p><a class="button primary" href="/ekodibiz/cards/">명함 시안 작업 시작</a><p class="disclaimer">기존 명함 편집기 경로는 변경하지 않습니다. 인쇄업체 주문 및 결제는 별도로 진행됩니다.</p></section>
+<section class="editor" id="editor" aria-labelledby="editor-title"><div class="heading"><h2 id="editor-title">온라인 시안 작업</h2><p id="editorHelp">문구와 규격을 입력하면 오른쪽 시안에 즉시 반영됩니다.</p></div>
+<div class="workgrid"><form class="panel controls" id="designForm" autocomplete="off">
+<h3>1. 디자인 설정</h3>
+<label for="format">제작 규격</label><select id="format" required></select>
+<label for="headline">제목 · 가장 크게 표시</label><input id="headline" maxlength="48" required value="함께 만드는 새로운 시작">
+<label for="subtitle">부제목</label><input id="subtitle" maxlength="80" value="사람과 지역을 연결하는 에코디">
+<label for="details">상세 문구</label><textarea id="details" rows="3" maxlength="220">날짜 · 장소 · 행사 안내를 입력하세요</textarea>
+<label for="contact">연락처·하단 안내</label><input id="contact" maxlength="85" value="문의  |  ekodi.kr">
+<div class="two"><label for="background">배경색<input type="color" id="background" value="#173e3d"></label><label for="accent">강조색<input type="color" id="accent" value="#f5d8a0"></label></div>
+<label for="photo">배경 사진 (선택 · 5MB 이하, JPG/PNG)</label><input id="photo" type="file" accept="image/jpeg,image/png"><button type="button" class="small" id="removePhoto" hidden>사진 제거</button>
+<h3>2. 제작 요청 정보</h3>
+<div class="two"><label for="quantity">수량<input id="quantity" type="number" min="1" max="100000" step="1" value="100" required></label><label for="finish">후가공<select id="finish"><option>일반</option><option>무광</option><option>유광</option><option>업체 협의</option></select></label></div>
+<label for="requester">요청자 / 단체명</label><input id="requester" maxlength="70" placeholder="인쇄 견적 요청 시에만 사용">
+<label for="contactEmail">회신 이메일</label><input id="contactEmail" type="email" maxlength="120" placeholder="메일에 자동 작성되며 서버 저장 안 함">
+<div class="check"><label><input type="checkbox" id="approve"> <span>시안의 글자·규격을 확인했고, 업체 최종 인쇄 가이드에 따라 재검수하겠습니다.</span></label></div>
+</form>
+<div class="panel previewpanel"><div class="previewtop"><div><p class="eyebrow">LIVE PREVIEW</p><h3 id="previewTitle">시안 미리보기</h3><small id="dimensions"></small></div><span class="state">실시간 초안</span></div>
+<div id="previewFrame" class="previewframe"><div id="previewSvg" role="img" aria-label="인쇄물 시안 미리보기"></div></div>
+<p class="previewcaption">여기 보이는 것은 디자인 검토용 시안입니다. 실제 인쇄용 CMYK·도련·재단·글꼴·해상도 기준은 인쇄소에서 최종 확인해야 합니다.</p>
+<div class="actions"><button type="button" id="exportSvg">SVG 시안 저장</button><button type="button" id="printPdf">PDF로 저장 / 인쇄</button><button type="button" class="primary" id="requestQuote" disabled>인쇄 견적 요청서 열기</button></div>
+<p class="status" id="status" role="status" aria-live="polite">시안을 검토한 후 파일을 내려받고 견적 요청 이메일에 첨부하세요.</p>
+</div></div></section>
+<section class="info"><h2>요청 전에 확인해 주세요</h2><p>지금은 브라우저 안에서 시안을 만들고 파일을 저장하는 기능입니다. 파일은 에코디 서버로 업로드되지 않으며, 주문 접수·견적 확정·결제·제작·배송은 아직 자동화되어 있지 않습니다. 견적 요청 버튼은 메일 앱에서 작성 중인 이메일을 열 뿐 자동 전송하지 않습니다.</p></section>
+</main><footer><span>EKODI PRINT · 에코디비즈 인쇄 서비스</span><span><a href="/ekodibiz/">에코디비즈</a> · <a href="/privacy">개인정보처리방침</a></span></footer>
+</body></html>
