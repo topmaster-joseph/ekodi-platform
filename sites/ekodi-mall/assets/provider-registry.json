@@ -83,6 +83,15 @@
       "description": "상인 위탁 소싱 및 권한 확인"
     },
     {
+      "id": "seller",
+      "label": "판매자 직접등록",
+      "type": "seller_registered",
+      "group": "직접",
+      "status": "판매자별 등록·인증 관리",
+      "route": "/ekodimall/seller/",
+      "description": "일반 판매자가 직접 등록한 상품 · 판매인증과 결제는 상품별 검증"
+    },
+    {
       "id": "own",
       "label": "에코디 직접판매",
       "type": "own",
