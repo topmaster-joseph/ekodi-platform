@@ -24,6 +24,7 @@ const buildReport=(profile,overrides={})=>({
 });
 test('EKODI owned browser checks three real viewports without user Opera or any write',()=>{
   assert.deepEqual(BBQCG_NATIVE_PROFILES,['compact-mobile','mobile-portrait','desktop']);
+  assert.equal(BBQCG_FIXED_SHELL_STYLE_HASHES.length,7,'all seven identified Shell style regressions must be pinned');
   for(const profile of BBQCG_NATIVE_PROFILES){
     const task=bbqcgNativeTask(profile);
     assert.equal(task.path,'/bbqcg');
