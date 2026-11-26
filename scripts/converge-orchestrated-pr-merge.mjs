@@ -481,6 +481,8 @@ const sharedSiteTouched=changedFiles.some(file=>
   ['social-admin.js','social-admin.css','social-account-admin.js','social-account-admin.css','admin-service-catalog.js'].includes(file)||
   // CGMA workspace pages compiled into Site Core (/cgma/ai-education/, /cgma/motor-festival-2026/).
   ['cgma-ai-education-route.js','cgma-motor-festival-route.js','cgma-edoc-sign-route.js','cgma-edoc-admin.js','cgma-edoc-admin.css'].includes(file)||
+  // ekodi.kr/factchat (admin FactChat portal) ships inside the platform router entry worker.
+  file==='factchat-portal-route.js'||
   (file.startsWith('prototypes/cgma-')&&/\.(html|js)$/.test(file))||
   // cgmurrc booth member/admin pages are compiled into Site Core by scripts/build.mjs.
   (file.startsWith('prototypes/cgmurrc-')&&/\.(html|js)$/.test(file))||
