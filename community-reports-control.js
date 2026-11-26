@@ -1,3 +1,4 @@
+import { invokeAiProviderCapability } from './ai-provider-control.js';
 import authWorker from './auth-worker.js';
 
 const PREFIX = '/api/community/admin/reports';
@@ -89,7 +90,9 @@ async function settings(env) {
 function mailConfigured(env) {
   return Boolean(clean(env.GMAIL_CLIENT_ID, 500) && clean(env.GMAIL_CLIENT_SECRET, 500) && clean(env.GMAIL_REFRESH_TOKEN, 2000));
 }
-function aiConfigured(env) { return Boolean(clean(env.OPENAI_API_KEY, 300)); }
+// AI drafting goes through the central EKODI provider router (free-first,
+// budget-guarded, logged, evaluable), never a hard-wired paid vendor.
+function aiConfigured(env) { return Boolean(env?.DB?.prepare); }
 function sourceEndpoint(env) { return clean(env.COMMUNITY_REPORT_SOURCE_URL, 1000) || DEFAULT_SOURCE_URL; }
 async function overview(request, env) {
   const upcoming = nextReportPeriod();
@@ -252,9 +255,6 @@ function fallbackBody(report) {
     '', section('6. 기도제목', report.prayers || sourcePrayerText(snapshot)),
   ].join('\n');
 }
-function extractOutputText(data) {
-  return (data?.output || []).flatMap(item => item?.content || []).filter(part => part?.type === 'output_text').map(part => part.text || '').join('\n').trim();
-}
 function aiSourceFacts(snapshot) {
   if (!snapshot || typeof snapshot !== 'object') return {};
   return {
@@ -263,23 +263,21 @@ function aiSourceFacts(snapshot) {
     items: Array.isArray(snapshot.items) ? snapshot.items.slice(0, 120) : [],
   };
 }
-async function generateWithOpenAI(env, report) {
+async function generateWithEkodiAi(env, report) {
   if (!aiConfigured(env)) return null;
   const facts = {
     manual: { activities: report.activities, outcomes: report.outcomes, evaluation: report.evaluation, plans: report.plans, requests: report.requests, prayers: report.prayers, sourceNotes: report.sourceNotes },
     recordedSources: aiSourceFacts(report.sourceSnapshot),
   };
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: { authorization: `Bearer ${env.OPENAI_API_KEY}`, 'content-type': 'application/json' },
-    body: JSON.stringify({
-      model: clean(env.OPENAI_MODEL, 120) || 'gpt-5',
-      instructions: 'You draft concise Korean ministry reports for Community. Use only supplied facts. Never invent names, counts, dates, outcomes, plans, or prayer requests. recordedSources are verified historical Community records; ongoingCircles are recurring-schedule context only and are not confirmed future events. Future plans must come from manual.plans. If evidence is missing, write 확인 필요. Keep the tone factual, pastoral, and suitable for headquarters reporting.',
-      input: `보고서: ${report.title}\n활동기간 ${report.activityFrom}~${report.activityTo}\n계획기간 ${report.planFrom}~${report.planTo}\n\n자료(JSON):\n${JSON.stringify(facts)}\n\n다음 순서로 작성: 1. 지난 2개월 주요 사역 2. 참여·성과·변화 3. 감사와 평가 4. 향후 2개월 계획 5. 본부 협조 요청 6. 기도제목.`,
-    }),
+  const result = await invokeAiProviderCapability(env, {
+    capability: 'documents',
+    system: 'You draft concise Korean ministry reports for Community. Use only supplied facts. Never invent names, counts, dates, outcomes, plans, or prayer requests. recordedSources are verified historical Community records; ongoingCircles are recurring-schedule context only and are not confirmed future events. Future plans must come from manual.plans. If evidence is missing, write 확인 필요. Keep the tone factual, pastoral, and suitable for headquarters reporting.',
+    input: `보고서: ${report.title}\n활동기간 ${report.activityFrom}~${report.activityTo}\n계획기간 ${report.planFrom}~${report.planTo}\n\n자료(JSON):\n${JSON.stringify(facts)}\n\n다음 순서로 작성: 1. 지난 2개월 주요 사역 2. 참여·성과·변화 3. 감사와 평가 4. 향후 2개월 계획 5. 본부 협조 요청 6. 기도제목.`,
+    maxOutputTokens: 4096,
+    governance: { module: 'community-reports', purpose: 'ministry-report-draft' },
   });
-  if (!response.ok) throw new Error(`AI 생성 실패 (${response.status})`);
-  const data = await response.json(); return extractOutputText(data) || null;
+  const text = String(result?.text || '').trim();
+  return text ? { text, provider: clean(result?.provider, 80) } : null;
 }
 async function generateDraft(request, env, sessionData, id) {
   let report = await getReport(env, id, true); if (!report) return json({ error: '사역보고를 찾을 수 없습니다.' }, 404, request, env);
@@ -288,7 +286,7 @@ async function generateDraft(request, env, sessionData, id) {
   try { report = await syncSources(request, env, sessionData, id); sourceSynced = true; }
   catch (error) { console.warn('Community report source fallback', error); report = await getReport(env, id, true) || report; }
   let body; let mode = 'smart-template';
-  try { body = await generateWithOpenAI(env, report); if (body) mode = 'openai'; } catch (error) { console.warn('Community report AI fallback', error); }
+  try { const drafted = await generateWithEkodiAi(env, report); if (drafted) { body = drafted.text; mode = `ekodi-ai:${drafted.provider || 'router'}`; } } catch (error) { console.warn('Community report AI fallback', error); }
   if (!body) body = fallbackBody(report);
   const who = await adminId(env, sessionData.email); const now = new Date().toISOString();
   await env.DB.prepare(`UPDATE community_ministry_reports SET body_text=?, ai_mode=?, status='AI_DRAFT', send_error='', updated_at=?, updated_by=? WHERE id=?`)

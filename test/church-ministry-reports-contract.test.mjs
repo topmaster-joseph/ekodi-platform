@@ -18,7 +18,7 @@ test('church ministry reports backend is pastor-scoped and keeps approval delive
     'AI_DRAFT',
     'APPROVED',
     'gmail.googleapis.com/gmail/v1/users/me/messages/send',
-    'api.openai.com/v1/responses',
+    "invokeAiProviderCapability(env, {", // AI drafts go through the central free-first router
   ]) assert.ok(source.includes(marker), `missing backend marker: ${marker}`);
 });
 
