@@ -32,9 +32,9 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(header,/async function siteChrome\(\)/);
   assert.match(header,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
   assert.match(header,/DISABLED_MODES=new Set\(\['off','hidden','immersive'\]\)/);
-  assert.match(header,/position:fixed!important/);
-  assert.match(header,/left:50%!important/);
-  assert.match(header,/text-align:center!important/);
+  assert.match(sharedCss,/position:fixed!important/);
+  assert.match(sharedCss,/left:50%!important/);
+  assert.match(sharedCss,/text-align:center!important/);
   assert.match(header,/data-ekodi-user-header-spacer/);
   assert.match(header,/--ekodi-user-header-height/);
   assert.match(header,/window\.EKODIUserUIHeader/);
@@ -45,6 +45,18 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(header,/--ekodi-user-content-inline-size/);
   assert.match(header,/main-aligned-v1/);
   assert.doesNotMatch(header,/body\s*\{[^}]*text-align\s*:\s*center/is);
+  // Read-only CSP guarantees: Shell shared chrome styles are external and
+  // retain the previous responsive layout without runtime <style> injection.
+  for(const runtime of [header,footerClient]){
+    assert.match(runtime,/link\.rel='stylesheet'/);
+    assert.match(runtime,/link\.href='\/shell\/user-ui-shell\.css'/);
+    assert.match(runtime,/data-ekodi-user-ui-style/);
+    assert.doesNotMatch(runtime,/document\.createElement\(['"]style['"]\)/);
+    assert.doesNotMatch(runtime,/style\.textContent\s*=/);
+  }
+  assert.match(sharedCss,/EKODI-STRICT-CSP-CHROME-001/);
+  assert.match(sharedCss,/footer\.foot \.foot-inner > \.ekodi-footer-traffic/);
+
 
   assert.equal(EKODI_USER_FOOTER.version,3);
   assert.equal(EKODI_USER_FOOTER.operator.businessRegistrationNumber,'213-13-01959');
@@ -75,8 +87,8 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(footerClient,/const VERSION=7/);
   assert.match(footerClient,/https:\/\/ekodi\.kr\/workspace-api\/v1\/site-chrome\/public/);
   assert.match(footerClient,/siteConfigPromise/);
-  assert.match(footerClient,/--ekodi-user-content-inline-size/);
-  assert.match(footerClient,/--ekodi-user-canvas-max,1240px/);
+  assert.match(sharedCss,/--ekodi-user-content-inline-size/);
+  assert.match(sharedCss,/--ekodi-user-canvas-max,1240px/);
   assert.doesNotMatch(footerClient,/min\(1040px/);
   assert.match(footerClient,/__EKODI_USER_FOOTER_CONFIG__/);
   assert.match(footerClient,/user-footer\.json/);
