@@ -237,7 +237,7 @@
       if (host === 'trip.com' || host.endsWith('.trip.com')) return 'tripcom';
       return 'external';
     }
-    return 'own';
+    return 'seller';
   }
   function readiness(product) {
     if (product.status !== 'published') return '상품 준비중';
