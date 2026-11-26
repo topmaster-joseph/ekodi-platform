@@ -1,7 +1,8 @@
 // EKODIBIZ 홈페이지 구독 서비스 — 화면 탭(신청·요금제·업종별 기능·이용 기준) + 단계형 신청(유형→요금제 설명→결제·추가→상담/바로 구독)
 // Canonical public page: https://ekodi.kr/homepage , 관리자: https://ekodi.kr/homepage/admin
-// 신청서는 별도 저장소 없이 기존 공개 문의 API(/mail/api/contact)로 joseph@ekodi.kr 에 전달된다.
+// 기존 신청·자동 개설 RPC를 재사용하고 공통 문의 API로 담당자에게 제안·후속 업무를 알린다.
 // 예상 구독료 계산은 estimateHomepageSubscription() 하나만 정본으로 쓰고, 같은 함수 원문을 브라우저에 그대로 싣는다.
+import { buildHomepageSalesPlan } from './homepage-sales-automation.js';
 export const EKODIBIZ_HOMEPAGE_SERVICE_PATH = '/homepage';
 export const EKODIBIZ_HOMEPAGE_SERVICE_URL = 'https://ekodi.kr/homepage';
 export const EKODIBIZ_HOMEPAGE_ADMIN_PATH = '/homepage/admin';
@@ -151,7 +152,11 @@ export function ekodiBizHomepageRoute(request, url) {
 }
 
 // 사용자 페이지와 관리자 페이지가 함께 쓰는 로그인·권한 도우미(브라우저용). 권한은 DB 함수가 다시 확인한다.
-const CLIENT_HELPERS = `var SB='https://renzehysxirjilvdxacv.supabase.co',SBK='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_',SKEY='sb-renzehysxirjilvdxacv-auth-token';
+const SALES_CLIENT = `var hpSalesBuild=${buildHomepageSalesPlan.toString()},hpSalesEstimate=${estimateHomepageSubscription.toString()},hpSalesPricing=${JSON.stringify(HOMEPAGE_PRICING)},hpSalesAudiences=${JSON.stringify(HOMEPAGE_AUDIENCES)};
+function hpSales(r){return hpSalesBuild(r,hpSalesPricing,hpSalesAudiences,hpSalesEstimate);}
+function hpSalesPanel(r){var p=hpSales(r);return '<details class="hp-sales"><summary>'+hpEsc(p.nextAction)+(p.overdue?' · 접수 기준 기한 경과':'')+'</summary><p class="note">접수 기록으로 만든 영업 초안입니다. 실제 연락·결제 여부는 별도 확인합니다. 추가 옵션은 접수 원문을 확인해 주세요.</p><p>첫 답변 기준일: '+(p.dueAt?hpEsc(new Date(p.dueAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})):'해당 없음')+'</p><label>유형별 제안문<textarea readonly rows="10" aria-label="유형별 제안문">'+hpEsc(p.draft)+'</textarea></label><button type="button" class="ghost" data-hp-copy>제안문 복사</button>'+(p.needsResponse?'<label>후속 안내 초안<textarea readonly rows="4" aria-label="후속 안내 초안">'+hpEsc(p.followupDraft)+'</textarea></label><ul>'+p.tasks.map(function(t){return '<li>'+hpEsc(t.label)+(t.dueAt?' · '+hpEsc(new Date(t.dueAt).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul'})):'')+'</li>';}).join('')+'</ul>':'')+'<p class="note" data-copy-status role="status"></p></details>';}
+function hpBindSales(root){root.addEventListener('click',async function(e){var b=e.target.closest('[data-hp-copy]');if(!b)return;var d=b.closest('.hp-sales'),t=d.querySelector('textarea'),st=d.querySelector('[data-copy-status]');try{await navigator.clipboard.writeText(t.value);st.textContent='제안문을 복사했습니다.';}catch(err){t.focus();t.select();st.textContent='제안문을 선택했습니다. 복사해 주세요.';}});}`;
+const CLIENT_HELPERS = SALES_CLIENT + `var SB='https://renzehysxirjilvdxacv.supabase.co',SBK='sb_publishable_0QjB0WzZbjrd-FJ5D5cR7A_xUkXyOY_',SKEY='sb-renzehysxirjilvdxacv-auth-token';
 function hpEsc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function hpSession(){try{var d=JSON.parse(localStorage.getItem(SKEY)||'null');return d&&d.access_token?d:null;}catch(e){return null;}}
 async function hpToken(){var s=hpSession();if(!s)return '';var now=Math.floor(Date.now()/1000);if(Number(s.expires_at||0)>now+60)return s.access_token;if(!s.refresh_token)return '';
@@ -169,10 +174,10 @@ function hpWon(n){return n==null?'-':Number(n).toLocaleString('ko-KR')+'원';}
 async function hpPublish(slug,value){if(!window.confirm(value?slug+' 홈페이지를 공개할까요? 첫 결제를 확인한 뒤 공개해 주세요.':slug+' 홈페이지를 비공개로 전환할까요?'))return false;await hpRpc('homepage_subscription_publish',{p_slug:slug,p_published:value});return true;}
 function hpAdminRow(r){var url=r.site_slug?'https://ekodi.kr/'+encodeURIComponent(r.site_slug):'';
   var btn=r.site_slug?(r.published?'<button type="button" class="ghost" data-hp-publish="'+hpEsc(r.site_slug)+'" data-hp-value="false">비공개로 전환</button>':'<button type="button" class="primary" data-hp-publish="'+hpEsc(r.site_slug)+'" data-hp-value="true">공개</button>'):'';
-  return '<article class="hp-row'+(r.published?' is-pub':(r.site_slug?' is-wait':''))+'"><div><strong>'+hpEsc(r.display_name)+'</strong><p class="note">'+(r.mode==='subscribe'?'바로 구독':'상담')+' · '+hpEsc(HP_STATUS[r.status]||r.status)+' · '+hpEsc(HP_AUD[r.audience]||r.audience)+' · '+hpEsc(r.plan)+' · 월 '+hpWon(r.monthly_estimate)+' · '+hpEsc(r.email||'')+(r.phone?' · '+hpEsc(r.phone):'')+'</p></div><div class="hp-side">'+(url?'<a href="'+hpEsc(url)+'" target="_blank" rel="noopener">'+hpEsc(r.site_slug)+'</a>':'')+btn+'</div></article>';}
+  return '<article class="hp-row'+(r.published?' is-pub':(r.site_slug?' is-wait':''))+'"><div><strong>'+hpEsc(r.display_name)+'</strong><p class="note">'+(r.mode==='subscribe'?'바로 구독':'상담')+' · '+hpEsc(HP_STATUS[r.status]||r.status)+' · '+hpEsc(HP_AUD[r.audience]||r.audience)+' · '+hpEsc(r.plan)+' · 월 '+hpWon(r.monthly_estimate)+' · '+hpEsc(r.email||'')+(r.phone?' · '+hpEsc(r.phone):'')+'</p></div><div class="hp-side">'+(url?'<a href="'+hpEsc(url)+'" target="_blank" rel="noopener">'+hpEsc(r.site_slug)+'</a>':'')+btn+'</div>'+hpSalesPanel(r)+'</article>';}
 function hpBindPublish(root,after){root.addEventListener('click',async function(e){var b=e.target.closest('[data-hp-publish]');if(!b)return;b.disabled=true;try{if(await hpPublish(b.getAttribute('data-hp-publish'),b.getAttribute('data-hp-value')==='true'))await after();else b.disabled=false;}catch(err){b.disabled=false;alert('처리하지 못했습니다: '+err.message);}});}`;
 
-const SHARED_ROW_CSS = `.hp-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-left:4px solid var(--line);border-radius:12px;padding:10px 14px;background:var(--card);margin-bottom:8px}.hp-row.is-wait{border-left-color:#d99a2b}.hp-row.is-pub{border-left-color:#1f9d6b}.hp-row p{margin:.2rem 0 0}.hp-side{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+const SHARED_ROW_CSS = `.hp-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-left:4px solid var(--line);border-radius:12px;padding:10px 14px;background:var(--card);margin-bottom:8px}.hp-row.is-wait{border-left-color:#d99a2b}.hp-row.is-pub{border-left-color:#1f9d6b}.hp-row p{margin:.2rem 0 0}.hp-sales{grid-column:1/-1;border-top:1px solid var(--line);padding-top:10px}.hp-sales summary{cursor:pointer;font-weight:700;min-height:44px}.hp-sales button{min-height:44px;padding:8px 14px;font:inherit;cursor:pointer}.hp-sales textarea{display:block;width:100%;max-width:100%;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);padding:10px;font:inherit;font-size:14px;line-height:1.6}.hp-sales label{display:block;margin:10px 0}.hp-side{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 .hp-side button,.mine-card button{min-height:40px;padding:6px 14px;border-radius:999px;font:inherit;font-weight:800;cursor:pointer}.primary{background:var(--accent);color:#fff;border:0}.ghost{background:transparent;color:var(--accent);border:2px solid var(--accent)}
 @media(max-width:640px){.hp-row{grid-template-columns:1fr}.hp-side{justify-content:flex-start}}`;
 
@@ -329,6 +334,7 @@ export function ekodiBizHomepageServiceHtml() {
         <div class="note" id="calcSub">-</div>
         <details><summary>계산 내역 보기</summary><ul id="calcLines"></ul><p id="calcNote"></p></details>
       </div>
+      <details class="step"><summary>내 유형에 맞는 이용 제안 미리 보기</summary><pre id="salesPreview" style="white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:14px"></pre></details>
       <div class="step"><h3><span class="num">4</span>신청자 정보</h3>
         <div class="row">
           <label>이름·기관·단체명 * <input id="business" maxlength="80" required autocomplete="organization"></label>
@@ -353,7 +359,7 @@ export function ekodiBizHomepageServiceHtml() {
       <p class="note">상담 신청: 담당자가 1영업일 이내 연락드립니다. 바로 구독 신청: 신청 즉시 홈페이지 주소(ekodi.kr/hp-…)가 자동으로 만들어지고, 첫 결제 안내를 이메일·문자로 보내드립니다. 첫 결제 확인 후 공개됩니다. 결제 전까지 요금은 청구되지 않습니다.</p>
       <div id="status" class="status" role="status" aria-live="polite"></div>
     </form>
-    <div id="done" class="done" role="status"><strong id="doneTitle">신청이 정상 접수되었습니다.</strong><p id="doneText">담당자가 1영업일 이내 연락드리겠습니다.</p><p>기타 문의: 담당자 ${o.manager} · ${o.phone} · <a href="mailto:${o.email}">${o.email}</a></p></div>
+    <div id="done" class="done" role="status"><strong id="doneTitle">신청이 정상 접수되었습니다.</strong><p id="doneText">담당자가 1영업일 이내 연락드리겠습니다.</p><details><summary>신청 구성 이용 제안</summary><pre id="doneProposal" style="white-space:pre-wrap;overflow-wrap:anywhere;font:inherit"></pre></details><p>기타 문의: 담당자 ${o.manager} · ${o.phone} · <a href="mailto:${o.email}">${o.email}</a></p></div>
   </section>
 
   <section id="plansPanel" class="page-panel" role="tabpanel" aria-labelledby="ptab-plans" hidden>
@@ -401,11 +407,12 @@ export function ekodiBizHomepageServiceHtml() {
   var PRICING=${JSON.stringify(P)};
   var AUDIENCES=${JSON.stringify(HOMEPAGE_AUDIENCES)};
   var estimate=${estimateHomepageSubscription.toString()};
+  var salesBuild=${buildHomepageSalesPlan.toString()};
   function $(id){return document.getElementById(id);}
   function v(id){return ($(id).value||'').trim();}
   function won(n){return Number(n).toLocaleString('ko-KR')+'원';}
   function audience(){var selected=document.querySelector('[name=audience]:checked');return AUDIENCES.find(function(a){return a.id===(selected&&selected.value);})||AUDIENCES[0];}
-  [].slice.call(document.querySelectorAll('[name=audience]')).forEach(function(input){input.addEventListener('change',function(){$('audienceGuide').textContent=audience().guide+' 모든 유형에서 기본형 월 9,900원으로 시작할 수 있습니다.';});});
+  [].slice.call(document.querySelectorAll('[name=audience]')).forEach(function(input){input.addEventListener('change',function(){$('audienceGuide').textContent=audience().guide+' 모든 유형에서 기본형 월 9,900원으로 시작할 수 있습니다.';update();});});
   function tabset(list){list.forEach(function(t,i){t.addEventListener('click',function(){pick(list,t);});t.addEventListener('keydown',function(e){var k=e.key,j=k==='ArrowRight'?i+1:k==='ArrowLeft'?i-1:k==='Home'?0:k==='End'?list.length-1:null;if(j===null)return;e.preventDefault();var n=list[(j+list.length)%list.length];pick(list,n);n.focus();});});}
   function pick(list,t){list.forEach(function(x){var on=x===t;x.setAttribute('aria-selected',on);x.tabIndex=on?0:-1;$(x.getAttribute('aria-controls')).hidden=!on;});}
   var pageTabs=[].slice.call(document.querySelectorAll('#pageTabs [role=tab]'));
@@ -421,13 +428,14 @@ export function ekodiBizHomepageServiceHtml() {
   function update(){var inc=PRICING.plans[v('plan')].includes;
     ['booking','payment'].forEach(function(k){var input=$(k);if(input.disabled&&!inc[k])input.checked=false;input.disabled=inc[k];if(inc[k])input.checked=true;});
     var e=estimate(PRICING,sel());last=e;
+    $('salesPreview').textContent=salesBuild({display_name:v('business'),audience:audience().id,plan:e.plan,contract:e.contract,options:sel()},PRICING,AUDIENCES,estimate).draft;
     $('calcMonthlyLabel').textContent=e.contract==='annual'?'월 환산 약':'월 예상 구독료';
     $('calcMonthly').textContent=won(e.monthly);
     $('calcSub').textContent=PRICING.plans[e.plan].name+' · '+(e.contract==='annual'?'연납 '+won(e.yearly):'연간 '+won(e.yearly))+' · 제작비 '+won(e.setup)+' · 첫 결제 예상 '+won(e.firstPayment);
     $('calcLines').innerHTML=e.lines.map(function(l){return '<li>'+l.label+': 월 '+won(l.amount)+'</li>';}).join('');
     $('calcNote').textContent=(e.discountRate?'할인 '+Math.round(e.discountRate*100)+'% 적용 · ':'')+(e.contract==='annual'?'연납 12개월 선납 · 2개월 할인 · ':'월 단위 이용 · ')+'부가세 포함 · 할인 금액은 100원 단위 반올림 · 연납 월 환산은 1원 단위 반올림';
   }
-  ['pages','social','lang','booking','payment','logo','photo','member','nonprofit','contract'].forEach(function(id){$(id).addEventListener('input',update);$(id).addEventListener('change',update);});
+  ['business','pages','social','lang','booking','payment','logo','photo','member','nonprofit','contract'].forEach(function(id){$(id).addEventListener('input',update);$(id).addEventListener('change',update);});
   [].slice.call(document.querySelectorAll('[data-preset]')).forEach(function(b){b.addEventListener('click',function(){var p=JSON.parse(b.getAttribute('data-preset'));
     $('type').value=p.type;setPlan(p.plan);$('pages').value=0;$('social').value=p.social||0;$('lang').value=0;
     ['booking','payment','logo','photo'].forEach(function(k){$(k).disabled=false;$(k).checked=!!p[k];});$('nonprofit').checked=!!p.nonprofit;update();openPage('apply');});});
@@ -451,12 +459,13 @@ export function ekodiBizHomepageServiceHtml() {
     }catch(err){prov=null;}
     if(prov&&prov.ok===false){var em={rate_limited:'같은 이메일로 오늘 신청이 많습니다. 내일 다시 시도하거나 전화로 문의해 주세요.',busy:'신청이 많아 잠시 후 다시 시도해 주세요.',phone_required:'바로 구독 신청은 전화번호가 필요합니다.',terms_required:'요금제·이용 기준 확인에 체크해 주세요.',consent_required:'개인정보 수집·이용에 동의해 주세요.',invalid_email:'이메일 주소를 확인해 주세요.',invalid_phone:'연락처를 확인해 주세요.'};s.className='status error';s.textContent=em[prov.error]||'신청 처리에 실패했습니다. ${o.phone} 로 연락 주세요.';btns.forEach(function(x){x.disabled=false;});return;}
     if(prov&&prov.site_url)msg+='\\n-\\n자동 개설 주소(공개 승인 전): '+prov.site_url+'\\n요청 ID: '+prov.request_id;else if(prov&&prov.request_id)msg+='\\n-\\n요청 ID: '+prov.request_id;else msg+='\\n-\\n자동 접수 기록 실패: 수동 확인 필요';
-    try{var r=await fetch('/mail/api/contact',{method:'POST',headers:{'content-type':'application/json'},cache:'no-store',body:JSON.stringify({name:v('name')||v('business'),email:v('email'),subject:(sub?'홈페이지 바로 구독 신청 · ':'홈페이지 구독 상담 신청 · ')+v('business')+' · 월 '+won(c.monthly),message:msg,website:v('website'),site:'ekodibiz',source:'${EKODIBIZ_HOMEPAGE_CONTACT_SOURCE}',sourceUrl:location.href})});
+    try{var r=await fetch('/mail/api/contact',{method:'POST',headers:{'content-type':'application/json'},cache:'no-store',body:JSON.stringify({name:v('name')||v('business'),email:v('email'),subject:(sub?'홈페이지 바로 구독 신청 · ':'홈페이지 구독 상담 신청 · ')+v('business')+' · 월 '+won(c.monthly),message:msg,website:v('website'),site:'ekodibiz',source:'${EKODIBIZ_HOMEPAGE_CONTACT_SOURCE}',sourceUrl:location.href,homepageSales:{display_name:v('business'),audience:audience().id,plan:c.plan,contract:c.contract,options:sel()}})});
       var data=await r.json().catch(function(){return{};});if(!r.ok)throw new Error(data.error||'신청서 전송에 실패했습니다.');
+      $('doneProposal').textContent=$('salesPreview').textContent;
       $('doneTitle').textContent=sub?'구독 신청이 정상 접수되었습니다.':'신청이 정상 접수되었습니다.';
       $('doneText').textContent=sub?(prov&&prov.site_url?'홈페이지 주소가 자동으로 만들어졌습니다: '+prov.site_url+' — 첫 결제 확인 후 공개됩니다. ':'')+'선택하신 '+PRICING.plans[c.plan].name+' (월 '+won(c.monthly)+') 기준으로 1영업일 이내 첫 결제 안내를 이메일·문자로 보내드립니다.':'담당자가 1영업일 이내 연락드리겠습니다.';
       f.style.display='none';d.style.display='block';d.scrollIntoView({behavior:'smooth',block:'center'});
-    }catch(err){s.className='status error';s.textContent=(err&&err.message||'신청서 전송에 실패했습니다.')+' 계속 안 되면 ${o.phone} 로 연락 주세요.';btns.forEach(function(x){x.disabled=false;});}
+    }catch(err){if(prov&&prov.ok&&prov.request_id){$('doneTitle').textContent='신청이 저장되었습니다.';$('doneText').textContent='접수번호: '+prov.request_id+' · 담당자 알림 전달이 지연되고 있습니다. 관리자는 저장된 신청을 확인할 수 있습니다. 중복 신청 없이 기다려 주세요.';$('doneProposal').textContent=$('salesPreview').textContent;f.style.display='none';d.style.display='block';d.scrollIntoView({behavior:'smooth',block:'center'});}else{s.className='status error';s.textContent=(err&&err.message||'신청서 전송에 실패했습니다.')+' 계속 안 되면 ${o.phone} 로 연락 주세요.';btns.forEach(function(x){x.disabled=false;});}}
   });
 })();</script>
 <script>(function(){
@@ -548,7 +557,7 @@ export function ekodiBizHomepageAdminHtml() {
 <header data-site-shell="header"><a href="/homepage">← 홈페이지 구독</a><span class="note">관리자</span></header>
 <main data-ekodibiz-homepage-admin="${EKODIBIZ_HOMEPAGE_SERVICE_VERSION}">
   <h1>홈페이지 구독 관리</h1>
-  <p class="note">일상적인 확인·내용 수정은 <a href="/homepage#mine">내 홈페이지</a> 탭에서 로그인 권한에 따라 처리합니다. 이 화면은 전체 신청 확인과 공개·비공개 전환만 다룹니다.</p>
+  <p class="note">일상적인 확인·내용 수정은 <a href="/homepage#mine">내 홈페이지</a> 탭에서 로그인 권한에 따라 처리합니다. 이 화면에서는 전체 신청과 자동 생성된 제안문·후속 업무를 확인하고 공개 여부를 관리합니다.</p>
   <div id="adminRoot" aria-live="polite"><p class="note">불러오는 중입니다.</p></div>
 </main>
 <footer data-site-shell="footer">EKODIBIZ · ${o.name} · 사업자등록번호 ${o.businessRegistrationNumber}</footer>
@@ -556,16 +565,17 @@ export function ekodiBizHomepageAdminHtml() {
   ${CLIENT_HELPERS}
   var root=document.getElementById('adminRoot'),rows=[],filter='all';
   function render(){var w=rows.filter(function(r){return r.site_slug&&!r.published;}).length,p=rows.filter(function(r){return r.published;}).length,c=rows.filter(function(r){return r.mode==='consult';}).length;
-    var shown=rows.filter(function(r){return filter==='all'||(filter==='waiting'&&r.site_slug&&!r.published)||(filter==='published'&&r.published)||(filter==='consult'&&r.mode==='consult');});
+    rows.sort(function(a,b){var x=hpSales(a),y=hpSales(b);return Number(y.needsResponse)-Number(x.needsResponse)||(Date.parse(x.dueAt)||Infinity)-(Date.parse(y.dueAt)||Infinity);});
+    var shown=rows.filter(function(r){return (filter==='sales'&&hpSales(r).needsResponse)||filter==='all'||(filter==='waiting'&&r.site_slug&&!r.published)||(filter==='published'&&r.published)||(filter==='consult'&&r.mode==='consult');});
     root.innerHTML='<div class="cards"><div>전체<b>'+rows.length+'</b></div><div>공개 대기<b>'+w+'</b></div><div>공개 중<b>'+p+'</b></div><div>상담<b>'+c+'</b></div></div>'+
-      '<div class="filters" role="group" aria-label="상태">'+[['all','전체'],['waiting','공개 대기'],['published','공개 중'],['consult','상담']].map(function(f){return '<button type="button" data-f="'+f[0]+'" aria-pressed="'+(filter===f[0])+'">'+f[1]+'</button>';}).join('')+'</div>'+
+      '<div class="filters" role="group" aria-label="상태">'+[['sales','영업 대기'],['all','전체'],['waiting','공개 대기'],['published','공개 중'],['consult','상담']].map(function(f){return '<button type="button" data-f="'+f[0]+'" aria-pressed="'+(filter===f[0])+'">'+f[1]+'</button>';}).join('')+'</div>'+
       '<div id="adminList">'+(shown.length?shown.map(hpAdminRow).join(''):'<p class="note">해당하는 신청이 없습니다.</p>')+'</div>';}
   async function load(){try{var d=await hpRpc('homepage_subscription_admin_list',{p_limit:200});rows=d.requests||[];render();}
     catch(e){if(e.code==='login_required')root.innerHTML='<p>관리자 계정으로 로그인해 주세요.</p><a class="cta" href="'+hpLogin('https://ekodi.kr/homepage/admin')+'">로그인</a>';
       else if(e.code==='forbidden')root.innerHTML='<p class="status error">플랫폼 관리자 계정이 아닙니다.</p><p><a href="/homepage#mine">내 홈페이지로 이동</a></p>';
       else root.innerHTML='<p class="status error">불러오지 못했습니다: '+hpEsc(e.message)+'</p>';}}
   root.addEventListener('click',function(e){var b=e.target.closest('[data-f]');if(!b)return;filter=b.getAttribute('data-f');render();});
-  hpBindPublish(root,load);
+  hpBindPublish(root,load);hpBindSales(root);
   load();
 })();</script>
 </body>
