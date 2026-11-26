@@ -41,8 +41,12 @@ function detailPage(c){
  return page(c.title,hero+'<section class="wrap two-col"><div>'+form+'</div>'+info+'</section><section class="wrap caveat"><h2 data-v-i18n="safetyTitle">참여 전 확인사항</h2><p data-v-i18n="safetyNote">행사 당일 안전 안내에 따라 이동하고, 추운 날씨에 대비해 따뜻한 옷과 장갑을 준비해 주세요. 행사 시간은 오전 10시 모임 기준이며 종료 시각은 현장 안내를 따릅니다.</p><p>'+t('partnerLabel','공동 주최:')+' <span data-v-i18n="partners">'+escapeHtml(c.host)+'</span></p></section>');
 }
 function adminPage(){
- const body='<section class="hero hero-inner"><a class="back" href="/volunteer">← 봉사활동</a><p class="eyebrow">OPERATOR</p><h1>봉사 후원 관리</h1><p>해당 활동의 권한을 부여받은 관리자만 후원 약정과 입금 확인 현황을 열람할 수 있습니다.</p></section><section class="wrap" data-volunteer-admin><p role="status" aria-live="polite" data-admin-status>관리자 인증을 확인하고 있습니다.</p><a data-admin-login class="cta" href="/auth/?site=space&return_to=https%3A%2F%2Fekodi.kr%2Fvolunteer%2Fadmin" hidden>관리자 로그인</a><div data-admin-table hidden><button type="button" class="outline" data-admin-refresh>현황 새로고침</button><div class="table-scroll"><table><thead><tr><th>이름</th><th>후원 장수</th><th>약정액</th><th>상태</th><th>입금 확인</th></tr></thead><tbody data-pledge-rows></tbody></table></div></div></section>';
- return page('후원 관리',body,'noindex,nofollow,noarchive');
+ const header='<section class="wrap volunteer-admin-head"><div class="volunteer-admin-heading"><a class="back" href="/volunteer/activities/2026-coal-delivery">← 연탄봉사 신청페이지</a><span class="eyebrow">OPERATOR</span></div><h1>연탄봉사 신청·후원 관리</h1><p>봉사 신청자와 연탄 후원 약정은 별도로 접수·관리됩니다. 개인정보는 권한 있는 운영진만 확인할 수 있습니다.</p></section>';
+ const summary='<div class="volunteer-admin-summary" aria-label="활동 신청 현황"><div><small>봉사 신청</small><strong data-volunteer-count>—</strong><span>건</span></div><div><small>참여 인원</small><strong data-people-count>—</strong><span>명</span></div><div><small>후원 약정</small><strong data-pledge-count>—</strong><span>건</span></div></div>';
+ const applicants='<section class="volunteer-admin-section" data-applicant-section><div class="volunteer-admin-section-title"><h2>봉사 신청자 명단</h2><span data-volunteer-subcount></span></div><div class="table-scroll"><table><thead><tr><th>신청자</th><th>연락처</th><th>인원</th><th>상태</th><th>신청 일시</th></tr></thead><tbody data-volunteer-rows></tbody></table></div></section>';
+ const donors='<section class="volunteer-admin-section" data-pledge-section><div class="volunteer-admin-section-title"><h2>연탄 후원 약정</h2><span data-pledge-subcount></span></div><div class="table-scroll"><table><thead><tr><th>이름</th><th>후원 장수</th><th>약정액</th><th>상태</th><th>입금 확인</th></tr></thead><tbody data-pledge-rows></tbody></table></div></section>';
+ const body=header+'<section class="wrap volunteer-admin-body" data-volunteer-admin><p role="status" aria-live="polite" data-admin-status>관리자 인증을 확인하고 있습니다.</p><a data-admin-login class="cta" href="/auth/?site=space&return_to=https%3A%2F%2Fekodi.kr%2Fvolunteer%2Fadmin" hidden>관리자 로그인</a><div data-admin-table hidden>'+summary+'<button type="button" class="outline" data-admin-refresh>명단 새로고침</button>'+applicants+donors+'<p class="subtle">이름·전화번호 등 개인정보는 외부에 공유하거나 공개 게시하지 마세요.</p></div></section>';
+ return page('봉사 신청·후원 관리',body,'noindex,nofollow,noarchive');
 }
 function isAvailable(c){return c&&typeof c==='object';}
 async function rpc(env,name,args,token=''){
@@ -104,7 +108,7 @@ export async function routeVolunteer(request,env,{json,withHeaders}){
   if(!saved.data?.ok||!saved.data?.receipt_id)return send({error:'persistence_unverified',message:'신청 저장을 확인하지 못했습니다.'},503);
   return send({receiptId:saved.data.receipt_id,participationStatus:saved.data.participation_status||'',pledgeStatus:saved.data.pledge_status||'',message:'신청이 접수되었습니다.'});
  }
- if(p==='/volunteer/api/admin/pledges'){
+ if(p==='/volunteer/api/admin/pledges'||p==='/volunteer/api/admin/registrations'){
   if(request.method!=='POST')return send({error:'method_not_allowed'},405);
   const origin=request.headers.get('origin')||'';
   if(origin&&origin!=='https://ekodi.kr')return send({error:'origin_not_allowed'},403);
@@ -114,11 +118,14 @@ export async function routeVolunteer(request,env,{json,withHeaders}){
   const c=CAMPAIGNS[String(data?.campaign||'')];
   if(!c)return send({error:'not_found'},404);
   const action=String(data?.action||'');
-  const result=action==='list'
-   ?await rpc(env,'volunteer_pledge_admin_snapshot',{p_workspace_slug:c.workspace,p_activity_key:c.key},token)
-   :action==='confirm'&&/^[0-9a-f-]{36}$/i.test(String(data?.pledgeId||''))
-    ?await rpc(env,'volunteer_pledge_admin_confirm',{p_pledge_id:String(data.pledgeId)},token)
-    :null;
+  const roster=p==='/volunteer/api/admin/registrations';
+  const result=roster&&action==='list'
+   ?await rpc(env,'activity_admin_snapshot',{p_workspace_slug:c.workspace,p_activity_key:c.key},token)
+   :!roster&&action==='list'
+    ?await rpc(env,'volunteer_pledge_admin_snapshot',{p_workspace_slug:c.workspace,p_activity_key:c.key},token)
+    :!roster&&action==='confirm'&&/^[0-9a-f-]{36}$/i.test(String(data?.pledgeId||''))
+     ?await rpc(env,'volunteer_pledge_admin_confirm',{p_pledge_id:String(data.pledgeId)},token)
+     :null;
   if(!result)return send({error:'invalid_action'},400);
   if(!result.ok)return send({error:result.status===403?'forbidden':'admin_unavailable'},result.status===401?401:result.status===403?403:503);
   return send(result.data&&typeof result.data==='object'?result.data:{result:result.data});
