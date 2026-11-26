@@ -1148,7 +1148,8 @@ test('admin approval requires a closed campaign and matching totals; reminders s
   const auth = body => ({ method: 'POST', headers: { authorization: 'Bearer tok', 'content-type': 'application/json' }, body: JSON.stringify(body || {}) });
   let sb = mockSupabase('topmaster.joseph@gmail.com');
   try {
-    const early = await handleRequest(new Request('https://ekodi.kr/qtin/api/admin/campaigns/2026-12/approve', auth({ expectedOrders: 1, expectedAmount: 9000 })), env);
+    // Pin the clock inside the 2026-12 intake window; the real clock passed its close on 2026-11-26.
+    const early = await handleRequest(new Request('https://ekodi.kr/qtin/api/admin/campaigns/2026-12/approve', auth({ expectedOrders: 1, expectedAmount: 9000 })), env, OPEN_NOW);
     assert.equal(early.status, 409, 'cannot approve while intake is open');
   } finally { sb.restore(); }
   await env.DB.prepare("UPDATE qtin_campaigns SET manual_state='force_closed' WHERE id='2026-12'").run();
