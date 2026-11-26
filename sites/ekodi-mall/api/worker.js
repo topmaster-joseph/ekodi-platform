@@ -290,8 +290,7 @@ export function canReadMallProviderInventory(user, env) {
 async function listOperatorProviderProducts(env) {
   const rows = await env.DB.prepare(`SELECT id,share_code,public_url,seller_display_name,seller_type,sale_type,
     category,name,price,stock_quantity,status,checkout_ready,supply_provider,supply_item_no,source_kind,source_name,affiliate_url
-    FROM products WHERE COALESCE(supply_provider,'')<>'' OR sale_type='affiliate'
-      OR source_kind IN ('ekodibiz_own','consigned_merchant')
+    FROM products
     ORDER BY updated_at DESC,id DESC LIMIT 2000`).all();
   return (rows.results || []).map(row => ({
     id:row.id,shareCode:row.share_code,publicUrl:row.public_url,status:row.status,
