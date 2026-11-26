@@ -51,13 +51,18 @@
     [data-ekodi-shell-surface="admin"] .ekodi-message-ui__details pre{background:rgba(255,255,255,.06)}
   `;
 
-  function installStyles() {
-    if (document.getElementById(STYLE_ID)) return;
-    const style = document.createElement('style');
-    style.id = STYLE_ID;
-    style.textContent = css;
-    document.head.appendChild(style);
-  }
+  function installStyles(){
+  // Reuse the canonical first-party CSS instead of an inline <style>.
+  // Strict service CSP remains intact; standalone adopters also load it safely.
+  if(document.querySelector('link[data-ekodi-user-ui-style],link[href*="/shell/user-ui-shell.css"]'))return;
+  if(document.getElementById(STYLE_ID))return;
+  const link=document.createElement('link');
+  link.id=STYLE_ID;
+  link.rel='stylesheet';
+  link.href='/shell/user-ui-shell.css';
+  link.dataset.ekodiUserUiStyle='external-csp-v1';
+  (document.head||document.documentElement).append(link);
+}
 
   function escapeText(value) {
     return String(value ?? '');

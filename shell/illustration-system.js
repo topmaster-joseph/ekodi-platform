@@ -21,7 +21,18 @@
   @media(prefers-reduced-motion:reduce){.ekodi-illustration__float,.ekodi-illustration__breathe{animation:none!important}}
   `;
 
-  function installStyles(){if(document.getElementById(STYLE_ID))return;const s=document.createElement('style');s.id=STYLE_ID;s.textContent=css;document.head.appendChild(s);}
+  function installStyles(){
+  // Reuse the canonical first-party CSS instead of an inline <style>.
+  // Strict service CSP remains intact; standalone adopters also load it safely.
+  if(document.querySelector('link[data-ekodi-user-ui-style],link[href*="/shell/user-ui-shell.css"]'))return;
+  if(document.getElementById(STYLE_ID))return;
+  const link=document.createElement('link');
+  link.id=STYLE_ID;
+  link.rel='stylesheet';
+  link.href='/shell/user-ui-shell.css';
+  link.dataset.ekodiUserUiStyle='external-csp-v1';
+  (document.head||document.documentElement).append(link);
+}
   function serviceId(){return document.documentElement.dataset.ekodiService||document.body?.dataset?.ekodiService||location.hostname.split('.')[0]||'my';}
   function sceneFor(service=serviceId()){return SERVICE_SCENES[service]||'personal-journey';}
   function person(x,y,scale=1,shirt='var(--ekodi-ill-accent)'){return `<g transform="translate(${x} ${y}) scale(${scale})"><circle cx="0" cy="-22" r="11" fill="var(--ekodi-ill-skin)" stroke="var(--ekodi-ill-ink)" stroke-width="2"/><path d="M-12-24c3-11 19-13 24 0-4-2-7-5-9-9-5 6-10 8-15 9Z" fill="var(--ekodi-ill-ink)"/><path d="M-15-7c8-8 22-8 30 0l5 30h-40l5-30Z" fill="${shirt}" stroke="var(--ekodi-ill-ink)" stroke-width="2"/><path d="M-6-19h2M5-19h2" stroke="var(--ekodi-ill-ink)" stroke-width="2" stroke-linecap="round"/><path d="M-4-13c3 2 5 2 8 0" stroke="var(--ekodi-ill-ink)" stroke-width="1.8" fill="none" stroke-linecap="round"/></g>`;}

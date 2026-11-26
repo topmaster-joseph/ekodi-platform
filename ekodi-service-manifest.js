@@ -77,9 +77,10 @@ export const EKODI_SERVICE_MANIFEST = Object.freeze({
   updatedAt: '2026-09-24',
   identityModel: 'person-space-role',
   authorityModel: 'platform-admin-is-separate-from-tenant-activity',
-  // v8 invalidates per-colo /shell.js?bundle=7 caches after CSP-safe
+  // v9 invalidates per-colo bundle=8 caches after externalizing five additional Shell CSS modules.
+  // v8 invalidated per-colo /shell.js?bundle=7 caches after CSP-safe
   // external CSS migration; never reuse legacy inline-style bundle.
-  shellVersion: 8,
+  shellVersion: 9,
   shellPolicy: 'required-for-user-facing-services',
   onboardingPolicyVersion: 1,
   userAccessPolicy: 'public-guide-workspace-member-content',
