@@ -120,11 +120,16 @@ function paint(){
 }
 function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(paint);}
 function installStyle(){
+  // Shared user UI already includes the CSP-safe external CSS. Avoid the
+  // runtime inline <style> that strict service pages consistently reject.
+  if(document.querySelector('link[data-ekodi-user-ui-style],link[href*="/shell/user-ui-shell.css"]'))return;
   if(document.getElementById('ekodi-unified-auth-style'))return;
-  const style=document.createElement('style');
-  style.id='ekodi-unified-auth-style';
-  style.textContent='.ekodi-unified-auth{display:inline-flex;align-items:center;justify-content:center;min-width:0;max-width:min(21ch,34vw);margin-inline-start:8px;vertical-align:middle;font:inherit}.ekodi-unified-auth__link,.ekodi-unified-auth__name{display:inline-block;max-width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:inherit;font-weight:650;line-height:1.35}.ekodi-unified-auth__link{text-decoration:none;color:inherit}.ekodi-unified-auth__link:focus-visible{outline:2px solid currentColor;outline-offset:3px}@media(max-width:600px){.ekodi-unified-auth{max-width:12ch;margin-inline-start:4px}}';
-  (document.head||document.documentElement).append(style);
+  const link=document.createElement('link');
+  link.id='ekodi-unified-auth-style';
+  link.rel='stylesheet';
+  link.href='/shell/user-ui-shell.css';
+  link.dataset.ekodiUserUiStyle='auth-external-csp-v1';
+  (document.head||document.documentElement).append(link);
 }
 window.EKODIUnifiedUserAuth=Object.freeze({version:1,refresh:schedule});
 window.addEventListener('ekodi:user-header-ready',schedule);
