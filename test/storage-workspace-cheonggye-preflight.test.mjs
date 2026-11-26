@@ -4,8 +4,8 @@ import {readFileSync} from 'node:fs';
 const control=readFileSync(new URL('../google-drive-storage-control.js',import.meta.url),'utf8');
 
 test('member Sheet access verification precedes any primary account or route cutover',()=>{
-  const start=control.indexOf('const bootstrapMatch=url.pathname.match');
-  const end=control.indexOf('const disconnectMatch=url.pathname.match',start);
+  const start=control.indexOf('async function bootstrapPrimaryConnection');
+  const end=control.indexOf('async function autoActivatePrimary',start);
   assert.ok(start>=0&&end>start);
   const handler=control.slice(start,end);
   const grant=handler.indexOf('const sheetMeta=await driveFetch(candidateAccess');
@@ -27,7 +27,7 @@ test('preflight checks only file metadata and never changes or reads member rows
   const preflight=control.slice(start,end);
   assert.match(preflight,/supportsAllDrives=true&fields=id,mimeType,capabilities\(canEdit\)/);
   assert.doesNotMatch(preflight,/sheetsFetch|sheetRange|:append|values\/|method:\s*'POST'|method:\s*'PUT'|DELETE/i);
-  assert.match(preflight,/return json\(\{error:.*code:'CHEONGGYE_SHEET_EDIT_ACCESS_REQUIRED'\},403/);
+  assert.match(preflight,/return \{status:403,body:\{error:.*code:'CHEONGGYE_SHEET_EDIT_ACCESS_REQUIRED'\}\}/);
 });
 
 test('fallback old primary remains connected if preflight denies Workspace cutover',()=>{
