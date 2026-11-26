@@ -20,7 +20,14 @@ export const BBQCG_NATIVE_PHRASES=Object.freeze({
 // scripts are deliberately not allowlisted or treated as solved.
 export const BBQCG_FIXED_SHELL_STYLE_HASHES=Object.freeze([
   'sha256-wo6UxAABjRaoc7daJHFwNEhchuZLrGAZznw5zT+FPg4=',
-  'sha256-dUSx2u1Qfvq55euG9asAxjp3uojrtLlsPvWBF7tHRFA='
+  'sha256-dUSx2u1Qfvq55euG9asAxjp3uojrtLlsPvWBF7tHRFA=',
+  // Remaining exact style hashes fixed by strict-CSP Shell externalization v9:
+  // media, messages, illustration, design inheritance and unified login.
+  'sha256-56iRHn0ej9JYBkqhTqTQCrBVCLBuVesvScQBMp5bJOI=',
+  'sha256-6VVFqLR4PDJXyCW7LUvhdS2zhZdIHiNuwZA+lh0G6zI=',
+  'sha256-LiXvRlPcXXsokE41eFS7y5B+hJa0pauWdVT/Djrp4nQ=',
+  'sha256-mE13/Tkp6GHOZBGLsbNs4lm9lEsDZF0aqAyMUFoW4yw=',
+  'sha256-hEOYE6DHApNv8x375sq9CzL6GcuPcrFObwxu7AfldAI='
 ]);
 export function bbqcgNativeTask(profile){
   if(!BBQCG_NATIVE_PROFILES.includes(profile))throw Error('BBQCG_PROFILE_NOT_ALLOWED');
