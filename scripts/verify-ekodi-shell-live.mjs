@@ -77,7 +77,9 @@ for(let attempt=1;attempt<=attempts;attempt++){
 
   if(health){
     if(health.identityModel!=='person-space-role')failures.push(`health:identityModel:${health.identityModel||'missing'}`);
-    if(Number(health.shellVersion)<2)failures.push(`health:shellVersion:${health.shellVersion||'missing'}`);
+    // Version 8 is the first bundle key after the 2026-11-27 strict-CSP
+    // externalization. A still-running v7 worker is not a completed release.
+    if(Number(health.shellVersion)<8)failures.push(`health:shellVersion:${health.shellVersion||'missing'}:requires-v8`);
     if(Number(health.userUIHeaderVersion)<1)failures.push(`health:userUIHeaderVersion:${health.userUIHeaderVersion||'missing'}`);
     if(Number(health.userUIFooterVersion)<2)failures.push(`health:userUIFooterVersion:${health.userUIFooterVersion||'missing'}`);
     if(Number(health.userAIEntryVersion)<1)failures.push(`health:userAIEntryVersion:${health.userAIEntryVersion||'missing'}`);
@@ -121,6 +123,11 @@ for(let attempt=1;attempt<=attempts;attempt++){
   if(theme){
     if(theme.publicExperience?.rotation!=='weekly-deterministic')failures.push(`theme:rotation:${theme.publicExperience?.rotation||'missing'}`);
     if(theme.publicExperience?.timezone!=='Asia/Seoul')failures.push(`theme:timezone:${theme.publicExperience?.timezone||'missing'}`);
+  }
+  // Real canonical bundled shell must contain both first-party external-style
+  // adopters. A stale per-colo bundle=7 must never be accepted as v8.
+  for(const signature of ["ekodiUserUiStyle='external-csp-v1'","ekodiUserCharacterStyle='external-csp-v1'"]){
+    if(!shellResult.text.includes(signature))failures.push('shell:csp-external-style-source-missing:'+signature.split('=')[0]);
   }
   includesAll(shellResult.text,'shell',[
     'window.EKODIShell','내 공간 · My EKODI','EKODI 다음 행동','suggestedServices','모든 서비스 보기','ekodi:public-experience',
