@@ -1,0 +1,66 @@
+name: Verify BBQCG EKODI Native Browser
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'bbq-cheonggye-site.js'
+      - 'bbqcg-order-portal.js'
+      - 'scripts/verify-bbqcg-native-browser.mjs'
+      - 'test/bbqcg-native-browser.test.mjs'
+      - '.github/workflows/verify-bbqcg-native-browser.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'bbq-cheonggye-site.js'
+      - 'bbqcg-order-portal.js'
+      - 'scripts/verify-bbqcg-native-browser.mjs'
+      - 'test/bbqcg-native-browser.test.mjs'
+      - '.github/workflows/verify-bbqcg-native-browser.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bbqcg-ekodi-native-${{ github.event.pull_request.number || github.ref_name }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  customer-public-readonly:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout protected EKODI source
+        uses: actions/checkout@v7
+      - name: Use Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Verify EKODI native-browser safety contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/verify-bbqcg-native-browser.mjs
+          node --test test/bbqcg-native-browser.test.mjs
+          node scripts/verify-bbqcg-native-browser.mjs --plan
+      - name: Install isolated owned Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.65.1
+          npx playwright install --with-deps chromium
+      - name: Read-only production inspection with EKODI native Chromium
+        shell: bash
+        env:
+          EKODI_BROWSER_ARTIFACT_DIR: artifacts/bbqcg-native-browser
+        run: |
+          set -euo pipefail
+          node scripts/verify-bbqcg-native-browser.mjs --run
+      - name: Upload anonymous mobile and desktop proof
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bbqcg-ekodi-native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/bbqcg-native-browser/
+          if-no-files-found: warn
+          retention-days: 7
