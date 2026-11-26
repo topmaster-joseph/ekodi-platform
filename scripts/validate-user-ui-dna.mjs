@@ -213,8 +213,13 @@ for (const marker of ['Responsive Typography Standard v3','word-break:keep-all',
 for (const marker of ['EKODI_USER_FOOTER','USER_FOOTER_BOOTSTRAP','USER_EXPERIENCE_PROFILES_BOOTSTRAP','x-ekodi-user-experience-profiles','/user-footer.json','x-ekodi-user-ui-footer','userLanguageUrl','x-ekodi-user-language','LANGUAGE_REGISTRY_BOOTSTRAP','/language-registry.json']) {
   if (!shellWorkerSource.includes(marker)) errors.push(`Shared Shell worker lost central user chrome marker: ${marker}`);
 }
-for (const marker of ['__EKODI_USER_FOOTER_CONFIG__','user-footer.json','VERSION=7','ekodi-user-ui-footer__copy','--ekodi-user-content-inline-size','--ekodi-user-canvas-max,1240px','applyReadableFooter','--ekodi-user-footer-safe-text','data-ekodi-i18n','data-ekodi-legacy-common-footer-hidden','suppressLegacyCommonFooters','dedupeSharedFooters','observeFooterChanges']) {
+for (const marker of ['__EKODI_USER_FOOTER_CONFIG__','user-footer.json','VERSION=7','ekodi-user-ui-footer__copy','applyReadableFooter','--ekodi-user-footer-safe-text','data-ekodi-i18n','data-ekodi-legacy-common-footer-hidden','suppressLegacyCommonFooters','dedupeSharedFooters','observeFooterChanges']) {
   if (!clientFooterSource.includes(marker)) errors.push(`Shared client footer lost central-config marker: ${marker}`);
+}
+// The shared footer's geometry is now an externally served CSP-safe stylesheet.
+ // Keep the same mandatory visual contracts, but validate their actual owner.
+for (const marker of ['--ekodi-user-content-inline-size','--ekodi-user-canvas-max,1240px']) {
+  if (!userUiStyle.includes(marker)) errors.push(`Shared CSP-safe footer layout lost central-config marker: ${marker}`);
 }
 for (const duplicatedText of ['213-13-01959','백련동1길 17-4','© 2026 EKODI · EKODIBIZ']) {
   if (clientFooterSource.includes(duplicatedText)) errors.push(`Shared client footer duplicated central content: ${duplicatedText}`);

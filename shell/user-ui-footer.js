@@ -98,25 +98,19 @@ function suppressLegacyCommonFooters(){
   }
 }
 function installStyle(){
+  // EKODI Shell's shared /shell/user-ui-shell.css already contains the
+  // canonical user header/footer presentation. Avoid duplicating it via
+  // runtime <style> tags: strict customer-site CSP blocks those injections.
+  if(document.querySelector('link[data-ekodi-user-ui-style],link[href*="/shell/user-ui-shell.css"]'))return;
   if(document.getElementById(STYLE_ID))return;
-  const style=document.createElement('style');
-  style.id=STYLE_ID;
-  style.textContent=`
-    .ekodi-user-ui-footer{position:relative!important;z-index:2!important;width:100%!important;box-sizing:border-box!important;margin-top:32px!important;border-top:1px solid var(--ekodi-user-footer-border,color-mix(in srgb,var(--ekodi-service-accent,currentColor) 18%,transparent))!important;background:var(--ekodi-user-footer-background,color-mix(in srgb,var(--ekodi-service-paper,transparent) 92%,var(--ekodi-service-accent,transparent) 8%))!important;color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important;font-family:system-ui,-apple-system,"Noto Sans KR","Malgun Gothic",sans-serif!important;font-size:14px!important;line-height:1.75!important;text-align:center!important;text-shadow:none!important}
-    .ekodi-user-ui-footer__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 40px))!important;margin:0 auto!important;padding:28px 0 30px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:14px!important}
-    .ekodi-user-ui-footer__copy{min-width:0!important;width:100%!important;display:grid!important;justify-items:center!important;gap:7px!important}.ekodi-user-ui-footer__service{font-size:12px!important;font-weight:750!important;letter-spacing:.04em!important;color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important}.ekodi-user-ui-footer__brand{font-size:14px!important;font-weight:850!important;letter-spacing:.13em!important;color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important}
-    .ekodi-user-ui-footer__business,.ekodi-user-ui-footer__address{width:100%!important;display:flex!important;align-items:baseline!important;justify-content:center!important;gap:5px 16px!important;flex-wrap:wrap!important;color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-text,#f4f7f5)!important}.ekodi-user-ui-footer__address{word-break:keep-all!important}.ekodi-user-ui-footer__separator{color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;opacity:.9!important}
-    .ekodi-user-ui-footer__links{display:flex!important;justify-content:center!important;align-items:center!important;gap:7px 18px!important;flex-wrap:wrap!important;white-space:normal!important}.ekodi-user-ui-footer a{color:var(--ekodi-user-footer-safe-link,#fff)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-link,#fff)!important;font-weight:700!important;text-decoration:none!important;text-underline-offset:3px!important}.ekodi-user-ui-footer a:hover,.ekodi-user-ui-footer a:focus-visible{text-decoration:underline!important}.ekodi-user-ui-footer a:focus-visible{outline:2px solid currentColor!important;outline-offset:3px!important}
-    .ekodi-user-ui-footer__copyright,.ekodi-user-ui-footer__scope{color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;-webkit-text-fill-color:var(--ekodi-user-footer-safe-muted,#dbe5df)!important;opacity:1!important}.ekodi-user-ui-footer__scope{max-width:800px!important;font-size:13px!important;line-height:1.7!important}
-    [data-ekodi-legacy-common-footer-hidden]:not([data-ekodi-service-footer]){display:none!important}
-    footer.foot .foot-inner > .ekodi-footer-traffic,footer.promise-footer .promise-footer-inner > .ekodi-footer-traffic{grid-column:1/-1!important;justify-self:center!important}\n    footer.foot .foot-copy > [data-ekodi-copyright-credit],footer.promise-footer .footer-copy > [data-ekodi-copyright-credit]{display:block!important;margin-top:4px!important;color:#bdc2d9!important;font-size:11px!important;line-height:1.5!important}\n    .ekodi-footer-traffic{box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;flex-wrap:wrap!important;column-gap:28px!important;row-gap:10px!important;width:fit-content!important;max-width:100%!important;margin:8px auto 0!important;padding:9px 6px 0!important;border-top:1px solid currentColor!important;color:inherit!important;font:inherit!important;font-size:12px!important;font-weight:400!important;line-height:1.6!important;word-break:keep-all!important;opacity:.86!important;text-align:center!important}
-    .ekodi-footer-traffic__metric{display:inline-flex!important;align-items:baseline!important;gap:6px!important;white-space:nowrap!important}
-    .ekodi-footer-traffic__metric strong{font-weight:750!important;color:inherit!important}
-    .ekodi-footer-traffic__note{flex-basis:100%!important;margin-top:3px!important;text-align:center!important;font-size:11px!important;opacity:.8!important;white-space:normal!important}
-    @media(max-width:390px){.ekodi-footer-traffic{column-gap:20px!important;row-gap:8px!important;padding-inline:0!important;font-size:11.5px!important}}
-    @media(max-width:720px){.ekodi-user-ui-footer{font-size:13px!important}.ekodi-user-ui-footer__inner{width:min(var(--ekodi-user-content-inline-size,var(--ekodi-user-canvas-max,1240px)),calc(100% - 28px))!important;padding:24px 0 26px!important;gap:12px!important}.ekodi-user-ui-footer__business,.ekodi-user-ui-footer__address{gap:4px 11px!important}.ekodi-user-ui-footer__scope{font-size:12.5px!important}}
-  `;
-  (document.head||document.documentElement).append(style);
+  // Standalone adopters still get the exact same first-party stylesheet
+  // without CSP nonces, 'unsafe-inline' or an external provider dependency.
+  const link=document.createElement('link');
+  link.id=STYLE_ID;
+  link.rel='stylesheet';
+  link.href='/shell/user-ui-shell.css';
+  link.dataset.ekodiUserUiStyle='external-csp-v1';
+  (document.head||document.documentElement).append(link);
 }
 function parseRgb(value){
   const raw=String(value||'');

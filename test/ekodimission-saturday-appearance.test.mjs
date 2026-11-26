@@ -20,9 +20,10 @@ test('mission home shows current event without duplicate recurring copy', async 
 
 test('shared traffic footer separates metrics and wraps note on narrow screens', async () => {
   const footer = await read('shell/user-ui-footer.js');
-  assert.match(footer, /column-gap:28px!important;row-gap:10px!important/);
-  assert.match(footer, /column-gap:20px!important;row-gap:8px!important/);
-  assert.match(footer, /\.ekodi-footer-traffic__note\{flex-basis:100%!important/);
+  const css = await read('shell/user-ui-shell.css');
+  assert.match(css, /column-gap:28px!important;row-gap:10px!important/);
+  assert.match(css, /column-gap:20px!important;row-gap:8px!important/);
+  assert.match(css, /\.ekodi-footer-traffic__note\{flex-basis:100%!important/);
   assert.match(footer, /addTrafficMetric\(node,english\?'Today':'오늘 방문',data\.today\)/);
   assert.match(footer, /addTrafficMetric\(node,english\?'7 days':'최근 7일',data\.last7Days\)/);
   assert.match(footer, /addTrafficMetric\(node,english\?'30 days':'최근 30일',data\.last30Days\)/);

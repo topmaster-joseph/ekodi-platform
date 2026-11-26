@@ -116,16 +116,17 @@ test('Books and Education canonical paths are attributed to their own sites',()=
 
 test('both shared and native footers use one compact scoped presentation',async()=>{
   const source=await readFile('shell/user-ui-footer.js','utf8');
+  const css=await readFile('shell/user-ui-shell.css','utf8');
   const shell=await readFile('shell/shell.js','utf8');
   const router=await readFile('mission-control-entry-worker.js','utf8');
   assert.match(source,/attachFooterTraffic\(nativeFooter\(\)\)/);
   assert.match(source,/attachFooterTraffic\(existing\)/);
   assert.match(source,/attachFooterTraffic\(footer\)/);
   assert.match(source,/data-ekodi-footer-traffic/);
-  assert.match(source,/max-width:390px/);
-  assert.match(source,/ekodi-footer-traffic\{[^\n]*column-gap:28px!important;row-gap:10px!important/,'desktop counters have increased spacing');
-  assert.match(source,/@media\(max-width:390px\)\{\.ekodi-footer-traffic\{column-gap:20px!important;row-gap:8px!important/,'mobile counters retain separated and wrapped spacing');
-  assert.match(source,/ekodi-footer-traffic__note\{flex-basis:100%!important/,'UTC note is on its own line');
+  assert.match(css,/max-width:390px/);
+  assert.match(css,/ekodi-footer-traffic\{[^\n]*column-gap:28px!important;row-gap:10px!important/,'desktop counters have increased spacing');
+  assert.match(css,/@media\(max-width:390px\)\{\.ekodi-footer-traffic\{column-gap:20px!important;row-gap:8px!important/,'mobile counters retain separated and wrapped spacing');
+  assert.match(css,/ekodi-footer-traffic__note\{flex-basis:100%!important/,'UTC note is on its own line');
   assert.match(source,/익명 세션 · UTC 기준/);
   assert.match(shell,/trafficKnownRoots=new Set\('ai bible books ekodibooks/);
   assert.match(shell,/ delivery edu education energy/);
