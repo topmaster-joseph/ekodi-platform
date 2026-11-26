@@ -95,13 +95,27 @@ export function bookContent(product, provider, runDate) {
   link.searchParams.set('utm_source', provider); link.searchParams.set('utm_medium', 'social'); link.searchParams.set('utm_campaign', `book-${String(runDate).replaceAll('-', '')}`);
   return { title: hooks[provider] || hooks.facebook, caption: `${body}\n\n#에코디서점 #출판 #EKODI #전자책`, imageUrl: product.imageUrl, linkUrl: link.href, mode: 'rules' };
 }
+export function instagramImageOk(url) {
+  let path = '';
+  try { path = new URL(String(url || '')).pathname; } catch { return false; }
+  return !/\.(webp|png|gif|svg|avif|heic)$/i.test(path);
+}
 async function pickDirectProduct(env, candidates, runDate, provider) {
   if (!candidates.length) return null;
   const since = new Date(Date.parse(`${runDate}T00:00:00Z`) - DIRECT_REPEAT_DAYS * 864e5).toISOString().slice(0, 10);
   const recent = await env.DB.prepare('SELECT DISTINCT share_code FROM mall_direct_promotion_runs WHERE run_date>=? AND status IN (\'published\',\'publishing\')').bind(since).all().catch(() => ({ results: [] }));
   const used = new Set((recent.results || []).map(r => String(r.share_code)));
-  const pool = candidates.filter(c => !used.has(String(c.shareCode)));
-  const list = pool.length ? pool : candidates;
+  // PROMO-IG-JPEG-20261127: Instagram 게시 API는 JPEG만 받는다(11/23 "Only photo or video can be accepted as media type."로 실패).
+  // 인스타그램에는 JPEG가 아닌 확장자(webp·png·gif·svg·avif) 이미지와 이미 인스타그램에서 실패한 상품을 고르지 않는다.
+  let base = candidates;
+  if (provider === 'instagram') {
+    const failed = await env.DB.prepare("SELECT DISTINCT share_code FROM mall_direct_promotion_runs WHERE provider='instagram' AND status='failed'").all().catch(() => ({ results: [] }));
+    const bad = new Set((failed.results || []).map(r => String(r.share_code)));
+    base = candidates.filter(c => instagramImageOk(c.imageUrl) && !bad.has(String(c.shareCode)));
+    if (!base.length) return null;   // 직접판매 후보가 없으면 제휴 레인(JPEG 프록시 이미지)으로 넘어간다
+  }
+  const pool = base.filter(c => !used.has(String(c.shareCode)));
+  const list = pool.length ? pool : base;
   return list[irregularSlotMinute(runDate, `${provider}|pick`) % list.length];
 }
 async function recordDirectRun(env, v) {
@@ -153,6 +167,14 @@ async function productLearningMetrics(env,productRowId) {
 }
 
 export const DORMANCY_TEST_DAYS=3;
+// PROMO-DAILY-FLOOR-20261127: 세 채널이 모두 전날 게시하면 다음 날 전부 hold가 되어 하루 게시 0건이 생겼다(11/26).
+// 오늘 아직 아무 채널도 게시하지 않았다면 가장 오래 쉰 채널 하나를 시험 게시로 연다(고취소·기회 0 상품은 제외, 유료 없음).
+export function dailyFloorPick(pending,postedToday,opportunityScore){
+  if(Number(postedToday)>0||!(Number(opportunityScore)>0)) return null;
+  const rest=(row)=>row.daysSinceLastPost==null?Infinity:Number(row.daysSinceLastPost);
+  const pick=(pending||[]).filter((row)=>row?.learning?.reason!=='high_cancel_rate').sort((a,b)=>rest(b)-rest(a)||String(a.connection?.provider).localeCompare(String(b.connection?.provider)))[0];
+  return pick?{...pick,learning:{...pick.learning,action:'test',reason:'daily_floor'}}:null;
+}
 export function scorePromotionLearning(input={}) {
   const opportunityScore=clamp(input.opportunityScore,0,100);
   const selectionScore=clamp(input.selectionScore,0,100);
@@ -239,7 +261,7 @@ async function channelPoliciesForProduct(env,runDate,product,connections) {
     const daysSinceLastPost=await providerDaysSinceLastPost(env,connection.provider);
     const learning=scorePromotionLearning({opportunityScore:product.opportunity_score,recommendedAction:product.recommended_action,selectionScore:product.selection_score,productClicks30d:product.clicks_30d,orders30d:product.orders_30d,cancels30d:product.cancels_30d,commission30d:product.commission_30d,...(stats.get(Number(product.id))||{}),daysSinceLastPost});
     await writePolicySnapshot(env,runDate,product,connection.provider,learning);
-    rows.push({connection,learning});
+    rows.push({connection,learning,daysSinceLastPost});
   }
   return rows.sort((a,b)=>b.learning.policyScore-a.learning.policyScore||String(a.connection.provider).localeCompare(String(b.connection.provider)));
 }
@@ -356,7 +378,8 @@ export async function runMallPromotionAutomation(env,{reason='cron',force=false}
   const pending=policies.filter(({connection})=>!completed.has(String(connection.provider)+':'+String(connection.id)));
   const scale=pending.filter(row=>row.learning.action==='scale');
   const tests=pending.filter(row=>row.learning.action==='test');
-  const selected=scale.length?scale.slice(0,gate.maxDailyPosts):tests.slice(0,Math.min(1,gate.maxDailyPosts));
+  let selected=scale.length?scale.slice(0,gate.maxDailyPosts):tests.slice(0,Math.min(1,gate.maxDailyPosts));
+  if(!selected.length){ const floor=dailyFloorPick(pending,completed.size,Number(product.opportunity_score||0)); if(floor) selected=[floor]; }
   const selectedKeys=new Set(selected.map(({connection})=>String(connection.provider)+':'+String(connection.id)));
   const results=pending.filter(({connection})=>!selectedKeys.has(String(connection.provider)+':'+String(connection.id))).map(({connection,learning})=>({provider:connection.provider,status:'no_action',recommendedAction:learning.action,policyScore:learning.policyScore,reason:learning.reason,confidenceScore:learning.confidenceScore}));
   if(!selected.length){

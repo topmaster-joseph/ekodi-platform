@@ -41,3 +41,24 @@ test('the growth worker (which holds the vault secrets) runs metrics collection 
   const deploy = fs.readFileSync(new URL('../.github/workflows/deploy-marketing-growth.yml', import.meta.url), 'utf8');
   assert.match(deploy, /META_APP_SECRET: \$\{\{ secrets\.META_APP_SECRET \}\}/);
 });
+
+test('daily floor: when every channel posted yesterday, the most-rested channel still gets one test post today (11/26 gap)', async () => {
+  const { dailyFloorPick } = await import('../mall-promotion-automation.js');
+  const row = (provider, days, reason = 'opportunity_only') => ({ connection: { provider, id: 1 }, learning: { action: 'hold', reason }, daysSinceLastPost: days });
+  const pick = dailyFloorPick([row('threads', 1), row('instagram', 2), row('facebook', 1)], 0, 40);
+  assert.equal(pick.connection.provider, 'instagram');
+  assert.equal(pick.learning.action, 'test');
+  assert.equal(pick.learning.reason, 'daily_floor');
+  assert.equal(dailyFloorPick([row('threads', 1)], 1, 40), null, 'already posted today');
+  assert.equal(dailyFloorPick([row('threads', 1)], 0, 0), null, 'zero-opportunity product');
+  assert.equal(dailyFloorPick([row('threads', 5, 'high_cancel_rate')], 0, 40), null, 'high cancellation hold stays');
+});
+
+test('instagram only receives JPEG-compatible images (11/23 media type failure)', async () => {
+  const { instagramImageOk } = await import('../mall-promotion-automation.js');
+  assert.equal(instagramImageOk('https://ekodi.kr/img/a.jpg'), true);
+  assert.equal(instagramImageOk('https://ekodi.kr/api/affiliate/public/image/3?storefront=ekodi-mall'), true);
+  assert.equal(instagramImageOk('https://ekodi.kr/books/covers/x.webp'), false);
+  assert.equal(instagramImageOk('https://ekodi.kr/books/covers/x.PNG?v=1'), false);
+  assert.equal(instagramImageOk('not a url'), false);
+});
