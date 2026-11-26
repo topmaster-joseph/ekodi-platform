@@ -11,8 +11,9 @@ const trafficStatsRequests=new Map();
 const STYLE_ID='ekodi-user-ui-footer-style';
 const CONFIG_URL='https://ekodi.kr/shell/user-footer.json';
 const SITE_CHROME_URL='https://ekodi.kr/workspace-api/v1/site-chrome/public';
-// Education has no customer-site chrome configuration; keep the shared fallback.
-const NON_TENANT_SITE_CHROME_SUBJECTS=new Set(['edu','education']);
+// Education and the independent BBQ storefront do not have customer-tenant chrome
+// configuration. Preserve the site-owned native footer without a doomed 404 lookup.
+const NON_TENANT_SITE_CHROME_SUBJECTS=new Set(['edu','education','bbqcg']);
 const USER_SURFACES=new Set(['public','workspace']);
 const SERVICE_OWNED_FOOTER_SERVICES=new Set();
 const SITE_COPYRIGHT_ATTR='data-ekodi-copyright-credit';
