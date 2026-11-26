@@ -30,9 +30,27 @@ if(form){
   bankCaveat:'Bank transfers are separate. The organizer confirms payments manually.',
   mapLink:'View meeting point on map',safetyTitle:'Before you participate',
   safetyNote:'Follow the safety instructions on site and bring warm clothes and gloves. Meet at 10:00 AM. The end time will be announced by the organizer.',
-  partnerLabel:'Partner organizations:',
-  partners:'Mokpo International Christian School · Jeonnam Christian Newspaper · EKODI Mission and local partners',
-  bannerToForm:'Go to the volunteer and donation form'
+  partnerLabel:'Hosting organizations:',
+  partners:'Mokpo International Christian School, Hearts&Hands, EKODI Mission, Mideumhoe, Mokpo Christian Academy, Mokpo Pyeonggang Church, Mokpo Jangro Church, Mokpo Chunghyeon Church, and Mokpo Yechan Church',
+  bannerToForm:'Go to the volunteer and donation form',
+  storyEyebrow:'Love Briquette Delivery',
+  storyHeading:'12th Love Briquette Delivery',
+  sourceTiming:'Saturday, December 5, 2026 at 10:00 AM · Volunteer hours recognized',
+  sourceRegistration:'First 50 applicants (apply by November 27 at 12:00 noon via form, telephone, text message, or Google Form)',
+  sourceSupport:'Briquettes (KRW 1,300 each), boiler heating oil, KRW 500,000 (as stated in the original notice)',
+  applyVolunteer:'Join as a volunteer',
+  applyDonation:'Donate briquettes',
+  storyLead:'Together with local churches, Mokpo International Christian School, Christian civic groups, and mission organizations, we are holding the 12th Love Briquette Delivery.',
+  storyCommitment:'I donate briquettes and gladly volunteer with a joyful heart and willing hands.',
+  storyExpand:'Read our faith, mission and previous year’s story',
+  storyFaithTitle:'Sharing in obedience to the Word',
+  storyFaith:'God sent His only Son Jesus, who was without sin, to this earth. Through His death on the cross in our place and His resurrection, He gave life and salvation to those who believe. “It is more blessed to give than to receive” (Acts 20:35); whoever has pity on the poor lends to the Lord, who will repay that good deed (Proverbs 19:17); and those who generously share with the poor have righteousness that endures forever (Psalm 112:9). A life of obedience to this Word is a blessed life.',
+  storyHistoryTitle:'Last year’s giving and this year’s hope',
+  storyHistory:'Last year, 55 elementary, middle and high school students, university students, parents, pastors and international students joined. They raised KRW 3.1 million for briquettes and supported home heating fuel, multicultural students, Ukrainian children and a brother with a disability. This year, following recommendations from the Yudal-dong Community Service Center, we look forward to sharing love through briquette delivery and heating fuel.',
+  storyChildrenTitle:'Learning to care by doing',
+  storyChildren:'Children gather savings from piggy banks and pocket money to buy briquettes, then deliver them even in cold weather, sweating as they work. As the saying goes, “Only what we teach through our lives remains,” this will be a living lesson and a beautiful memory of living together. Children who grow up with healthy, happy memories will become wonderful people who serve their neighbors. Join us.',
+  storyOriginal:'View the original flyer and application',
+  organizerFooter:'Organized by: 토끼와거북 (Rabbit and Tortoise)'
  });
  const messages={
   ko:{
@@ -144,6 +162,14 @@ if(form){
   sync();renderStatus();renderMessage();
  }
  languageButtons.forEach(button=>button.addEventListener('click',()=>setLanguage(button.dataset.vLang)));
+ // The two visible paths use the existing privacy-checked form; no submission occurs on click.
+ document.querySelectorAll('[data-v-apply-mode]').forEach(link=>link.addEventListener('click',()=>{
+  const target=link.dataset.vApplyMode;
+  if(target==='volunteer'||target==='pledge'){
+   mode.value=target;
+   sync();
+  }
+ }));
  mode.addEventListener('change',sync);bricks.addEventListener('input',sync);
  setLanguage(language,{updateUrl:false});
  fetch(api+'campaigns/'+encodeURIComponent(slug)+'/status',{cache:'no-store',headers:{accept:'application/json'}})

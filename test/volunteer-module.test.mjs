@@ -20,6 +20,46 @@ test('first volunteer campaign represents the source flyer without inventing an 
  assert.match(campaign.date,/12월 5일/);
  assert.equal(campaign.bank,'농협 351-1185-2874-13');
 });
+test('the 12th coal campaign reproduces the uploaded flyer testimony and full organizer information',async()=>{
+ const response=await visit('/volunteer/activities/2026-coal-delivery');
+ assert.equal(response.status,200);
+ const html=await response.text();
+ for(const passage of [
+  '12회 사랑의 연탄 배달','봉사시간 인정',
+  '지역교회와 목포국제기독학교, 기독시민단체, 선교단체와 함께',
+  '죄 없는 유일한 아들 예수님',
+  '행20:35','잠19:17','시112:9',
+  '55명의 초중고, 대학청년',
+  '310만원 연탄 기부금',
+  '다문화 유학생, 우크라이나 아동, 장애형제',
+  '유달동 주민센터의 추천',
+  '삶으로 가르치는 것만이 남는다',
+  '살아있는 교육과 더불어 살아가는 아름다운 추억',
+  '선착순 50명(11월27일 낮 12시까지 신청서, 전화, 문자, 구글폼으로 신청)',
+  '연탄(1장 1,300원), 보일러등유 오십만원',
+  '연탄 기부도 하고 기쁜 마음과 몸으로 사랑의 봉사를 신청합니다.',
+  '(사)Hearts&amp;Hands',
+  '에코디선교회','믿음회','목포크리스찬아카데미',
+  '목포평강교회','목포장로교회','목포충현교회','목포예찬교회',
+  '주관: 토끼와거북'
+ ])assert.ok(html.includes(passage),'missing source segment: '+passage);
+ for(const marker of ['data-v-i18n="storyFaith"','data-v-i18n="storyHistory"',
+   'data-v-i18n="storyChildren"','data-v-i18n="sourceTiming"',
+   'data-v-apply-mode="volunteer"','data-v-apply-mode="pledge"',
+   'data-v-i18n="storyOriginal"','id="volunteer-form"','href="/volunteer/admin"'
+ ])assert.ok(html.includes(marker),marker);
+ assert.doesNotMatch(html,/name="birthdate"|name="gender"/);
+ assert.doesNotMatch(html,/전남기독신문사/);
+ const js=await readFile(new URL('../space/volunteer.js',import.meta.url),'utf8');
+ assert.match(js,/data-v-apply-mode/);
+ assert.match(js,/storyFaith:/);
+ assert.match(js,/storyHistory:/);
+ assert.match(js,/storyChildren:/);
+ const css=await readFile(new URL('../space/volunteer.css',import.meta.url),'utf8');
+ assert.match(css,/\.volunteer-event-actions/);
+ assert.match(css,/@media\(max-width:700px\)/);
+});
+
 test('canonical volunteer route reuses SPACE without path stripping',()=>{
  const spec=platformExecutionSurfaceForPath('/volunteer/activities/2026-coal-delivery');
  assert.equal(spec.id,'volunteer');
