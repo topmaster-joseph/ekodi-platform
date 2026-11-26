@@ -136,8 +136,8 @@
     window.location.href=link;
     status('메일 앱에서 수신자와 첨부파일을 확인하고 직접 전송하세요. 주문·결제가 완료된 상태는 아닙니다.');
   }
-  $('designForm').addEventListener('input',changed);
-  $('designForm').addEventListener('change',changed);
+  $('designForm').addEventListener('input',(event)=>{if(event.target.id!=='approve')changed();});
+  $('designForm').addEventListener('change',(event)=>{if(event.target.id!=='approve')changed();});
   $('approve').addEventListener('change',refresh);
   $('exportSvg').addEventListener('click',saveSvg);
   $('printPdf').addEventListener('click',()=>window.print());
