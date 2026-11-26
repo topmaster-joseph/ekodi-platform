@@ -1,6 +1,8 @@
 import { serviceAccountToken } from './mail-user-page.js';
 import { sendGoogleMailMessage } from './mail-google-adapter.js';
 import { recordJournalInbox, maybeSendJournalDigest } from './journal-editor-inbox.js';
+import { buildHomepageSalesPlan } from './homepage-sales-automation.js';
+import { HOMEPAGE_PRICING, HOMEPAGE_AUDIENCES, estimateHomepageSubscription } from './ekodibiz-homepage-service-page.js';
 
 export const MAIL_CONTACT_RECIPIENT = 'joseph@ekodi.kr';
 const GMAIL_SEND_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
@@ -74,12 +76,20 @@ export async function handleMailContactApi(request,env={}) {
   try { body=JSON.parse(raw||'{}'); } catch { return json({error:'문의 형식을 확인해 주세요.',code:'INVALID_JSON'},400); }
   if(clean(body?.website,120)) return json({ok:true,message:'문의가 접수되었습니다.'});
   const email=clean(body?.email,254).toLowerCase();
-  const name=clean(body?.name,80),subject=clean(body?.subject,180),message=clean(body?.message,12000);
+  const name=clean(body?.name,80),subject=clean(body?.subject,180);
+  let message=clean(body?.message,12000);
   const site=clean(body?.site,100),source=clean(body?.source,80),sourceUrl=clean(body?.sourceUrl,1000);
   if(!validEmail(email)) return json({error:'답변받을 이메일 주소를 확인해 주세요.',code:'INVALID_EMAIL'},400);
   if(!subject) return json({error:'제목을 입력해 주세요.',code:'SUBJECT_REQUIRED'},400);
   if(!message) return json({error:'문의 내용을 입력해 주세요.',code:'MESSAGE_REQUIRED'},400);
   const recipient=contactRecipient(),sender=contactSender(),receivedAt=new Date().toISOString();
+  if(source==='ekodibiz-homepage-subscription'&&body.homepageSales&&typeof body.homepageSales==='object'&&!Array.isArray(body.homepageSales)) {
+    const input=body.homepageSales;
+    const sales=buildHomepageSalesPlan({display_name:clean(input.display_name,80)||name,audience:clean(input.audience,30),plan:clean(input.plan,8),contract:clean(input.contract,10),options:input.options,created_at:receivedAt},HOMEPAGE_PRICING,HOMEPAGE_AUDIENCES,estimateHomepageSubscription);
+    message+='\n\n[에코디비즈 자동 영업 안내 · 서버 요금표 기준]\n'+sales.draft+'\n\n[담당자 후속 업무 · 연락 여부 별도 확인]\n';
+    for(const task of sales.tasks) message+=task.label+' · '+(task.dueAt?new Date(task.dueAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'날짜 확인 필요')+'\n';
+    message+='관리: https://ekodi.kr/homepage/admin\n접수·제안은 매출이나 결제 확인으로 집계하지 않습니다.';
+  }
   // JOURNAL-EDITOR-ALERTS-20261113: 저널 독자 편지는 바로 메일하지 않고 편집부 알림함에 모아 저녁 6시 하루 요약으로 보낸다.
   // 기록이 안 되면(DB 없음·오류) 예전처럼 바로 메일로 보낸다 — 편지가 사라지지 않게.
   if(source==='journal-reader-letter'&&await recordJournalInbox(env,{kind:'letter',title:subject,senderName:name,senderEmail:email,message,link:sourceUrl})){
