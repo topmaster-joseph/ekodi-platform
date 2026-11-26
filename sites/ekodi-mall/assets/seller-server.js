@@ -225,6 +225,7 @@
     if (provider === 'ownerclan') return 'ownerclan';
     if (provider) return 'external';
     if (product.source?.kind === 'consigned_merchant') return 'merchant';
+    if (product.source?.kind === 'ekodibiz_own') return 'own';
     if (product.source?.kind === 'ekodi-bookstore') return 'bookstore';
     if (product.product?.saleType === 'inquiry') return 'inquiry';
     if (product.product?.saleType === 'affiliate') {
@@ -236,7 +237,7 @@
       if (host === 'trip.com' || host.endsWith('.trip.com')) return 'tripcom';
       return 'external';
     }
-    return 'own';
+    return 'seller';
   }
   function readiness(product) {
     if (product.status !== 'published') return '상품 준비중';
