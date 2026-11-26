@@ -37,8 +37,8 @@ test('OAuth request requires explicitly allowlisted identity when selecting a co
 });
 
 test('unapproved secondary OAuth cannot select canonical shared drive, steward identity unchanged',()=>{
-  const begin=server.indexOf('const selectMatch=url.pathname.match');
-  const end=server.indexOf('const bootstrapMatch=url.pathname.match',begin);
+  const begin=server.indexOf('async function selectDriveForConnection');
+  const end=server.indexOf('async function bootstrapPrimaryConnection',begin);
   const select=server.slice(begin,end);
   assert.ok(begin>0&&end>begin);
   assert.match(select,/row\.role==='secondary'&&selected\.id===primarySharedDriveId\(env\)/);

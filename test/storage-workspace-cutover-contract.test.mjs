@@ -20,7 +20,7 @@ test('pending new Workspace OAuth cannot disable a working primary or replace Sh
 });
 
 test('selecting canonical Drive requires exact authenticated Workspace account and real Drive Manager capability',()=>{
-  const select=slice('const selectMatch=url.pathname.match','const bootstrapMatch=url.pathname.match');
+  const select=slice('async function selectDriveForConnection','async function bootstrapPrimaryConnection');
   assert.match(select,/PRIMARY_WORKSPACE_ACCOUNT_REQUIRED/);
   assert.match(select,/primaryAccountEmail\(env\)/);
   assert.match(select,/selected\.capabilities\?\.canManageMembers===true/);
@@ -34,12 +34,12 @@ test('selecting canonical Drive requires exact authenticated Workspace account a
 });
 
 test('bootstrap first verifies canonical route parent, then rotates cache and disables former primary',()=>{
-  const boot=slice('async function bootstrap(env, row)', 'export async function handleGoogleDriveStorageControl');
+  const boot=slice('async function bootstrap(env, row)', 'async function selectDriveForConnection');
   assert.match(boot,/const existing = await findFolder\(access,route\.folder_name,archiveRoot\)/);
   assert.match(boot,/CANONICAL_STORAGE_ROUTE_PARENT_MISMATCH/);
   assert.ok(boot.indexOf('CANONICAL_STORAGE_ROUTE_PARENT_MISMATCH') <
     boot.indexOf("UPDATE storage_routes SET folder_id="));
-  const handler=slice('const bootstrapMatch=url.pathname.match','const disconnectMatch=url.pathname.match');
+  const handler=slice('async function bootstrapPrimaryConnection','async function autoActivatePrimary');
   assert.match(handler,/PRIMARY_WORKSPACE_ACCOUNT_REQUIRED/);
   assert.match(handler,/PRIMARY_SHARED_DRIVE_REQUIRED/);
   assert.match(handler,/PRIMARY_SHARED_DRIVE_MANAGER_REQUIRED/);
@@ -61,4 +61,28 @@ test('admin distinguishes connected-but-unverified from actual ready primary',()
   assert.match(control,/const primary=connections\.find\(row=>row\.role==='primary'&&row\.status==='ready'\)/);
   assert.match(admin,/connection\.status==='connected'\?t\('연결됨 · 폴더 확인 필요','Connected · setup pending'\)/);
   assert.match(admin,/state\.primaryAccountMatched===true/);
+});
+
+test('primary OAuth auto-activates only through the same guarded select and bootstrap paths',()=>{
+  const callback=slice("if (url.pathname === \`${BASE}/callback\`","if (url.pathname === \`${BASE}/cheonggye-members/health\`");
+  assert.match(callback,/if \(payload\.role === 'primary'\) await autoActivatePrimary\(env,id\);\n\s*return adminRedirect/);
+  const auto=slice('async function autoActivatePrimary','export async function handleGoogleDriveStorageControl');
+  assert.match(auto,/primarySharedDriveId\(env\)/);
+  assert.match(auto,/await selectDriveForConnection\(env,row,driveId\)/);
+  assert.match(auto,/await bootstrapPrimaryConnection\(env,row\)/);
+  assert.ok(auto.indexOf('selectDriveForConnection')<auto.indexOf('bootstrapPrimaryConnection'));
+  assert.doesNotMatch(auto,/UPDATE storage_|writeCheonggyeConnectionCache/,'no unguarded writes of its own');
+  const select=slice('const selectMatch=url.pathname.match','const bootstrapMatch=url.pathname.match');
+  assert.match(select,/await selectDriveForConnection\(env,row,/);
+  const boot=slice('const bootstrapMatch=url.pathname.match','const disconnectMatch=url.pathname.match');
+  assert.match(boot,/await bootstrapPrimaryConnection\(env,row\)/);
+});
+
+test('opening storage status finishes a staged primary only via guarded auto-activation',()=>{
+  const status=slice("if (url.pathname === \`${BASE}/status\`","const routes = await env.DB.prepare('SELECT service_key,folder_key");
+  assert.match(status,/COALESCE\(folder_id,''\)=''/);
+  assert.match(status,/status IN \('connecting','connected'\) AND LOWER\(account_email\)=\?/);
+  assert.match(status,/bind\(primaryAccountEmail\(env\)\)/);
+  assert.match(status,/await autoActivatePrimary\(env,staged\.id\)/);
+  assert.doesNotMatch(status,/UPDATE storage_|writeCheonggyeConnectionCache/);
 });
