@@ -46,7 +46,7 @@ test('every public ekodi.kr site prefix is registered for footer visit statistic
 });
 
 test('registered prefixes resolve to their own site, never the root counter', () => {
-  for (const prefix of ['bbqcg', 'pizzamaru', 'yogurt', 'cmpmyi', 'pyeonggongmok', 'sosik', 'qtin', 'mokpo-presbytery', 'jubilee', 'open', 'business-coop', 'singles', 'proposal', 'office', 'cgmurrc', 'ekodipay']) {
+  for (const prefix of ['print', 'bbqcg', 'pizzamaru', 'yogurt', 'cmpmyi', 'pyeonggongmok', 'sosik', 'qtin', 'mokpo-presbytery', 'jubilee', 'open', 'business-coop', 'singles', 'proposal', 'office', 'cgmurrc', 'ekodipay']) {
     const site = trafficSiteIdForVisit('ekodi.kr', prefix);
     assert.notEqual(site, 'root', prefix);
   }
