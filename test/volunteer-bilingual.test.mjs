@@ -50,6 +50,7 @@ test('language changes keep typed data, preserve API payload, and translate subm
  const checking=node('실시간 접수 확인 중','checking');
  const input=createNode('',{vPlaceholder:'namePlaceholder'});input.placeholder='이름을 입력하세요';
  const ko=createNode('한국어',{vLang:'ko'}),en=createNode('English',{vLang:'en'});
+ const volunteerAction=createNode('봉사 참여 신청',{vApplyMode:'volunteer'}),donationAction=createNode('연탄 후원 신청',{vApplyMode:'pledge'});
  const mode=createNode();mode.value='volunteer';
  const party=createNode();party.value='2';
  const bricks=createNode();bricks.value='10';
@@ -84,6 +85,7 @@ test('language changes keep typed data, preserve API payload, and translate subm
     if(sel==='[data-v-i18n]')return [title,privacy,adminLink,eventDate,checking,button];
     if(sel==='[data-v-placeholder]')return [input];
     if(sel==='[data-v-aria]')return [];
+    if(sel==='[data-v-apply-mode]')return [volunteerAction,donationAction];
     return [];
    }
   },
@@ -134,4 +136,12 @@ test('language changes keep typed data, preserve API payload, and translate subm
  assert.equal(input.placeholder,'이름을 입력하세요');
  assert.equal(party.value,'2');
  assert.doesNotMatch(location.href,/\?lang=en/);
+ donationAction.listeners.click();
+ assert.equal(mode.value,'pledge');
+ assert.equal(party.disabled,true);
+ assert.equal(bricks.disabled,false);
+ volunteerAction.listeners.click();
+ assert.equal(mode.value,'volunteer');
+ assert.equal(party.disabled,false);
+ assert.equal(bricks.disabled,true);
 });
