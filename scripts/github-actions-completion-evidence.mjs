@@ -244,8 +244,20 @@ export async function collectAuthenticatedCompletionEvidence({github,owner='topm
 
   // The production deployment is explicitly dispatched with the merge commit.
   // Never treat PR preview workflows as promoted production deployments.
-  const deploymentResponse=await github.rest.actions.listWorkflowRunsForRepo({owner,repo,head_sha:mergeSha,per_page:100});
-  const triggered=(deploymentResponse.data?.workflow_runs||[]).filter(item=>/^(?:Deploy)\b/i.test(text(item?.name,160))&&['push','workflow_dispatch'].includes(text(item?.event,40)));
+  // A busy merge commit can carry well over 100 runs (workflow_run/issue_comment
+  // audits), which pushed real Deploy runs off the first page (e.g. #6987: 128
+  // runs, Deploy Management Platform on page 2). Query only deploy-capable
+  // events and page through them.
+  const deploymentRuns=[];
+  for(const event of ['push','workflow_dispatch']){
+    for(let page=1;page<=5;page++){
+      const response=await github.rest.actions.listWorkflowRunsForRepo({owner,repo,head_sha:mergeSha,event,per_page:100,page});
+      const batch=response.data?.workflow_runs||[];
+      deploymentRuns.push(...batch.map(run=>({...run,event:run.event||event})));
+      if(batch.length<100)break;
+    }
+  }
+  const triggered=deploymentRuns.filter(item=>/^(?:Deploy)\b/i.test(text(item?.name,160))&&['push','workflow_dispatch'].includes(text(item?.event,40))&&text(item?.head_sha,80)===mergeSha);
   if(!triggered.length){
     // A merged release whose every file is outside any runtime (docs, eval, tests,
     // non-deploy workflows, validators) has nothing to deploy. The endpoint

@@ -32,8 +32,8 @@ function mockGithub(overrides={}){
           const allowed=all.map(run=>({...run,event:run.event||(run.name.startsWith('Deploy ')?'push':'pull_request')}));
           return {data:{workflow_runs:head_sha===prHeadSha&&event==='pull_request'
             ?allowed.filter(run=>run.event==='pull_request')
-            :head_sha===mergeSha&&!event
-              ?allowed.filter(run=>['push','workflow_dispatch'].includes(run.event))
+            :head_sha===mergeSha
+              ?allowed.filter(run=>['push','workflow_dispatch'].includes(run.event)&&(!event||run.event===event)).map(run=>({head_sha:mergeSha,...run}))
               :[]}};
         },
         listJobsForWorkflowRun:async({run_id})=>({data:{jobs:(overrides.jobsByRun?.[run_id])||[
@@ -441,4 +441,21 @@ test('source staging from another workflow, a failed job, or a missing run is no
     assert.equal(evidence.verified,false);
     assert.equal(evidence.reason,'staging_evidence_missing');
   }
+});
+
+test('deploy run beyond the first 100 runs of a busy merge commit is still found',async()=>{
+  const noise=Array.from({length:100},(_,i)=>({id:1000+i,name:'Deploy Control API',event:'workflow_dispatch',head_sha:'f'.repeat(40),status:'completed',conclusion:'success'}));
+  const github=mockGithub({});
+  const base=github.rest.actions.listWorkflowRunsForRepo;
+  const pages=[];
+  github.rest.actions.listWorkflowRunsForRepo=async args=>{
+    if(args.head_sha!==mergeSha)return base(args);
+    pages.push(`${args.event}:${args.page}`);
+    if(args.event!=='workflow_dispatch')return {data:{workflow_runs:[]}};
+    return {data:{workflow_runs:args.page===1?noise:[{id:3,workflow_id:30,name:'Deploy Control API',event:'workflow_dispatch',head_sha:mergeSha,status:'completed',conclusion:'success',html_url:'https://example/deploy'}]}};
+  };
+  const evidence=await collectAuthenticatedCompletionEvidence({github,taskId,branchRef});
+  assert.equal(evidence.verified,true);
+  assert.deepEqual(evidence.deployments.map(d=>d.runId),[3]);
+  assert.ok(pages.includes('workflow_dispatch:2'));
 });
