@@ -250,7 +250,7 @@ def policy_council():
 <h1>제111회기 총회 국내선교부<br>정책협의회 참석 안내</h1>
 <p class="lead">주제 「생명을 살리고, 공동체를 세우는 국내선교」</p>
 <p class="verse">“생명의 하나님, 우리를 하나 되게 하소서” (신 30:19–20, 엡 4:1–6)</p>
-<div class="pc-dl">목포노회 참석자: <b>선교부장 · 서기</b> (별도 신청은 받지 않습니다)<br><small>총회 제출 마감 11. 25.(수) 오후 5시 — 서기가 아래 명단을 총회에 제출합니다.</small></div></div>
+<div class="pc-dl">목포노회 참석자: <b>선교부장 · 서기</b> (별도 신청은 받지 않습니다)<br><small>총회 제출 완료 — 11. 26.(목) 이메일 제출, 총회 접수 확인(전화)</small></div></div>
 <dl class="facts"><div><dt>일시</dt><dd>12. 10.(목)</dd></div><div><dt>시간</dt><dd>11:00–15:00</dd></div><div><dt>장소</dt><dd>그레이스홀</dd></div><div><dt>등록비</dt><dd>20,000원</dd></div></dl></div></section>
 <main>
 <section id="info"><div class="wrap"><div class="sh"><div><span class="kicker">행사 개요</span><h2>정책협의회 안내</h2></div><p>강소교회 목회전략, 소그룹 활성화 방안, 세대통합예배를 중심으로 목회 현장에 적용할 실천 과제를 논의합니다.</p></div>
