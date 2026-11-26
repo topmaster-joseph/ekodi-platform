@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {BBQCG_NATIVE_PROFILES,BBQCG_NATIVE_PHRASES,bbqcgNativeTask,
+import {BBQCG_NATIVE_PROFILES,BBQCG_NATIVE_PHRASES,BBQCG_FIXED_SHELL_STYLE_HASHES,bbqcgNativeTask,
   verifyBbqcgNativeReceipt} from '../scripts/verify-bbqcg-native-browser.mjs';
 
 const buildReport=(profile,overrides={})=>({
   ok:true,virtualizationProvider:'ekodi-background-browser-worker',
   headless:true,ephemeralContext:true,activeUserProfileReused:false,
   allowMutation:false,deviceProfile:profile,canonicalOrigin:'https://ekodi.kr',
-  blockedExternalNavigationCount:0,blockedMutations:[],pageErrors:[],httpErrorResponses:[],
+  blockedExternalNavigationCount:0,blockedMutations:[],pageErrors:[],httpErrorResponses:[],consoleErrors:[],
   results:[
     {type:'initial-goto',url:'https://ekodi.kr/bbqcg',status:200},
     {type:'waitFor',visible:true},
@@ -47,6 +47,17 @@ test('receipt passes only real first-party browser, 200 pages and no mobile over
     }),profile).ok,false);
     assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{virtualizationProvider:'external'}),profile).ok,false);
     assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{pageErrors:[{name:'Error'}]}),profile).ok,false);
+    for(const hash of BBQCG_FIXED_SHELL_STYLE_HASHES){
+      assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{
+        consoleErrors:['Applying inline style violates CSP. Either a hash (\\''+hash+'\\') or nonce is required.']
+      }),profile).ok,false,'known Shell blocked style must fail: '+hash);
+    }
+    assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{
+      consoleErrors:['Analytics request blocked by strict CSP']
+    }),profile).ok,true,'unrelated analytics CSP block is not claimed fixed');
+    const noConsoleLog=buildReport(profile);delete noConsoleLog.consoleErrors;
+    assert.equal(verifyBbqcgNativeReceipt(noConsoleLog,profile).ok,false,
+      'first-party browser must provide diagnostic console log field');
     assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{httpErrorResponses:[{status:404,url:'https://ekodi.kr/workspace-api/v1/site-chrome/public?subject_key=bbqcg'}]}),profile).ok,false,
       'legacy missing native site-chrome 404 must fail');
     assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{httpErrorResponses:[{status:404,url:'https://ekodi.kr/other-service'}]}),profile).ok,true,
