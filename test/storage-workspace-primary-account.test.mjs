@@ -24,9 +24,13 @@ test('production and development primary OAuth identities are exact Workspace ac
   assert.match(dev,/STORAGE_PRIMARY_GOOGLE_EMAIL = "joseph@ekodi.kr"/);
   assert.match(control,/function primaryAccountEmail\(env\)/);
   assert.match(control,/email !== primaryAccountEmail\(env\)/);
+  // In the OAuth callback the exact-account rejection precedes the only path that can
+  // alter a previous connection (guarded auto-activation → bootstrapPrimaryConnection).
   const allowed=control.indexOf('email !== primaryAccountEmail(env)');
-  const deactivate=control.indexOf('UPDATE storage_connections SET status=\'disabled\'');
-  assert.ok(allowed>0&&deactivate>allowed,'Reject wrong account before altering previous stored connection');
+  const activate=control.indexOf('await autoActivatePrimary(env,id)');
+  assert.ok(allowed>0&&activate>allowed,'Reject wrong account before altering previous stored connection');
+  const boot=control.slice(control.indexOf('async function bootstrapPrimaryConnection'),control.indexOf('async function autoActivatePrimary'));
+  assert.ok(boot.indexOf('PRIMARY_WORKSPACE_ACCOUNT_REQUIRED')<boot.indexOf("UPDATE storage_connections SET status='disabled'"));
   assert.match(control,/if\(role==='primary'&&primaryAccountEmail\(env\)\)params\.set\('login_hint',primaryAccountEmail\(env\)\)/);
 });
 
