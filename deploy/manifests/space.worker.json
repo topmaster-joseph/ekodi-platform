@@ -752,11 +752,30 @@
           "온라인 신청서",
           "data-volunteer-form",
           "name=\"privacyConsent\"",
-          "농협 351-1185-2874-13"
+          "농협 351-1185-2874-13",
+          "data-v-lang=\"ko\"",
+          "data-v-lang=\"en\"",
+          "href=\"/volunteer/admin\"",
+          "data-v-i18n=\"privacyDetails\"",
+          "data-v-i18n=\"photoConsent\""
         ],
         "headerExpect": [
           "x-ekodi-route: volunteer-public",
           "cache-control: no-store"
+        ]
+      },
+      {
+        "url": "https://ekodi.kr/volunteer/assets/volunteer.js",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": [
+          "Volunteer & Donation Application",
+          "languageButtons",
+          "contact_conflict",
+          "history.replaceState"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: volunteer-asset"
         ]
       },
       {
