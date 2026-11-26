@@ -40,3 +40,12 @@ EKODIBIZ는 EKODI 수익사업의 사업운영, 고객 영업, 제안서, 계약
 6. 정식 EKODI Orchestrator 승인 영수증, 보호된 PR/CI, 스테이징/배포, 운영 URL 및 관리자 권한별 실증이 확보되기 전에는 운영 완료로 보고하지 않는다.
 
 이 단계에서는 사용자 DB 변경, 메일 발송, 광고, 가격 변경, 금전 결제, 계약 체결, 새 관리자 경로 개설을 하지 않는다.
+
+## Phase A2 — 실제 기존 모듈 결합 (구현 완료는 소스 단계)
+
+- `ekodibiz-sales-os-adapters.js`는 기존 `proposal/core.js`의 `createProposalDraft` 및 `reviewProposalDraft`를 직접 재사용한다. 승인된 가격이나 계약 사실을 만들어내지 않고, 원본은 항상 `working_draft` / `not_verified`이다.
+- 같은 어댑터의 `projectEkodibizB2bCrmOverview`는 기존 `/api/marketing/ledger/overview`의 `tenant:ekodibiz`, `service_b2b` 집계만 투영한다. 고객 원문, 고객 키, 이벤트 본문은 출력하지 않으며 마케팅 이벤트 금액을 확정매출로 사용하지 않는다. 해당 CRM의 고객관계 숫자는 최신 최대 3,000건 이벤트 기준이며 전체 고객수로 오인할 수 없다.
+- `ekodibiz-sales-os-view-model.js`는 6개 탭의 **데이터 표시 계약**만 제공한다. 실제 관리자 메뉴·권한·라우트 또는 로그인 기능을 생성한 것이 아니다. 미연결 수치는 `null`, 연결된 빈 원장은 0으로 구분한다.
+- 테스트: `node --test test/ekodibiz-sales-os-*.test.mjs` (개별 실행과 CI 증거 확인 필요). 실제 데이터 공급은 아직 없다.
+- 관리자 화면과 API 연결 시에는 `config/admin-menu-audience-policy.json`의 오케스트레이터 결정 기록, 서버 인증/CSRF 및 정규 workspace 소유권 검증이 우선이다.
+- 새 위탁계약/AI 영업/제안서 도메인, 별도 admin 메뉴, 별도 DB를 만들지 않는다.
