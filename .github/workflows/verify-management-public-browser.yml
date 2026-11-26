@@ -1,0 +1,44 @@
+name: Verify EKODI Management Anonymous Browser Viewports
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'management/**'
+      - 'test/management-public-browser-e2e.py'
+      - '.github/workflows/verify-management-public-browser.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'management/**'
+      - 'test/management-public-browser-e2e.py'
+      - '.github/workflows/verify-management-public-browser.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ekodi-management-public-browser-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  isolated-public-browser:
+    # Playwright 1.57 Chromium supports 24.04; ubuntu-latest may advance to 26.04.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install pinned isolated Chromium test runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --no-input playwright==1.57.0
+          python -m playwright install --with-deps chromium
+      - name: Verify live public responsive layout and anonymous data wall
+        shell: bash
+        run: |
+          set -euo pipefail
+          python test/management-public-browser-e2e.py
