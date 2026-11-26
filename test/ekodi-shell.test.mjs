@@ -4,6 +4,20 @@ import { readFile } from 'node:fs/promises';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
+test('Shell CSP remediation advances the versioned bundle cache key without loosening CSP',async()=>{
+  const [manifest,themeSource,worker,injector]=await Promise.all([
+    read('ekodi-service-manifest.js'),read('shell/theme.json'),
+    read('ekodi-shell-worker.js'),read('ekodi-shell-injector.js')
+  ]);
+  const current=Number(manifest.match(/shellVersion:\s*(\d+)/)?.[1]);
+  assert.ok(current>=8,'Shell bundle must be re-keyed after external CSS migration');
+  assert.equal(JSON.parse(themeSource).version,current,'theme and bundle versions must agree');
+  assert.match(worker,/bundleCacheRequest\(request\)/);
+  assert.match(worker,/EKODI_SERVICE_MANIFEST\.shellVersion/);
+  assert.match(worker,/bundleCache\.match\(bundleCacheKey\)/);
+  assert.match(injector,/SHELL_USER_UI_STYLE=.*user-ui-shell\.css/);
+});
+
 test('service manifest is the person-space-role registry for future EKODI sites',async()=>{
   const manifest=await read('ekodi-service-manifest.js');
   assert.match(manifest,/person-space-role/);
