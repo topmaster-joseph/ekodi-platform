@@ -20,7 +20,7 @@ test('supplier overview is in the existing Mall admin shell with site-local capa
   assert.doesNotMatch(view, /method:\s*['"](?:POST|PUT|PATCH|DELETE)['"]|setOrder\(/);
   const api = source('../sites/ekodi-mall/api/worker.js');
   const selected = api.slice(api.indexOf('async function listOperatorProviderProducts'), api.indexOf('async function opsAudit'));
-  assert.match(selected, /FROM products\\s+ORDER BY updated_at DESC/);
+  assert.ok(selected.includes('FROM products'+String.fromCharCode(10)+'    ORDER BY updated_at DESC'))
   assert.doesNotMatch(selected, /WHERE COALESCE/);
   assert.doesNotMatch(selected, /buyer_address|payment_account|buyer_phone/);
 });
