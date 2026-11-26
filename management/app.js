@@ -579,6 +579,9 @@ async function loadVerifiedSpaces(){
   const previous=prior?{id:prior.id,slug:prior.slug,kind:prior.kind,role:prior.role}:null;
   const token=state.session.accessToken,userId=state.session.user.id,serial=++state.spacesRequest;
   state.spaces=[];state.selectedWorkspace=null;$('verifiedSpacesList').replaceChildren();
+  // Clear previously rendered tenant-scoped growth and finance immediately while
+  // membership re-verification is pending, not only after the fetch resolves.
+  renderGrowthWorkspace();
   $('selectedWorkspaceStatus').textContent='운영 공간 권한을 다시 확인하고 있습니다.';
   if($('workbenchScope'))$('workbenchScope').textContent='운영 공간 권한 재확인 중';
   renderNextAction('checking');

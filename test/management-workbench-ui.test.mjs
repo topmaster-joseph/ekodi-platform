@@ -37,6 +37,7 @@ function page({guest=false,spaceResponses=[]}={}){
     if(path==='/api/catalog')return {ok:true,json:async()=>({modules:[]})};
     if(path==='/api/spaces'){
       const outcome=spaceResponses[spaceFetches++]??[];
+      if(outcome&&typeof outcome.then==='function')return outcome;
       if(outcome==='error')return {ok:false,status:503,json:async()=>({error:'offline'})};
       return {ok:true,status:200,json:async()=>({
         spaces:outcome,scope:'authenticated-member-only'
@@ -192,4 +193,47 @@ test('official brand and neutral membership display do not invent an unverified 
   const p=page();await p.flush();
   assert.match(p.get('memberMeta').textContent,/에코디 회원 · member@example\.test · 기능 선택형/);
   assert.doesNotMatch(p.get('memberMeta').textContent,/무료등급/);
+});
+
+test('pending membership recheck immediately removes previous growth and financial view content',async()=>{
+  let finishRefresh;
+  const deferred=new Promise(resolve=>{finishRefresh=resolve});
+  const p=page({spaceResponses:[[verifiedStore],deferred]});
+  await p.flush();await p.flush();
+  chooseStore(p);
+  runInContext("state.selection={workspaceKind:'business',modules:['growth']};renderGrowthWorkspace()",p.ctx);
+  assert.match(p.get('growthWorkspaceStatus').textContent,/공식 테스트 매장/);
+  assert.ok(p.get('growthWorkspaceDetails').children.length>0);
+  const checking=p.get('refreshSpaces').handlers.click();
+  assert.equal(p.get('growthWorkspaceDetails').children.length,0,
+    'prior workspace growth projections must disappear before membership request resolves');
+  assert.match(p.get('growthWorkspaceStatus').textContent,/먼저 선택/);
+  assert.equal(p.get('workbenchScope').textContent,'운영 공간 권한 재확인 중');
+  assert.match(p.get('workbenchNextText').textContent,/이전 공간의 결과는 표시하지 않습니다/);
+  assert.equal(p.get('workbenchNextButton').disabled,true);
+  finishRefresh({ok:true,status:200,json:async()=>({
+    spaces:[verifiedStore],scope:'authenticated-member-only'
+  })});
+  await checking;
+  assert.match(p.get('growthWorkspaceStatus').textContent,/공식 테스트 매장/);
+  assert.ok(p.get('growthWorkspaceDetails').children.length>0,
+    'only the fresh authenticated membership may restore the chosen workspace');
+  assert.equal(p.get('workbenchNextButton').disabled,false);
+});
+
+test('failed deferred workspace verification does not re-expose previous growth projections',async()=>{
+  let finishRefresh;
+  const deferred=new Promise(resolve=>{finishRefresh=resolve});
+  const p=page({spaceResponses:[[verifiedStore],deferred]});
+  await p.flush();await p.flush();
+  chooseStore(p);
+  runInContext("state.selection={workspaceKind:'business',modules:['growth']};renderGrowthWorkspace()",p.ctx);
+  assert.ok(p.get('growthWorkspaceDetails').children.length>0);
+  const checking=p.get('refreshSpaces').handlers.click();
+  assert.equal(p.get('growthWorkspaceDetails').children.length,0);
+  finishRefresh({ok:false,status:503,json:async()=>({error:'unavailable'})});
+  await checking;
+  assert.equal(p.get('growthWorkspaceDetails').children.length,0);
+  assert.equal(p.get('workbenchScope').textContent,'운영 공간 권한 확인 실패');
+  assert.equal(p.get('workbenchNextButton').dataset.view,'spaces');
 });
