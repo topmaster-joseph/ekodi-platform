@@ -30,7 +30,7 @@ function kisServer({ pages = [[{ pdno: '005930', prdt_name: '테스트전자', h
   const calls = [];
   let page = 0, expired = expireFirst;
   const fetchImpl = async (url, init = {}) => {
-    calls.push({ url: String(url), method: init.method || 'GET', headers: init.headers || {}, body: init.body });
+    calls.push({ url: String(url), method: init.method || 'GET', redirect: init.redirect, headers: init.headers || {}, body: init.body });
     const u = new URL(url);
     if (u.pathname === '/oauth2/tokenP') {
       if (tokenStatus !== 200) return new Response('{}', { status: tokenStatus });
@@ -111,11 +111,12 @@ test('real KIS read-only inquiry hits only the canonical GET target and never ex
   assert.equal(v.snapshot.totalMinor, String((1000000n + 700000n + 400000n) * 100n));
   // Network surface: one token POST to the fixed OAuth endpoint, GETs only to the canonical balance URL.
   assert.equal(calls[0].url, PAPER + '/oauth2/tokenP'); assert.equal(calls[0].method, 'POST');
+  assert.equal(calls[0].redirect, 'manual', 'OAuth may not automatically follow redirects');
   const gets = calls.slice(1);
   assert.equal(gets.length, 2);
   for (const c of gets) {
     const u = new URL(c.url);
-    assert.equal(c.method, 'GET');
+    assert.equal(c.method, 'GET'); assert.equal(c.redirect, 'manual', 'balance inquiry may not follow redirects');
     assert.equal(u.origin + u.pathname, PAPER + '/uapi/domestic-stock/v1/trading/inquire-balance');
     assert.equal(c.headers.tr_id, 'VTTC8434R');
     assert.equal(u.searchParams.get('CANO'), '50000000');
@@ -144,6 +145,64 @@ test('token reissue within a minute is refused and an expired token is replaced 
   // first token issued now -> expired response -> reissue refused (<61s) : must not loop or fall back to mock
   assert.equal(ok.connection, 'error'); assert.equal(ok.snapshot, null);
   assert.equal(later.calls.filter(c => c.url.endsWith('/oauth2/tokenP')).length, 1);
+});
+
+test('KIS OAuth redirect is refused before any token or balance request, without exposing secrets', async () => {
+  const calls=[];
+  const db=d1();
+  const fetchImpl=async(url,init)=>{
+    calls.push({url:String(url),method:init.method,redirect:init.redirect});
+    return Response.redirect('https://redirect-attacker.invalid/collect',302);
+  };
+  const r=await buildBrokerReadOnlyView({brokerId:'kis',env:ENV,db,fetchImpl,now:NOW,strongMfaVerified:true});
+  assert.equal(r.connection,'error');
+  assert.equal(r.error,'KIS_REDIRECT_FORBIDDEN');
+  assert.equal(r.snapshot,null);
+  assert.equal(r.dataMode,'kis-paper');
+  assert.equal(r.liveOrdersEnabled,false);
+  assert.deepEqual(calls,[{url:PAPER+'/oauth2/tokenP',method:'POST',redirect:'manual'}]);
+  assert.doesNotMatch(JSON.stringify(r),/fake-secret|PSfakeAppKey|50000000|redirect-attacker/);
+  assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM investment_broker_token_cache').get().n,0);
+});
+
+test('KIS balance redirect fails closed after one OAuth call, never follows a second host', async () => {
+  const calls=[];
+  const db=d1();
+  const fetchImpl=async(url,init)=>{
+    calls.push({url:String(url),method:init.method,redirect:init.redirect});
+    if(String(url).endsWith('/oauth2/tokenP'))
+      return Response.json({access_token:'tok_'+'x'.repeat(43),expires_in:86400});
+    return Response.redirect('https://redirect-attacker.invalid/collect',307);
+  };
+  const r=await buildBrokerReadOnlyView({brokerId:'kis',env:ENV,db,fetchImpl,now:NOW,strongMfaVerified:true});
+  assert.equal(r.connection,'error');
+  assert.equal(r.error,'KIS_REDIRECT_FORBIDDEN');
+  assert.equal(r.snapshot,null);
+  assert.equal(r.liveOrdersEnabled,false);
+  assert.equal(calls.length,2);
+  assert.ok(calls.every(x=>x.redirect==='manual'));
+  assert.equal(calls[0].method,'POST');
+  assert.equal(calls[1].method,'GET');
+  assert.equal(new URL(calls[1].url).pathname,'/uapi/domestic-stock/v1/trading/inquire-balance');
+  assert.ok(calls.every(x=>new URL(x.url).origin===PAPER));
+  assert.doesNotMatch(JSON.stringify(r),/fake-secret|PSfakeAppKey|50000000|redirect-attacker/);
+});
+
+test('unexpected redirected 2xx response cannot be accepted as a broker snapshot', async () => {
+  const calls=[];
+  const fetchImpl=async(url,init)=>{
+    calls.push({url:String(url),redirect:init.redirect});
+    const response=String(url).endsWith('/oauth2/tokenP')
+      ?Response.json({access_token:'tok_'+'x'.repeat(43),expires_in:86400})
+      :Response.json({rt_cd:'0',output1:[],output2:[{dnca_tot_amt:'200000'}]});
+    if(calls.length===2)Object.defineProperty(response,'url',{value:'https://unexpected.invalid/redirected'});
+    return response;
+  };
+  const r=await buildBrokerReadOnlyView({brokerId:'kis',env:ENV,db:d1(),fetchImpl,now:NOW,strongMfaVerified:true});
+  assert.equal(r.connection,'error');
+  assert.equal(r.error,'KIS_REDIRECT_FORBIDDEN');
+  assert.equal(r.snapshot,null);
+  assert.equal(calls.length,2);
 });
 
 test('provider failures never fall back to mock data', async () => {
