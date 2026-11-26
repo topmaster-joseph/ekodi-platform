@@ -49,7 +49,7 @@ test('receipt passes only real first-party browser, 200 pages and no mobile over
     assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{pageErrors:[{name:'Error'}]}),profile).ok,false);
     for(const hash of BBQCG_FIXED_SHELL_STYLE_HASHES){
       assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{
-        consoleErrors:['Applying inline style violates CSP. Either a hash (\\''+hash+'\\') or nonce is required.']
+        consoleErrors:[`Applying inline style violates CSP. SHA-256 ${hash} blocked.`]
       }),profile).ok,false,'known Shell blocked style must fail: '+hash);
     }
     assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{
