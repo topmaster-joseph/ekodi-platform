@@ -129,7 +129,18 @@
   [data-ekodi-shell-surface="admin"] .ekodi-illustration{filter:saturate(.72);opacity:.9}
   @media(prefers-reduced-motion:reduce){:root[data-ekodi-design-inheritance]{scroll-behavior:auto!important}}
   `;
-  function installStyles(){if(document.getElementById('ekodi-service-design-inheritance-style'))return;const s=document.createElement('style');s.id='ekodi-service-design-inheritance-style';s.textContent=css;document.head.appendChild(s);}
+  function installStyles(){
+  // Reuse the canonical first-party CSS instead of an inline <style>.
+  // Strict service CSP remains intact; standalone adopters also load it safely.
+  if(document.querySelector('link[data-ekodi-user-ui-style],link[href*="/shell/user-ui-shell.css"]'))return;
+  if(document.getElementById('ekodi-service-design-inheritance-style'))return;
+  const link=document.createElement('link');
+  link.id='ekodi-service-design-inheritance-style';
+  link.rel='stylesheet';
+  link.href='/shell/user-ui-shell.css';
+  link.dataset.ekodiUserUiStyle='external-csp-v1';
+  (document.head||document.documentElement).append(link);
+}
   function boot(){installStyles();apply();void loadProfile();}
 
   window.EKODIServiceDesign=Object.freeze({version:VERSION,designs:Object.freeze({...DESIGNS}),experienceRegistry,serviceId,designFor,apply,applyProfile,loadProfile});
