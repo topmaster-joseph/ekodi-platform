@@ -176,50 +176,126 @@ if(form){
 
 const admin=document.querySelector('[data-volunteer-admin]');
 if(admin){
- const status=admin.querySelector('[data-admin-status]'),login=admin.querySelector('[data-admin-login]'),wrap=admin.querySelector('[data-admin-table]'),rows=admin.querySelector('[data-pledge-rows]');
+ const status=admin.querySelector('[data-admin-status]');
+ const login=admin.querySelector('[data-admin-login]');
+ const wrap=admin.querySelector('[data-admin-table]');
+ const applicantRows=admin.querySelector('[data-volunteer-rows]');
+ const pledgeRows=admin.querySelector('[data-pledge-rows]');
  const campaign='2026-coal-delivery';
+ const count=admin.querySelector('[data-volunteer-count]');
+ const peopleCount=admin.querySelector('[data-people-count]');
+ const pledgeCount=admin.querySelector('[data-pledge-count]');
+ const applicantLabel=admin.querySelector('[data-volunteer-subcount]');
+ const pledgeLabel=admin.querySelector('[data-pledge-subcount]');
  const accessToken=()=>{
-   // Reuse the same first-party session candidates as the existing Mission shell.
-   const fromMission=window.EKODIMissionAuth?.getToken?.()||window.EKODI_MY_AUTH?.getAccessToken?.()||'';
-   if(fromMission)return fromMission;
-   try{
-     for(const store of [sessionStorage,localStorage]){
-       const direct=store.getItem('ekodi-auth-token');if(direct)return direct;
-       const current=store.getItem('sb-renzehysxirjilvdxacv-auth-token');
-       if(current){const token=JSON.parse(current)?.access_token;if(token)return token;}
-     }
-   }catch{}
-   return '';
- };
- async function call(action,extra={}){
-  const token=accessToken();if(!token)throw new Error('관리자 로그인이 필요합니다.');
-  const r=await fetch(api+'admin/pledges',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+token},body:JSON.stringify({action,campaign,...extra}),cache:'no-store'});
-  const d=await getJson(r);if(!r.ok||!d.ok)throw new Error(r.status===403?'이 활동의 관리자 권한이 없습니다.':'관리자 정보를 확인할 수 없습니다.');
-  return d;
- }
- const refresh=async()=>{
-  wrap.hidden=true;status.textContent='후원 약정 내역을 확인하고 있습니다.';
+  const fromMission=window.EKODIMissionAuth?.getToken?.()||window.EKODI_MY_AUTH?.getAccessToken?.()||'';
+  if(fromMission)return fromMission;
   try{
-    const data=await call('list'),pledges=Array.isArray(data.pledges)?data.pledges:[];
-    rows.replaceChildren();
-    for(const p of pledges){
-      const tr=document.createElement('tr');
-      for(const value of [p.name||'-',fmt(p.bricks)+'장',fmt(p.amount_krw)+'원',p.status||'대기']){
-        const td=document.createElement('td');td.textContent=value;tr.append(td);
-      }
-      const td=document.createElement('td');
-      if(p.status==='pending'){
-        const button=document.createElement('button');button.type='button';button.className='outline';button.textContent='입금 확인';button.addEventListener('click',async()=>{
-          if(!window.confirm('실제 입금 사실을 대조해 확인하셨습니까?'))return;
-          button.disabled=true;
-          try{await call('confirm',{pledgeId:p.id});await refresh()}catch(error){status.textContent=error.message;button.disabled=false}
-        });td.append(button);
-      }else td.textContent='—';
-      tr.append(td);rows.append(tr);
-    }
-    if(!pledges.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=5;cell.textContent='등록된 후원 약정이 없습니다.';row.append(cell);rows.append(row);}
-    wrap.hidden=false;login.hidden=true;status.textContent='후원 약정 '+pledges.length+'건 · 개인정보는 외부에 공유하지 마세요.';
-  }catch(error){status.textContent=error.message;login.hidden=Boolean(accessToken());}
+   for(const store of [sessionStorage,localStorage]){
+    const direct=store.getItem('ekodi-auth-token');if(direct)return direct;
+    const current=store.getItem('sb-renzehysxirjilvdxacv-auth-token');
+    if(current){const token=JSON.parse(current)?.access_token;if(token)return token}
+   }
+  }catch{}
+  return '';
+ };
+ async function call(endpoint,action,extra={}){
+  const token=accessToken();
+  if(!token)throw Object.assign(new Error('관리자 로그인이 필요합니다.'),{code:'login_required'});
+  const response=await fetch(api+'admin/'+endpoint,{
+   method:'POST',
+   headers:{'content-type':'application/json','authorization':'Bearer '+token},
+   body:JSON.stringify({action,campaign,...extra}),
+   cache:'no-store',
+   credentials:'same-origin'
+  });
+  const data=await getJson(response);
+  if(!response.ok||!data.ok){
+   const code=response.status===401?'login_required':response.status===403?'forbidden':'unavailable';
+   const msg=code==='login_required'?'관리자 로그인이 필요합니다.':
+    code==='forbidden'?'이 활동의 관리자 권한이 없습니다.':'관리자 정보를 확인할 수 없습니다.';
+   throw Object.assign(new Error(msg),{code});
+  }
+  return data;
+ }
+ const cell=(tr,value)=>{
+  const td=document.createElement('td');
+  td.textContent=String(value??'—');
+  tr.append(td);
+ };
+ const empty=(target,message,colspan)=>{
+  const row=document.createElement('tr'),td=document.createElement('td');
+  td.colSpan=colspan;td.textContent=message;row.append(td);target.append(row);
+ };
+ const shortDate=value=>{
+  const d=Date.parse(value||'');
+  if(!Number.isFinite(d))return '—';
+  return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(d);
+ };
+ const statusLabel=value=>({
+  applied:'신청 완료',confirmed:'참여 확정',attended:'참여 완료',waitlist:'대기',cancelled:'취소',
+  no_show:'불참',pending:'입금 대기'
+ })[String(value||'')]||String(value||'—');
+ let refreshing=false;
+ const refresh=async()=>{
+  if(refreshing)return;
+  refreshing=true;
+  wrap.hidden=true;login.hidden=true;
+  status.textContent='봉사 신청자와 후원 현황을 확인하고 있습니다.';
+  try{
+   // Fetch the canonical Activity/Person registration ledger and the independent pledge ledger.
+   // Both RPCs validate the same tenant-local operator role on the server.
+   const [registration,donation]=await Promise.all([
+    call('registrations','list'),
+    call('pledges','list')
+   ]);
+   const applicants=Array.isArray(registration.participants)?registration.participants:[];
+   const pledges=Array.isArray(donation.pledges)?donation.pledges:[];
+   applicantRows.replaceChildren();pledgeRows.replaceChildren();
+   for(const a of applicants){
+    const tr=document.createElement('tr');
+    cell(tr,a.name||'—');
+    cell(tr,a.phone||'—');
+    cell(tr,fmt(a.party_size||0)+'명');
+    cell(tr,statusLabel(a.status));
+    cell(tr,shortDate(a.submitted_at));
+    applicantRows.append(tr);
+   }
+   if(!applicants.length)empty(applicantRows,'등록된 봉사 신청자가 없습니다.',5);
+   for(const p of pledges){
+    const tr=document.createElement('tr');
+    cell(tr,p.name||'—');
+    cell(tr,fmt(p.bricks)+'장');
+    cell(tr,fmt(p.amount_krw)+'원');
+    cell(tr,statusLabel(p.status));
+    const td=document.createElement('td');
+    if(p.status==='pending'){
+     const button=document.createElement('button');
+     button.type='button';button.className='outline';button.textContent='입금 확인';
+     button.addEventListener('click',async()=>{
+      if(!window.confirm('실제 입금 사실을 대조해 확인하셨습니까?'))return;
+      button.disabled=true;
+      try{await call('pledges','confirm',{pledgeId:p.id});await refresh()}
+      catch(error){status.textContent=error.message;button.disabled=false}
+     });
+     td.append(button);
+    }else td.textContent='—';
+    tr.append(td);pledgeRows.append(tr);
+   }
+   if(!pledges.length)empty(pledgeRows,'등록된 연탄 후원 약정이 없습니다.',5);
+   const active=applicants.filter(a=>!['cancelled','no_show'].includes(a.status));
+   count.textContent=fmt(active.length);
+   peopleCount.textContent=fmt(active.reduce((n,a)=>n+(Number(a.party_size)||0),0));
+   pledgeCount.textContent=fmt(pledges.length);
+   applicantLabel.textContent=fmt(applicants.length)+'건';
+   pledgeLabel.textContent=fmt(pledges.length)+'건';
+   status.textContent='봉사 신청자 '+fmt(applicants.length)+'건 · 후원 약정 '+fmt(pledges.length)+'건';
+   login.hidden=true;wrap.hidden=false;
+  }catch(error){
+   wrap.hidden=true;
+   login.hidden=!(error.code==='login_required');
+   status.textContent=error.message||'관리자 정보를 확인할 수 없습니다.';
+  }finally{refreshing=false}
  };
  admin.querySelector('[data-admin-refresh]').addEventListener('click',refresh);
  window.addEventListener('focus',()=>{if(wrap.hidden)refresh()},{passive:true});
