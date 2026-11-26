@@ -48,3 +48,37 @@
  .volunteer-language button{flex:1}
  .volunteer-admin-link{flex:0 0 auto;padding:9px 12px;font-size:13px}
 }
+
+/* Applicant roster and donation pledges must be distinct, private operator sections. */
+[hidden]{display:none!important}
+.volunteer-admin-head{padding-top:20px;padding-bottom:20px}
+.volunteer-admin-heading{display:flex;align-items:center;gap:15px;flex-wrap:wrap;margin-bottom:10px}
+.volunteer-admin-heading .back{margin:0}
+.volunteer-admin-head h1{margin:10px 0;font-size:clamp(25px,3.2vw,38px);line-height:1.25;letter-spacing:-.045em}
+.volunteer-admin-head>p{margin:0;color:var(--muted);font-size:14px;line-height:1.65}
+.volunteer-admin-body{padding-top:10px;padding-bottom:35px}
+.volunteer-admin-body>[data-admin-status]{font-weight:650;margin:0 0 15px}
+.volunteer-admin-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:20px}
+.volunteer-admin-summary>div{border:1px solid var(--line);background:#f7faf6;border-radius:12px;padding:15px;display:flex;flex-wrap:wrap;gap:5px;align-items:baseline}
+.volunteer-admin-summary small{width:100%;color:var(--muted);font-size:12px}
+.volunteer-admin-summary strong{font-size:clamp(22px,3vw,30px);font-weight:800;color:var(--green)}
+.volunteer-admin-summary span{font-size:13px;color:var(--muted)}
+.volunteer-admin-section{margin:22px 0 25px}
+.volunteer-admin-section-title{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:2px solid var(--green);padding-bottom:12px}
+.volunteer-admin-section-title h2{font-size:20px;letter-spacing:-.03em;margin:0}
+.volunteer-admin-section-title span{font-weight:700;color:var(--green);white-space:nowrap}
+.volunteer-admin-section .table-scroll{margin-top:0}
+.volunteer-admin-section table{min-width:600px}
+.volunteer-admin-section table th{white-space:nowrap}
+.volunteer-admin-section table td{overflow-wrap:anywhere}
+@media(max-width:700px){
+ .volunteer-admin-head{padding:15px 16px}
+ .volunteer-admin-head h1{font-size:24px}
+ .volunteer-admin-body{padding-top:12px}
+ .volunteer-admin-summary>div{padding:10px}
+ .volunteer-admin-section{margin:18px 0 20px}
+ .volunteer-admin-section-title h2{font-size:17px}
+ .volunteer-admin-section .table-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+ .volunteer-admin-section table{min-width:590px;font-size:13px}
+ .volunteer-admin-section table td,.volunteer-admin-section table th{padding:11px 9px}
+}
