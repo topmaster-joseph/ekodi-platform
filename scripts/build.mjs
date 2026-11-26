@@ -79,8 +79,14 @@ await Promise.all([
   cp(`${root}office-prototype/office.css`,`${output}office/office.css`),
   cp(`${root}office-prototype/office.js`,`${output}office/office.js`),
 ]);
-// EKODI Business Card Studio: print-ready local preview, PDF generation and explicit order handoff.
+// EKODI Business Card Studio: existing canonical /ekodibiz/cards stays intact.
 await cp(`${root}business-card-studio`, `${output}ekodibiz/cards`, { recursive: true });
+// EKODI Print: one shared editor with directly accessible, non-redirecting product paths.
+await cp(`${root}print-studio`, `${output}print`, { recursive: true });
+for (const product of ['cards','banners','flyers','posters','stickers','booklets']) {
+  await mkdir(`${output}print/${product}/`, { recursive: true });
+  await cp(`${root}print-studio/index.html`, `${output}print/${product}/index.html`);
+}
 // EKODI Proposal Studio: local-only static draft editor, no server persistence.
 await cp(`${root}proposal`, `${output}proposal`, { recursive: true });
 await cp(`${root}sites/business-cooperative/public`, `${output}business-coop`, { recursive: true });
