@@ -2,6 +2,7 @@ import {isSeasonalOperationsPath,seasonalOperationsResponse} from './seasonal-wo
 import { isSeasonalPortalPath, seasonalPortalResponse } from './seasonal-workforce/route.mjs';
 import { routeCooperative, cooperativeLocatorGuard } from './cooperative-control.js';
 import { isCgmaAiEducationPath, routeCgmaAiEducation } from './cgma-ai-education-route.js';
+import { isFactChatPortalPath, routeFactChatPortal } from './factchat-portal-route.js';
 import { isCgmaMotorFestivalPath, routeCgmaMotorFestival } from './cgma-motor-festival-route.js';
 import { isCgmaEdocSignPath, routeCgmaEdocSign } from './cgma-edoc-sign-route.js';
 import legacyPlatformRouter from './platform-router-worker.js';
@@ -543,6 +544,7 @@ async function routePlatform(request,env,ctx){
     // SPACE workspace fallback. Match before Church/Mission/CGMA/SeonamMedi routing.
     if(host===PUBLIC_HOST&&['GET','HEAD'].includes(request.method)&&isPublicAccountingNoticePath(url.pathname))
       return legacyPlatformRouter.fetch(request,env,ctx);
+    if(host===PUBLIC_HOST&&isFactChatPortalPath(url.pathname))return routeFactChatPortal(request,env);
     if(host===PUBLIC_HOST){const cooperative=await routeCooperative(request,env);if(cooperative)return cooperative;}
     const legacySurface=legacySurfaceRedirect(request);if(legacySurface)return legacySurface;
     const legacyStores=legacyStoreGatewayRedirect(request,env);if(legacyStores)return legacyStores;
