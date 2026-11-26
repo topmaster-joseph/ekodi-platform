@@ -6,7 +6,7 @@ const CAMPAIGNS=Object.freeze({
     date:'2026년 12월 5일(토) 오전 10시',deadline:'2026년 11월 27일(금) 낮 12시',
     venue:'목포 서산초등학교 후문 버스 정류장',capacity:50,
     unitPrice:1300,bank:'농협 351-1185-2874-13',accountHolder:'토끼와거북',
-    host:'목포국제기독학교 · 전남기독신문사 · 에코디선교회 등 지역 협력단체',
+    host:'목포국제기독학교, (사)Hearts&Hands, 에코디선교회, 믿음회, 목포크리스찬아카데미, 목포평강교회, 목포장로교회, 목포충현교회, 목포예찬교회',
     organizer:'토끼와거북',contact:'061-274-1007 / 010-6603-8877',
     summary:'이웃의 겨울을 따뜻하게 하는 연탄 배달에 함께해 주세요. 직접 봉사하거나 연탄을 후원할 수 있습니다.'
   })
@@ -19,6 +19,20 @@ const page=(title,body,robots='index,follow')=>
 const VOLUNTEER_MAIN_IMAGE='https://d2ol7oe51mr4n9.cloudfront.net/user_3IgFYuI0BG12rOdEtYmFORAqXKR/1d0668d9-71d5-4fd7-8cbe-02a7e0a2e8a3.png';
 const COAL_MAIN_IMAGE='https://d2ol7oe51mr4n9.cloudfront.net/user_3IgFYuI0BG12rOdEtYmFORAqXKR/b92a8103-0ca0-427e-aa18-c2ba667c711c.png';
 const COAL_ORIGINAL_FLYER='https://d2ol7oe51mr4n9.cloudfront.net/user_3IgFYuI0BG12rOdEtYmFORAqXKR/0e814c8e-34ca-4768-b1c0-66c3f6a61a53.jpg';
+/* Source copy transcribed from the original 2026-12-05 12th coal-delivery flyer.
+   Keep its testimony, scripture references, history, supporters and application
+   information intact; presentation can change without rewriting the source. */
+const COAL_SOURCE=Object.freeze({
+ title:'12회 사랑의 연탄 배달',
+ timing:'2026년12월5일(토) 오전 10시, 봉사시간 인정',
+ lead:'지역교회와 목포국제기독학교, 기독시민단체, 선교단체와 함께 12회 사랑의 연탄배달을 합니다.',
+ faith:'하나님께서는 죄 없는 유일한 아들 예수님을 이 땅에 보내시고 우리의 죄를 대신하여 십자가 죽으심과 부활을 믿는 우리에게 죽음과 사망에서 구원하여 생명을 주셨습니다. 주는 것이 받는 것보다 복이 있다(행20:35), 가난한 자를 불쌍히 여기는 것은 여호와께 꾸어 드리는 것이니 그의 선행을 그에게 갚아 주시리라(잠19:17) 자기의 재물을 가난한 사람들에게 아낌없이 나누어 주었으니, 그의 의로움은 영원히 남을 것이며(시112:9) 라는 말씀대로 순종하는 삶이 복된 인생입니다.',
+ history:'작년에 55명의 초중고, 대학청년, 학부모, 목회자, 외국인 유학생들이 참석한 가운데 310만원 연탄 기부금을 모아 연탄, 난방 보일러기름, 다문화 유학생, 우크라이나 아동, 장애형제를 지원하였습니다. 금년에도 유달동 주민센터의 추천을 받아 사랑의 연탄배달과 난방 보일러 등 사랑의 나눔을 하게 되어 기쁘고 기대 됩니다.',
+ children:'연탄 한 장 친구들이 돼지 저금통과 용돈을 모아 연탄을 구입하고 추운 날씨에도 이마에 땀방울을 흘리면서 참여하는데 “삶으로 가르치는 것만이 남는다”는 말처럼 자녀들에게 살아있는 교육과 더불어 살아가는 아름다운 추억을 만들 것입니다. 건강하고 좋은 추억을 먹고 자란 우리 자녀가 건강하게 자라나며 이웃을 섬기는 멋진 친구들이 됩니다. 함께해요.',
+ registration:'선착순 50명(11월27일 낮 12시까지 신청서, 전화, 문자, 구글폼으로 신청)',
+ support:'연탄(1장 1,300원), 보일러등유 오십만원',
+ commitment:'연탄 기부도 하고 기쁜 마음과 몸으로 사랑의 봉사를 신청합니다.'
+});
 function homePage(){
   const c=CAMPAIGNS['2026-coal-delivery'],route='/volunteer/activities/'+encodeURIComponent(c.slug);
   const other=Object.values(CAMPAIGNS).filter(item=>item.slug!==c.slug);
@@ -36,9 +50,28 @@ function detailPage(c){
  const pledge='<div class="choice" data-volunteer-pledge hidden><label>'+t('bricks','후원할 연탄 수량 (장)')+'<input name="bricks" type="number" min="1" max="10000" step="1" value="10" disabled></label><p><strong data-pledge-total>13,000원</strong> · '+t('perBriquette','연탄 1장 1,300원')+'</p><p data-v-i18n="donationPayment">후원 신청만으로 입금이 완료되지는 않습니다. 아래 계좌로 별도 이체해 주세요.</p></div>';
  const consent='<label class="check"><input name="privacyConsent" type="checkbox" required><span><strong data-v-i18n="privacyHeading">개인정보 수집·이용에 동의합니다. *</strong> <span data-v-i18n="privacyDetails">수집 항목: 이름·연락처·선택한 소속·신청 내용. 목적: 행사 신청 확인, 현장 안내, 후원 약정 및 연락. 행사 운영과 확인에 필요한 기간만 이용하며, 삭제 등 문의는 행사 연락처로 요청할 수 있습니다.</span></span></label><label class="check"><input name="photoConsent" type="checkbox"><span data-v-i18n="photoConsent">활동 사진·영상 촬영 및 게시에 동의합니다. (선택, 거부해도 신청 가능)</span></label>';
  const form='<form id="volunteer-form" data-volunteer-form data-campaign="'+escapeHtml(c.slug)+'" novalidate><h2 data-v-i18n="formTitle">온라인 신청서</h2><p class="subtle" data-v-i18n="guestNote">로그인하지 않아도 신청할 수 있습니다. 필수 정보만 입력해 주세요.</p><div class="honeypot" aria-hidden="true"><label>홈페이지<input name="website" tabindex="-1" autocomplete="off"></label></div>'+fields+volunteer+pledge+'<label class="note-label">'+t('note','전달할 말씀 (선택)')+'<textarea name="note" maxlength="500" rows="3" data-v-placeholder="notePlaceholder" placeholder="현장 도움이 필요하거나 주최 측에 알릴 사항"></textarea></label>'+consent+'<button class="cta apply" type="submit" data-v-i18n="submit">신청 접수하기</button><p role="status" aria-live="polite" class="form-status" data-status tabindex="-1"></p></form>';
- const info='<aside class="sidecard"><p class="eyebrow">EVENT INFORMATION</p><h2 data-v-i18n="activityInfo">활동 안내</h2><dl><div><dt data-v-i18n="dateLabel">일시</dt><dd data-v-i18n="eventDate">'+escapeHtml(c.date)+'</dd></div><div><dt data-v-i18n="venueLabel">모임 장소</dt><dd data-v-i18n="venue">'+escapeHtml(c.venue)+'</dd></div><div><dt data-v-i18n="deadlineLabel">신청 마감</dt><dd data-v-i18n="deadline">'+escapeHtml(c.deadline)+'</dd></div><div><dt data-v-i18n="capacityLabel">참가 정원</dt><dd>'+c.capacity+'<span data-v-i18n="peopleUnit">명</span></dd></div><div><dt data-v-i18n="organizerLabel">주관</dt><dd data-v-i18n="organizer">'+escapeHtml(c.organizer)+'</dd></div><div><dt data-v-i18n="contactLabel">연락처</dt><dd>'+escapeHtml(c.contact)+'</dd></div></dl><hr><h3 data-v-i18n="donationInfo">연탄 후원 안내</h3><p data-v-i18n="priceEach">연탄 1장 '+c.unitPrice.toLocaleString('ko-KR')+'원</p><p class="bank">'+escapeHtml(c.bank)+'</p><p data-v-i18n="accountHolder">예금주: '+escapeHtml(c.accountHolder)+'</p><p class="subtle" data-v-i18n="bankCaveat">은행 이체는 별도로 진행합니다. 입금 여부는 담당자가 확인합니다.</p><a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(c.venue)+'" target="_blank" rel="noopener noreferrer" data-v-i18n="mapLink">모임 장소 지도 보기</a></aside>';
- const hero='<section class="wrap volunteer-event-head"><div class="volunteer-detail-toolbar"><a class="back" href="/volunteer" data-v-i18n="back">← 봉사활동 목록</a><div class="volunteer-language" role="group" aria-label="Language / 언어"><button type="button" data-v-lang="ko" aria-pressed="true">한국어</button><button type="button" data-v-lang="en" aria-pressed="false">English</button></div><a class="outline volunteer-admin-link" href="/volunteer/admin" data-v-i18n="adminLink">관리자 페이지</a></div><h1 class="visually-hidden" data-v-i18n="eventTitle">'+escapeHtml(c.title)+'</h1><a class="volunteer-coal-banner" href="#volunteer-form" data-v-aria="bannerToForm" aria-label="봉사·후원 신청서로 이동"><img src="'+COAL_MAIN_IMAGE+'" width="1672" height="448" alt="'+escapeHtml(c.title)+' - '+escapeHtml(c.date)+'" loading="eager" fetchpriority="high" decoding="async" referrerpolicy="no-referrer"></a><div class="volunteer-event-bar"><span data-registration-state data-v-i18n="checking">실시간 접수 확인 중</span><a class="cta" data-v-i18n="startApplication" href="#volunteer-form">신청서 작성하기</a></div></section>';
- return page(c.title,hero+'<section class="wrap two-col"><div>'+form+'</div>'+info+'</section><section class="wrap caveat"><h2 data-v-i18n="safetyTitle">참여 전 확인사항</h2><p data-v-i18n="safetyNote">행사 당일 안전 안내에 따라 이동하고, 추운 날씨에 대비해 따뜻한 옷과 장갑을 준비해 주세요. 행사 시간은 오전 10시 모임 기준이며 종료 시각은 현장 안내를 따릅니다.</p><p>'+t('partnerLabel','공동 주최:')+' <span data-v-i18n="partners">'+escapeHtml(c.host)+'</span></p></section>');
+ const info='<aside class="sidecard"><p class="eyebrow">EVENT INFORMATION</p><h2 data-v-i18n="activityInfo">활동 안내</h2><dl><div><dt data-v-i18n="dateLabel">일시</dt><dd data-v-i18n="eventDate">'+escapeHtml(c.date)+'</dd></div><div><dt data-v-i18n="venueLabel">모임 장소</dt><dd data-v-i18n="venue">'+escapeHtml(c.venue)+'</dd></div><div><dt data-v-i18n="deadlineLabel">신청 마감</dt><dd data-v-i18n="deadline">'+escapeHtml(c.deadline)+'</dd></div><div><dt data-v-i18n="capacityLabel">참가 정원</dt><dd>'+c.capacity+'<span data-v-i18n="peopleUnit">명</span></dd></div><div><dt data-v-i18n="organizerLabel">주관</dt><dd data-v-i18n="organizer">'+escapeHtml(c.organizer)+'</dd></div><div><dt data-v-i18n="contactLabel">연락처</dt><dd>'+escapeHtml(c.contact)+'</dd></div></dl><p class="volunteer-side-footnote" data-v-i18n="sourceRegistration">'+escapeHtml(COAL_SOURCE.registration)+'</p><hr><h3 data-v-i18n="donationInfo">연탄 후원 안내</h3><p class="volunteer-source-support" data-v-i18n="sourceSupport">'+escapeHtml(COAL_SOURCE.support)+'</p><p data-v-i18n="priceEach">연탄 1장 '+c.unitPrice.toLocaleString('ko-KR')+'원</p><p class="bank">'+escapeHtml(c.bank)+'</p><p data-v-i18n="accountHolder">예금주: '+escapeHtml(c.accountHolder)+'</p><p class="subtle" data-v-i18n="bankCaveat">은행 이체는 별도로 진행합니다. 입금 여부는 담당자가 확인합니다.</p><a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(c.venue)+'" target="_blank" rel="noopener noreferrer" data-v-i18n="mapLink">모임 장소 지도 보기</a></aside>';
+ const storyline='<section class="wrap volunteer-story" aria-labelledby="volunteer-story-heading">'+
+  '<div class="volunteer-story-lead"><p class="eyebrow" data-v-i18n="storyEyebrow">사랑의 연탄배달</p><h2 id="volunteer-story-heading" data-v-i18n="storyHeading">'+escapeHtml(COAL_SOURCE.title)+'</h2>'+
+  '<p class="volunteer-story-first" data-v-i18n="storyLead">'+escapeHtml(COAL_SOURCE.lead)+'</p>'+
+  '<p class="volunteer-story-commitment" data-v-i18n="storyCommitment">'+escapeHtml(COAL_SOURCE.commitment)+'</p></div>'+
+  '<details class="volunteer-story-detail"><summary data-v-i18n="storyExpand">함께 나누는 믿음과 지난해의 이야기 읽기</summary>'+
+  '<div class="volunteer-story-copy"><h3 data-v-i18n="storyFaithTitle">말씀을 따라 나누는 삶</h3>'+
+  '<p data-v-i18n="storyFaith">'+escapeHtml(COAL_SOURCE.faith)+'</p>'+
+  '<h3 data-v-i18n="storyHistoryTitle">지난해의 나눔과 올해의 소망</h3>'+
+  '<p data-v-i18n="storyHistory">'+escapeHtml(COAL_SOURCE.history)+'</p>'+
+  '<h3 data-v-i18n="storyChildrenTitle">아이들과 함께하는 살아 있는 교육</h3>'+
+  '<p data-v-i18n="storyChildren">'+escapeHtml(COAL_SOURCE.children)+'</p></div></details>'+
+  '<details class="volunteer-story-detail volunteer-source-original"><summary data-v-i18n="storyOriginal">원본 안내문과 신청서 보기</summary>'+
+  '<a href="'+COAL_ORIGINAL_FLYER+'" rel="noopener noreferrer" target="_blank" aria-label="원본 안내문 확대 보기">'+
+  '<img src="'+COAL_ORIGINAL_FLYER+'" width="992" height="1403" loading="lazy" decoding="async" alt="12회 사랑의 연탄 배달: 원본 행사 사진, 안내문, 신청서"></a></details>'+
+  '</section>';
+ const quick='<div class="volunteer-event-quick"><p class="volunteer-service" data-v-i18n="sourceTiming">'+escapeHtml(COAL_SOURCE.timing)+'</p>'+
+  '<p class="volunteer-application-deadline" data-v-i18n="sourceRegistration">'+escapeHtml(COAL_SOURCE.registration)+'</p>'+
+  '<div class="volunteer-event-actions"><a class="cta" data-v-apply-mode="volunteer" data-v-i18n="applyVolunteer" href="#volunteer-form">봉사 참여 신청</a>'+
+  '<a class="outline" data-v-apply-mode="pledge" data-v-i18n="applyDonation" href="#volunteer-form">연탄 후원 신청</a></div></div>';
+ const hero='<section class="wrap volunteer-event-head"><div class="volunteer-detail-toolbar"><a class="back" href="/volunteer" data-v-i18n="back">← 봉사활동 목록</a><div class="volunteer-language" role="group" aria-label="Language / 언어"><button type="button" data-v-lang="ko" aria-pressed="true">한국어</button><button type="button" data-v-lang="en" aria-pressed="false">English</button></div><a class="outline volunteer-admin-link" href="/volunteer/admin" data-v-i18n="adminLink">관리자 페이지</a></div><h1 class="visually-hidden" data-v-i18n="eventTitle">'+escapeHtml(c.title)+'</h1><a class="volunteer-coal-banner" href="#volunteer-form" data-v-aria="bannerToForm" aria-label="봉사·후원 신청서로 이동"><img src="'+COAL_MAIN_IMAGE+'" width="1672" height="448" alt="'+escapeHtml(c.title)+' - '+escapeHtml(c.date)+'" loading="eager" fetchpriority="high" decoding="async" referrerpolicy="no-referrer"></a>'+quick+'<div class="volunteer-event-bar"><span data-registration-state data-v-i18n="checking">실시간 접수 확인 중</span><a class="cta" data-v-i18n="startApplication" href="#volunteer-form">신청서 작성하기</a></div></section>';
+ return page(c.title,hero+storyline+'<section class="wrap two-col"><div>'+form+'</div>'+info+'</section><section class="wrap caveat"><h2 data-v-i18n="safetyTitle">참여 전 확인사항</h2><p data-v-i18n="safetyNote">행사 당일 안전 안내에 따라 이동하고, 추운 날씨에 대비해 따뜻한 옷과 장갑을 준비해 주세요. 행사 시간은 오전 10시 모임 기준이며 종료 시각은 현장 안내를 따릅니다.</p><p>'+t('partnerLabel','주최:')+' <span data-v-i18n="partners">'+escapeHtml(c.host)+'</span></p><p data-v-i18n="organizerFooter">주관: 토끼와거북</p></section>');
 }
 function adminPage(){
  const header='<section class="wrap volunteer-admin-head"><div class="volunteer-admin-heading"><a class="back" href="/volunteer/activities/2026-coal-delivery">← 연탄봉사 신청페이지</a><span class="eyebrow">OPERATOR</span></div><h1>연탄봉사 신청·후원 관리</h1><p>봉사 신청자와 연탄 후원 약정은 별도로 접수·관리됩니다. 개인정보는 권한 있는 운영진만 확인할 수 있습니다.</p></section>';
