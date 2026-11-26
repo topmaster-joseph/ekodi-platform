@@ -39,7 +39,7 @@ export async function renderMallSupplierAdmin({ host, summary, token, card, stat
         if (/trip\.com/i.test(link)) return 'tripcom';
         return 'external';
       }
-      return 'own';
+      return 'seller';
     };
     const rows = new Map();
     for (const p of privateData.products || []) {
