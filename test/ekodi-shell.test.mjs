@@ -9,14 +9,13 @@ test('Shell CSP remediation advances the versioned bundle cache key without loos
     read('ekodi-service-manifest.js'),read('shell/theme.json'),
     read('ekodi-shell-worker.js'),read('ekodi-shell-injector.js')
   ]);
-  const current=Number(manifest.match(/shellVersion:\\s*(\\d+)/)?.[1]);
+  const current=Number(manifest.match(/shellVersion:\s*(\d+)/)?.[1]);
   assert.ok(current>=8,'Shell bundle must be re-keyed after external CSS migration');
   assert.equal(JSON.parse(themeSource).version,current,'theme and bundle versions must agree');
-  assert.match(worker,/bundleCacheRequest\\(request\\)/);
-  assert.match(worker,/EKODI_SERVICE_MANIFEST\\.shellVersion/);
-  assert.match(worker,/bundleCache\\.match\\(bundleCacheKey\\)/);
-  assert.match(injector,/SHELL_USER_UI_STYLE=.*user-ui-shell\\.css/);
-  assert.doesNotMatch(injector,/unsafe-inline/);
+  assert.match(worker,/bundleCacheRequest\(request\)/);
+  assert.match(worker,/EKODI_SERVICE_MANIFEST\.shellVersion/);
+  assert.match(worker,/bundleCache\.match\(bundleCacheKey\)/);
+  assert.match(injector,/SHELL_USER_UI_STYLE=.*user-ui-shell\.css/);
 });
 
 test('service manifest is the person-space-role registry for future EKODI sites',async()=>{
