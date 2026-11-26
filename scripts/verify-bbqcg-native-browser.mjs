@@ -15,6 +15,13 @@ export const BBQCG_NATIVE_PHRASES=Object.freeze({
   launch:'11월 24일 개점',
   paymentLocked:'온라인 결제 및 매장 자동 접수는 아직 준비 중입니다.'
 });
+// Exact stable CSP style violations found in the native EKODI browser before
+// the protected Shell fixes. Unrelated Cloudflare analytics/dynamic inline
+// scripts are deliberately not allowlisted or treated as solved.
+export const BBQCG_FIXED_SHELL_STYLE_HASHES=Object.freeze([
+  'sha256-wo6UxAABjRaoc7daJHFwNEhchuZLrGAZznw5zT+FPg4=',
+  'sha256-dUSx2u1Qfvq55euG9asAxjp3uojrtLlsPvWBF7tHRFA='
+]);
 export function bbqcgNativeTask(profile){
   if(!BBQCG_NATIVE_PROFILES.includes(profile))throw Error('BBQCG_PROFILE_NOT_ALLOWED');
   return {
@@ -49,6 +56,10 @@ export function verifyBbqcgNativeReceipt(report,profile){
     ?report.httpErrorResponses.filter(item=>Number(item?.status)===404&&
       /^https:\/\/ekodi\.kr\/workspace-api\/v1\/site-chrome\/public(?:[?#]|$)/.test(String(item?.url||'')))
     :null;
+  const errors=Array.isArray(report?.consoleErrors)?report.consoleErrors:null;
+  const blockedFixedShellStyles=errors
+    ?errors.filter(message=>BBQCG_FIXED_SHELL_STYLE_HASHES.some(hash=>String(message).includes(hash)))
+    :null;
   const required=['waitFor','assertText','assertDisabled','screenshot'];
   const checks={
     correctProvider:report?.virtualizationProvider==='ekodi-background-browser-worker',
@@ -70,13 +81,15 @@ export function verifyBbqcgNativeReceipt(report,profile){
     noMutation:report?.allowMutation===false&&Array.isArray(report?.blockedMutations)&&
       report.blockedMutations.every(item=>!['GET','HEAD','OPTIONS'].includes(String(item?.method||'').toUpperCase())),
     noPageErrors:!(report?.pageErrors||[]).length,
-    noMissingNativeChrome:siteChrome404s!==null&&siteChrome404s.length===0
+    noMissingNativeChrome:siteChrome404s!==null&&siteChrome404s.length===0,
+    noBlockedFixedShellStyles:blockedFixedShellStyles!==null&&blockedFixedShellStyles.length===0
   };
   return {ok:Object.values(checks).every(Boolean),profile,checks,
     viewport:report?.viewport||null,
     navigationPerformance:report?.performance||null,
     pageErrorCount:report?.pageErrors?.length||0,
     missingNativeChrome404Count:siteChrome404s?.length??null,
+    blockedFixedShellStyleCount:blockedFixedShellStyles?.length??null,
     blockedWriteAttempts:report?.blockedMutations?.length||0,
     screenshots:report?.screenshots?.length||0};
 }
