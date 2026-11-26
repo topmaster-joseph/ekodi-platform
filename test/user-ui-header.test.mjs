@@ -32,9 +32,9 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(header,/async function siteChrome\(\)/);
   assert.match(header,/USER_SURFACES=new Set\(\['public','workspace'\]\)/);
   assert.match(header,/DISABLED_MODES=new Set\(\['off','hidden','immersive'\]\)/);
-  assert.match(header,/position:fixed!important/);
-  assert.match(header,/left:50%!important/);
-  assert.match(header,/text-align:center!important/);
+  assert.match(sharedCss,/position:fixed!important/);
+  assert.match(sharedCss,/left:50%!important/);
+  assert.match(sharedCss,/text-align:center!important/);
   assert.match(header,/data-ekodi-user-header-spacer/);
   assert.match(header,/--ekodi-user-header-height/);
   assert.match(header,/window\.EKODIUserUIHeader/);
@@ -45,6 +45,18 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(header,/--ekodi-user-content-inline-size/);
   assert.match(header,/main-aligned-v1/);
   assert.doesNotMatch(header,/body\s*\{[^}]*text-align\s*:\s*center/is);
+  // Read-only CSP guarantees: Shell shared chrome styles are external and
+  // retain the previous responsive layout without runtime <style> injection.
+  for(const runtime of [header,footerClient]){
+    assert.match(runtime,/link\.rel='stylesheet'/);
+    assert.match(runtime,/link\.href='\/shell\/user-ui-shell\.css'/);
+    assert.match(runtime,/data-ekodi-user-ui-style/);
+    assert.doesNotMatch(runtime,/document\.createElement\(['"]style['"]\)/);
+    assert.doesNotMatch(runtime,/style\.textContent\s*=/);
+  }
+  assert.match(sharedCss,/EKODI-STRICT-CSP-CHROME-001/);
+  assert.match(sharedCss,/footer\.foot \.foot-inner > \.ekodi-footer-traffic/);
+
 
   assert.equal(EKODI_USER_FOOTER.version,3);
   assert.equal(EKODI_USER_FOOTER.operator.businessRegistrationNumber,'213-13-01959');
@@ -75,8 +87,8 @@ test('user UI header/footer/language are shared user-surface-only modules',async
   assert.match(footerClient,/const VERSION=7/);
   assert.match(footerClient,/https:\/\/ekodi\.kr\/workspace-api\/v1\/site-chrome\/public/);
   assert.match(footerClient,/siteConfigPromise/);
-  assert.match(footerClient,/--ekodi-user-content-inline-size/);
-  assert.match(footerClient,/--ekodi-user-canvas-max,1240px/);
+  assert.match(sharedCss,/--ekodi-user-content-inline-size/);
+  assert.match(sharedCss,/--ekodi-user-canvas-max,1240px/);
   assert.doesNotMatch(footerClient,/min\(1040px/);
   assert.match(footerClient,/__EKODI_USER_FOOTER_CONFIG__/);
   assert.match(footerClient,/user-footer\.json/);
@@ -251,16 +263,17 @@ test('site-owned chrome takes precedence over shell-generated layout',async()=>{
 
 test('BBQ native footer keeps mandatory copyright and visit metrics inside its centered grid',async()=>{
  const footer=await read('shell/user-ui-footer.js');
+ const css=await read('shell/user-ui-shell.css');
  assert.match(footer,/function bbqCenteredFooterHost\(footer\)/);
  assert.match(footer,/location\.pathname/);
  assert.match(footer,/footer\.matches\('\.foot,\.promise-footer'\)/);
  assert.match(footer,/footer\.querySelector\('\.foot-inner,\.promise-footer-inner'\)/);
  assert.match(footer,/host\?\.querySelector\('\.foot-copy,\.footer-copy'\)\|\|footer/);
  assert.match(footer,/appendText\(bbqCenteredFooterHost\(footer\)\|\|footer\.querySelector/);
- assert.match(footer,/footer\.foot \.foot-inner > \.ekodi-footer-traffic/);
- assert.match(footer,/footer\.promise-footer \.promise-footer-inner > \.ekodi-footer-traffic/);
- assert.match(footer,/grid-column:1\/-1!important/);
- assert.match(footer,/footer\.foot \.foot-copy > \[data-ekodi-copyright-credit\]/);
+ assert.match(css,/footer\.foot \.foot-inner > \.ekodi-footer-traffic/);
+ assert.match(css,/footer\.promise-footer \.promise-footer-inner > \.ekodi-footer-traffic/);
+ assert.match(css,/grid-column:1\/-1!important/);
+ assert.match(css,/footer\.foot \.foot-copy > \[data-ekodi-copyright-credit\]/);
  assert.match(footer,/EKODI \(에코디\)\. All rights reserved/);
  // No blanket service exception or removal of the licensed copyright.
  assert.match(footer,/SERVICE_OWNED_FOOTER_SERVICES=new Set\(\)/);

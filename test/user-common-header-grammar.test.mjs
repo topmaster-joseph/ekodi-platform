@@ -48,7 +48,11 @@ test('adoption does not force fixed positioning or change authorization state',a
   const [js,css]=await Promise.all([read('shell/user-ui-header.js'),read('shell/user-ui-shell.css')]);
   const adoption=js.slice(js.indexOf('function standardHeaderRow('),js.indexOf('function bindHomeAnchor('));
   assert.doesNotMatch(adoption,/location\.href=|fetch\(|auth\.|localStorage|document\.createElement\('a'\)/);
-  const style=css.slice(css.indexOf('/* EKODI COMMON HEADER GRAMMAR v1'));
+  // The grammar segment does not own the separate pre-existing fixed header implementation.
+  const grammarStart=css.indexOf('/* EKODI COMMON HEADER GRAMMAR v1');
+  const chromeStart=css.indexOf('/* EKODI-STRICT-CSP-CHROME-001');
+  assert.ok(grammarStart>=0 && chromeStart>grammarStart);
+  const style=css.slice(grammarStart,chromeStart);
   assert.doesNotMatch(style,/position\s*:\s*(?:fixed|sticky)/);
   assert.doesNotMatch(style,/display\s*:\s*none\s*!important/);
   assert.match(style,/\[hidden\]/);
