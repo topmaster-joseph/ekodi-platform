@@ -20,6 +20,7 @@ test('all registered EKODI user services explicitly inherit canonical shared aut
 test('bundled shared shell serves the user login component on public and workspace surfaces',async()=>{
   const worker=await read('ekodi-shell-worker.js');
   const source=await read('shell/unified-user-auth.js');
+  const sharedCss=await read('shell/user-ui-shell.css');
   new Script(source,{filename:'shell/unified-user-auth.js'});
   assert.match(worker,/unifiedAuthUrl\.pathname='\/unified-user-auth\.js'/);
   assert.match(worker,/\$\{linkCompat\}\\n\$\{unifiedAuth\}\\n/);
@@ -29,6 +30,15 @@ test('bundled shared shell serves the user login component on public and workspa
   assert.match(source,/shortName\(display\)/);
   assert.match(source,/chars\.length>12/);
   assert.match(source,/profile-api\/me/);
+  // Public login remains visible without injecting blocked inline style.
+  assert.match(source,/link\.rel='stylesheet'/);
+  assert.match(source,/link\.href='\/shell\/user-ui-shell\.css'/);
+  assert.match(source,/data-ekodi-user-ui-style/);
+  assert.doesNotMatch(source,/document\.createElement\(['"]style['"]\)/);
+  assert.doesNotMatch(source,/style\.textContent\s*=/);
+  assert.match(sharedCss,/EKODI-UNIFIED-AUTH-CSP-001/);
+  assert.match(sharedCss,/\.ekodi-unified-auth\{/);
+  assert.match(sharedCss,/\.ekodi-unified-auth__link:focus-visible/);
   assert.doesNotMatch(source,/localStorage\.setItem|sessionStorage\.setItem|document\.cookie=/);
   assert.doesNotMatch(source,/service_role|SUPABASE_SERVICE_ROLE_KEY/i);
 });
