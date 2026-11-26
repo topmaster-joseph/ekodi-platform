@@ -82,3 +82,46 @@
  .volunteer-admin-section table{min-width:590px;font-size:13px}
  .volunteer-admin-section table td,.volunteer-admin-section table th{padding:11px 9px}
 }
+
+/* 12th coal-delivery: faithfully transcribed original notice, reorganized for reading and applying. */
+.volunteer-event-quick{display:grid;gap:12px;padding:18px 2px 2px}
+.volunteer-service{color:var(--ink);font-size:clamp(15px,1.8vw,19px);font-weight:800;margin:0;line-height:1.55}
+.volunteer-application-deadline{font-size:14px;color:var(--muted);margin:0;line-height:1.6}
+.volunteer-event-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:4px}
+.volunteer-event-actions .cta,.volunteer-event-actions .outline{display:flex;align-items:center;justify-content:center;text-align:center;min-height:52px;font-weight:780;text-decoration:none;padding:13px 15px;font-size:15px}
+.volunteer-event-actions .outline{background:#fff}
+.volunteer-event-bar{border-top:1px solid var(--line);margin-top:19px;padding-top:15px}
+.volunteer-story{margin-top:5px;margin-bottom:20px}
+.volunteer-story-lead{border-top:1px solid var(--line);padding:26px 0 18px}
+.volunteer-story-lead .eyebrow{margin:0 0 8px}
+.volunteer-story-lead h2{font-size:clamp(22px,3vw,31px);line-height:1.35;letter-spacing:-.04em;margin:0 0 17px}
+.volunteer-story-first{max-width:900px;margin:0 0 12px;font-size:17px;line-height:1.85;word-break:keep-all}
+.volunteer-story-commitment{font-size:15px;color:var(--green);font-weight:750;margin:0 0 2px;line-height:1.75;word-break:keep-all}
+.volunteer-story-detail{border-top:1px solid var(--line);padding:0}
+.volunteer-story-detail:last-child{border-bottom:1px solid var(--line)}
+.volunteer-story-detail summary{font-weight:750;font-size:15px;color:var(--ink);cursor:pointer;padding:16px 10px 16px 0;line-height:1.5}
+.volunteer-story-detail summary::marker{color:var(--green)}
+.volunteer-story-detail summary:focus-visible{outline:3px solid var(--green);outline-offset:3px}
+.volunteer-story-copy{max-width:940px;padding:1px 0 24px}
+.volunteer-story-copy h3{font-size:18px;letter-spacing:-.025em;color:var(--ink);margin:22px 0 8px}
+.volunteer-story-copy p{margin:0;line-height:1.95;font-size:15px;color:#354840;word-break:keep-all}
+.volunteer-source-original>a{display:block;max-width:690px;margin:4px auto 20px}
+.volunteer-source-original img{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:8px}
+.volunteer-source-support{font-size:14px;line-height:1.7;word-break:keep-all}
+.volunteer-side-footnote{margin:14px 0 0;font-size:13px;line-height:1.6;color:var(--muted)}
+@media(max-width:700px){
+ .volunteer-event-quick{gap:8px;padding:12px 0 0}
+ .volunteer-service{font-size:15px}
+ .volunteer-application-deadline{font-size:12px}
+ .volunteer-event-actions{gap:8px}
+ .volunteer-event-actions .cta,.volunteer-event-actions .outline{font-size:13px;min-height:48px;padding:11px 7px}
+ .volunteer-event-bar{margin-top:12px}
+ .volunteer-story{margin-top:0;padding-top:0}
+ .volunteer-story-lead{padding:20px 0 15px}
+ .volunteer-story-lead h2{font-size:23px}
+ .volunteer-story-first{font-size:15px;line-height:1.8}
+ .volunteer-story-commitment{font-size:14px}
+ .volunteer-story-detail summary{font-size:14px}
+ .volunteer-story-copy h3{font-size:16px}
+ .volunteer-story-copy p{font-size:14px;line-height:1.85}
+}
