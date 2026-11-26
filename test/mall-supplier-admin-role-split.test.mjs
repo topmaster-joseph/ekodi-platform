@@ -18,6 +18,11 @@ test('supplier overview is in the existing Mall admin shell with site-local capa
   assert.match(view, /privateData\.scope !== 'operator-read-only'/);
   assert.ok(view.indexOf("privateData.scope !== 'operator-read-only'") < view.indexOf("Promise.allSettled"));
   assert.doesNotMatch(view, /method:\s*['"](?:POST|PUT|PATCH|DELETE)['"]|setOrder\(/);
+  const api = source('../sites/ekodi-mall/api/worker.js');
+  const selected = api.slice(api.indexOf('async function listOperatorProviderProducts'), api.indexOf('async function opsAudit'));
+  assert.match(selected, /FROM products\\s+ORDER BY updated_at DESC/);
+  assert.doesNotMatch(selected, /WHERE COALESCE/);
+  assert.doesNotMatch(selected, /buyer_address|payment_account|buyer_phone/);
 });
 
 test('Mall administrator does not read external feeds if server denies cross-seller permission', async () => {
@@ -63,7 +68,8 @@ test('operator view shows zero-product Agoda, separates buyer checkout, and supp
   const response=(data)=>({ok:true,status:200,json:async()=>data});
   const products=[
     {id:'a',status:'published',checkoutReady:false,product:{saleType:'direct',name:'스테인리스 보관통',price:20000,category:'living'},seller:{displayName:'에코디'},supply:{provider:'domeggook'}},
-    {id:'b',status:'published',checkoutReady:true,product:{saleType:'direct',name:'자체 상품',price:5000,category:'gift'},seller:{displayName:'판매자 A'},source:{kind:'ekodibiz_own'}}
+    {id:'b',status:'published',checkoutReady:true,product:{saleType:'direct',name:'자체 상품',price:5000,category:'gift'},seller:{displayName:'에코디비즈'},source:{kind:'ekodibiz_own'}},
+    {id:'c',status:'draft',checkoutReady:false,product:{saleType:'direct',name:'개인 수제상품',price:7000,category:'craft'},seller:{displayName:'개인판매자'}}
   ];
   try {
     globalThis.document={querySelector:query=>fake[query.slice(1)],querySelectorAll:query=>query.includes('#mallSupplierTabs')?buttons:[]};
@@ -74,6 +80,7 @@ test('operator view shows zero-product Agoda, separates buyer checkout, and supp
       if(url==='/ekodimall/assets/provider-registry.json')return response({providers:[
         {id:'domeggook',label:'도매꾹·도매매',group:'상품',status:'회원오류 · 발주차단'},
         {id:'agoda',label:'아고다',group:'숙박',status:'제휴 검색링크 운영'},
+        {id:'seller',label:'판매자 직접등록',group:'직접',status:'등록 관리'},
         {id:'bookstore',label:'에코디서점',group:'출판',status:'도서 목록'},
         {id:'coupang',label:'쿠팡파트너스',group:'제휴',status:'외부 결제'}
       ]});
@@ -85,7 +92,7 @@ test('operator view shows zero-product Agoda, separates buyer checkout, and supp
     assert.deepEqual(requested.slice(0,1),['/ekodimall/api/api/internal/products/by-provider']);
     assert.equal(requested.length,4);
     assert.match(host.innerHTML,/아고다 · 0/);
-    assert.match(summary.innerHTML,/조회된 상품:4/);
+    assert.match(summary.innerHTML,/조회된 상품:5/);
     assert.match(fake.mallSupplierRows.innerHTML,/스테인리스 보관통/);
     assert.match(fake.mallSupplierRows.innerHTML,/상품 준비중/);
     assert.match(fake.mallSupplierRows.innerHTML,/외부 구매 연결/);
@@ -94,6 +101,9 @@ test('operator view shows zero-product Agoda, separates buyer checkout, and supp
     assert.match(fake.mallSupplierCount.textContent,/0건/);
     fake.mallSupplierTabs.listeners.click({target:{closest:()=>({dataset:{provider:'domeggook'}})}});
     assert.match(fake.mallSupplierRows.innerHTML,/스테인리스 보관통/);
+    assert.doesNotMatch(fake.mallSupplierRows.innerHTML,/자체 상품/);
+    fake.mallSupplierTabs.listeners.click({target:{closest:()=>({dataset:{provider:'seller'}})}});
+    assert.match(fake.mallSupplierRows.innerHTML,/개인 수제상품/);
     assert.doesNotMatch(fake.mallSupplierRows.innerHTML,/자체 상품/);
     assert.equal(state.at(-1),'공급처별 조회');
   } finally {
