@@ -4,6 +4,15 @@ import { readFile } from 'node:fs/promises';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 
+test('live Shell acceptance refuses stale v7 and legacy bundled inline-style assets',async()=>{
+  const verifier=await read('scripts/verify-ekodi-shell-live.mjs');
+  assert.match(verifier,/Number\(health\.shellVersion\)<8/);
+  assert.match(verifier,/health:shellVersion:/);
+  assert.match(verifier,/ekodiUserUiStyle='external-csp-v1'/);
+  assert.match(verifier,/ekodiUserCharacterStyle='external-csp-v1'/);
+  assert.match(verifier,/shell:csp-external-style-source-missing/);
+});
+
 test('Shell CSP remediation advances the versioned bundle cache key without loosening CSP',async()=>{
   const [manifest,themeSource,worker,injector]=await Promise.all([
     read('ekodi-service-manifest.js'),read('shell/theme.json'),
