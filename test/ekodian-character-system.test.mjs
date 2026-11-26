@@ -35,7 +35,7 @@ test('EKODIAN renderer remains parseable and registry-aware',()=>{
   assert.doesNotThrow(()=>new vm.Script(rendererSource));
   assert.match(rendererSource,/character-registry\.js/);
   // Motion accessibility now lives in the CSP-safe external stylesheet.
-  assert.match(rendererSource,/user-character\\.css/);
+  assert.match(rendererSource,/user-character\.css/);
   assert.match(characterCss,/prefers-reduced-motion/);
   assert.match(characterCss,/animation:none!important/);
   assert.match(rendererSource,/payment/);
