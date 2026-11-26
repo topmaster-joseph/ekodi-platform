@@ -63,6 +63,7 @@ function runStudio(path){
     createElement:()=>({href:'',download:'',click(){},remove(){}}),
     body:{appendChild(){}}
   };
+  node('quantity').value='100'; // Mirror the HTML input's initial value in this minimal DOM stub.
   const context={document,location:{pathname:path},window:{location:{href:''},print(){}},
     URL:{createObjectURL:()=> 'blob:example',revokeObjectURL(){}},
     Blob,FileReader:class {},setTimeout(){},console};
