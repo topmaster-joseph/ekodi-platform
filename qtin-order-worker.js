@@ -1240,7 +1240,7 @@ async function exportCsv(env, id) {
   return '\ufeff' + lines.join('\r\n');
 }
 
-async function handleAdminApi(request, env, url) {
+async function handleAdminApi(request, env, url, now = new Date()) {
   if (isStaging(env)) return json({ error: 'staging_auth_required', dataMode: 'isolated-staging' }, 401, env, request.method);
   const auth = await adminSession(request, env);
   if (auth.error) return json({ error: auth.error }, auth.status, env);
@@ -1294,7 +1294,7 @@ async function handleAdminApi(request, env, url) {
     if (request.method === 'POST' && sub === '/approve') {
       const denied = write(); if (denied) return denied;
       const campaign = await getCampaign(env, id);
-      if (!campaign || campaignState(campaign) !== 'closed') return json({ error: '신청이 마감된 뒤에 최종 발주를 승인할 수 있습니다.' }, 409, env);
+      if (!campaign || campaignState(campaign, now) !== 'closed') return json({ error: '신청이 마감된 뒤에 최종 발주를 승인할 수 있습니다.' }, 409, env);
       const body = await readJson(request);
       const snap = await approvalSnapshot(env, id);
       if (!snap.orders) return json({ error: '결제완료 신청이 없어 발주할 도서가 없습니다.' }, 409, env);
@@ -1666,7 +1666,7 @@ export async function handleRequest(request, env, now = new Date()) {
       return json({ error: 'webhook_verification_failed' }, 500, env);
     }
   }
-  if (path === `${API}/admin` || path.startsWith(`${API}/admin/`)) return handleAdminApi(request, env, url);
+  if (path === `${API}/admin` || path.startsWith(`${API}/admin/`)) return handleAdminApi(request, env, url, now);
   if (path.startsWith(API)) return json({ error: 'not_found' }, 404, env, method);
 
   if (method !== 'GET' && method !== 'HEAD') return json({ error: '허용되지 않은 요청입니다.' }, 405, env, method);
