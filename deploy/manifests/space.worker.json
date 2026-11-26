@@ -743,6 +743,24 @@
         ]
       },
       {
+        "url": "https://ekodi.kr/volunteer/admin",
+        "statuses": [200],
+        "redirect": "manual",
+        "expect": [
+          "연탄봉사 신청·후원 관리",
+          "봉사 신청자 명단",
+          "연탄 후원 약정",
+          "data-volunteer-rows",
+          "data-pledge-rows",
+          "/volunteer/assets/volunteer.js"
+        ],
+        "headerExpect": [
+          "x-ekodi-route: volunteer-public",
+          "x-robots-tag: noindex",
+          "cache-control: no-store"
+        ]
+      },
+      {
         "url": "https://ekodi.kr/volunteer/activities/2026-coal-delivery",
         "statuses": [
           200
