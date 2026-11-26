@@ -1,4 +1,6 @@
 import test from 'node:test';
+// Execute non-tenant BBQ and Education fetch-boundary tests in the protected Shell CI lane.
+import './education-non-tenant-chrome.test.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { shellCsp } from '../ekodi-shell-injector.js';
