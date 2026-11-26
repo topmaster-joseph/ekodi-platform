@@ -51,3 +51,31 @@ test('registration enforces one Person but does not imply tenant, billing, or pl
   assert.match(boundary,/이메일 문자열 일치만으로 자동 통합하지 않음|이메일.*자동.*병합/);
   assert.match(boundary,/서버가 EKODI ID의 실제 membership/);
 });
+
+
+test('strict CSP Shell modules keep all media, messages, illustration and design styles in first-party CSS',async()=>{
+  const modules=[
+    'shell/media-meeting-adapter.js',
+    'ekodi-message-ui.js',
+    'shell/illustration-system.js',
+    'shell/service-design-inheritance.js'
+  ];
+  const [sharedCss,...sources]=await Promise.all([
+    read('shell/user-ui-shell.css'),
+    ...modules.map(read)
+  ]);
+  assert.match(sharedCss,/EKODI-STRICT-CSP-SERVICES-002/);
+  for(let i=0;i<modules.length;i++){
+    const code=sources[i];
+    assert.match(code,/link\.rel='stylesheet'/,modules[i]);
+    assert.match(code,/link\.href='\/shell\/user-ui-shell\.css'/,modules[i]);
+    assert.match(code,/data-ekodi-user-ui-style/,modules[i]);
+    assert.doesNotMatch(code,/document\.createElement\(['"]style['"]\)/,modules[i]);
+    assert.doesNotMatch(code,/\.textContent\s*=\s*css\s*;/,modules[i]);
+    new Script(code,{filename:modules[i]});
+  }
+  assert.match(sharedCss,/\[data-ekodi-media-provider="youtube"\] \.ekodi-media-state/);
+  assert.match(sharedCss,/\.ekodi-message-ui__title/);
+  assert.match(sharedCss,/@media\(prefers-reduced-motion:reduce\)\{\.ekodi-illustration__float/);
+  assert.match(sharedCss,/:root\[data-ekodi-design-inheritance\]/);
+});
