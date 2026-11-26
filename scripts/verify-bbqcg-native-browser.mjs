@@ -58,13 +58,18 @@ export function verifyBbqcgNativeReceipt(report,profile){
       result.filter(x=>x.type==='assertText').length===3,
     paymentControlDisabled:result.some(x=>x.type==='assertDisabled'&&x.passed===true),
     noOutboundBrowserNavigation:report?.blockedExternalNavigationCount===0,
-    noMutation:!(report?.blockedMutations||[]).length,
+    // The public site can attempt telemetry POSTs. EKODI Native Browser
+    // prevents every non-GET/HEAD/OPTIONS request via context.route.
+    // Treat actively blocked attempts as proof of isolation, not as writes.
+    noMutation:report?.allowMutation===false&&Array.isArray(report?.blockedMutations)&&
+      report.blockedMutations.every(item=>!['GET','HEAD','OPTIONS'].includes(String(item?.method||'').toUpperCase())),
     noPageErrors:!(report?.pageErrors||[]).length
   };
   return {ok:Object.values(checks).every(Boolean),profile,checks,
     viewport:report?.viewport||null,
     navigationPerformance:report?.performance||null,
     pageErrorCount:report?.pageErrors?.length||0,
+    blockedWriteAttempts:report?.blockedMutations?.length||0,
     screenshots:report?.screenshots?.length||0};
 }
 export async function runBbqcgNativeCanary({runner=runTask,artifactRoot=ROOT}={}){
