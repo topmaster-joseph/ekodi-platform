@@ -29,6 +29,7 @@ export async function renderMallSupplierAdmin({ host, summary, token, card, stat
       if (id === 'ownerclan') return 'ownerclan';
       if (id) return 'external';
       if (kind === 'consigned_merchant') return 'merchant';
+      if (kind === 'ekodibiz_own') return 'own';
       if (p.product?.saleType === 'inquiry') return 'inquiry';
       if (p.product?.saleType === 'affiliate') {
         const link = String(p.product?.affiliateUrl || '');
