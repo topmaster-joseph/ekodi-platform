@@ -84,7 +84,7 @@ if(form){
  const placeholders=[...document.querySelectorAll('[data-v-placeholder]')];
  const arias=[...document.querySelectorAll('[data-v-aria]')];
  const originals=new Map(translatable.map(node=>[node,node.textContent]));
- const originalPlaceholders=new Map(placeholders.map(node=>[node,node.getAttribute('placeholder')||'']));
+ const originalPlaceholders=new Map(placeholders.map(node=>[node,node.placeholder||'']));
  const originalArias=new Map(arias.map(node=>[node,node.getAttribute('aria-label')||'']));
  const originalTitle=document.title;
  const initialLanguage=new URL(location.href).searchParams.get('lang');
