@@ -6,12 +6,14 @@ on:
     paths:
       - 'management/**'
       - 'test/management-public-browser-e2e.py'
+      - 'test/management-member-fixture-browser-e2e.py'
       - '.github/workflows/verify-management-public-browser.yml'
   push:
     branches: [main]
     paths:
       - 'management/**'
       - 'test/management-public-browser-e2e.py'
+      - 'test/management-member-fixture-browser-e2e.py'
       - '.github/workflows/verify-management-public-browser.yml'
 
 permissions:
@@ -42,3 +44,8 @@ jobs:
         run: |
           set -euo pipefail
           python test/management-public-browser-e2e.py
+      - name: Verify isolated member fixtures (not real production credentials)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python test/management-member-fixture-browser-e2e.py
