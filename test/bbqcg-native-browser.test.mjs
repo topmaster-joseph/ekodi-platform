@@ -47,7 +47,11 @@ test('receipt passes only real first-party browser, 200 pages and no mobile over
     }),profile).ok,false);
     assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{virtualizationProvider:'external'}),profile).ok,false);
     assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{pageErrors:[{name:'Error'}]}),profile).ok,false);
-    assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{blockedMutations:[{method:'POST'}]}),profile).ok,false);
+    assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{blockedMutations:[{method:'POST'}]}),profile).ok,true,
+      'telemetry POSTs are safe when the owned browser intercepts and blocks them');
+    assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{blockedMutations:[{method:'GET'}]}),profile).ok,false,
+      'unrecognized blocked-read record should not silently pass');
+    assert.equal(verifyBbqcgNativeReceipt(buildReport(profile,{allowMutation:true}),profile).ok,false);
     const bad=buildReport(profile);
     bad.results=bad.results.filter(x=>x.type!=='assertDisabled');
     assert.equal(verifyBbqcgNativeReceipt(bad,profile).ok,false);
