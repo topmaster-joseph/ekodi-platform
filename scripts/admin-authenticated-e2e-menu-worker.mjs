@@ -3,6 +3,7 @@ import path from 'node:path';
 import { chromium } from 'playwright';
 import { adminMenuOrder, getAdminMenuForSection, getAdminMenuGroupForSection, getAdminMenuItem } from '../admin-menu-registry.js';
 import { AI_ROUTER_SCORE_POLICY } from '../ai-router-score.js';
+import { verifyPublicationVisualProof } from './lib/admin-public-site-visual-proof.mjs';
 
 const token = String(process.env.E2E_ADMIN_TOKEN || '').trim();
 const menuId = String(process.env.E2E_MENU_ID || '').trim();
@@ -370,7 +371,10 @@ async function verifyPublicSiteControls(tab, alreadyActive, started) {
   if (!['button', 'auto'].includes(redirectMode)) throw new Error(`public-site-controls: invalid redirectMode ${redirectMode}`);
   if (!badge) throw new Error('public-site-controls: empty status badge');
   if (!message.includes('상태를 확인했습니다')) throw new Error(`public-site-controls: load confirmation missing: ${message}`);
-  results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, ...state, apiStatus: response.status, corsOrigin, domain: 'cgma.or.kr', publicStatus, maintenanceDisplayType, redirectMode, badge });
+  stage('public-site-controls-five-viewports');
+  const visualProof = await verifyPublicationVisualProof(page, artifactsDir);
+  results.push({ id: menuId, group, ok: true, durationMs: Date.now() - started, ...state, apiStatus: response.status, corsOrigin, domain: 'cgma.or.kr', publicStatus, maintenanceDisplayType, redirectMode, badge, visualProof:{readOnly:visualProof.readOnly,productionMutation:false,widths:visualProof.widths,screenshotCount:visualProof.screenshotCount,searchVerified:true,filterVerified:true,resetVerified:true} });
+  console.log('[PROD-E2E] public-site-controls: authenticated five viewport visual proof, read-only search/filter/reset and redacted screenshots PASS');
 }
 
 async function verifyAiSettings(tab, alreadyActive, started) {

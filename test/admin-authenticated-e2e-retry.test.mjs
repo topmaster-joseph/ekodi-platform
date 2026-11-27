@@ -127,7 +127,7 @@ test('architecture focus is isolated, read-only and not mistaken for all-menu ac
   assert.match(workflow,/inputs\.focus_menu == 'architecture'/);
   assert.match(workflow,/architecture-focused-production-/);
   assert.match(workflow,/if: \$\{\{ inputs\.focus_menu == 'all' \}\}/);
-  assert.match(retry,/const focusedDiagnostic = \['social-accounts','architecture'\]/);
+  assert.match(retry,/const focusedDiagnostic = \['social-accounts','architecture','public-site-controls'\]/);
   assert.match(retry,/productionConvergenceAttempts = focusOnly \? 1 : 36/);
   assert.match(retry,/focused read-only diagnostic \(not full-suite certification\)/);
   assert.match(worker,/ADMIN-ARCH-ISOLATED-PROOF-20261029/);
@@ -140,4 +140,34 @@ test('architecture focus is isolated, read-only and not mistaken for all-menu ac
   assert.match(worker,/sample\.layerOverflow>2/);
   assert.match(worker,/page\.setViewportSize\(\{width:1440,height:1100\}\)/);
   assert.doesNotMatch(worker,/setInterval\(|process\.env\.E2E_ADMIN_TOKEN\s*=/);
+});
+
+test('publication controls focused proof uses a genuine read-only Admin session and five redacted viewports',async()=>{
+  const [scope,worker,retry,workflow,visual]=await Promise.all([
+    readFile(new URL('../scripts/lib/admin-e2e-menu-scope.mjs',import.meta.url),'utf8'),
+    workerSource(),retrySource(),productionWorkflowSource(),
+    readFile(new URL('../scripts/lib/admin-public-site-visual-proof.mjs',import.meta.url),'utf8')
+  ]);
+  assert.match(scope,/\['social-accounts', 'architecture', 'public-site-controls'\]/);
+  assert.match(retry,/\['social-accounts','architecture','public-site-controls'\]/);
+  assert.match(workflow,/^\s*-\s*public-site-controls\s*$/m);
+  assert.match(workflow,/public-site-controls-focused-production-/);
+  assert.match(workflow,/admin-public-site-controls-proof-/);
+  assert.match(workflow,/Preserve completed publication visual proof from full Admin verification/);
+  assert.match(workflow,/public-site-controls-geometry\.json/);
+  assert.match(workflow,/public-site-controls-\*\.png/);
+  assert.match(worker,/verifyPublicationVisualProof\(page, artifactsDir\)/);
+  assert.match(visual,/PUBLIC_SITE_VISUAL_WIDTHS = Object\.freeze\(\[320, 390, 768, 1366, 1440\]\)/);
+  assert.match(visual,/page\.setViewportSize\(\{width, height:/);
+  assert.match(visual,/documentOverflow > 2/);
+  assert.match(visual,/trackCount !== \(width <= 900 \? 1 : 2\)/);
+  assert.ok(visual.includes(String.raw`gridTemplateColumns.split(/\s+/)`), 'measure real CSS grid columns by whitespace');
+  assert.match(visual,/search\.fill\('cgma'\)/);
+  assert.match(visual,/filter\.selectOption\('public'\)/);
+  assert.match(visual,/\[data-psc-reset\]/);
+  assert.match(visual,/if \(changes\.length !== 0\)/);
+  assert.match(visual,/maskColor:'#d1d5db'/);
+  assert.match(visual,/productionMutation:false/);
+  assert.doesNotMatch(visual,/method:\s*['"]PUT['"]|setInterval\(|process\.env\.E2E_ADMIN_TOKEN\s*=/);
+  assert.match(workflow,/Revoke short-lived E2E session/);
 });

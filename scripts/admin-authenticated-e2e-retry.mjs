@@ -21,7 +21,7 @@ for (const event of ['uncaughtException', 'unhandledRejection']) {
   });
 }
 
-const focusedDiagnostic = ['social-accounts','architecture'].includes(String(process.env.E2E_MENU_FOCUS || 'all').trim());
+const focusedDiagnostic = ['social-accounts','architecture','public-site-controls'].includes(String(process.env.E2E_MENU_FOCUS || 'all').trim());
 const maxAttemptsPerMenu = focusedDiagnostic ? 1 : 2;
 const menuTimeoutMs = focusedDiagnostic ? 90_000 : 30_000; // five viewport focused budget, still fail-closed on CF quota
 const taxSurfaceTimeoutMs = 35_000;
