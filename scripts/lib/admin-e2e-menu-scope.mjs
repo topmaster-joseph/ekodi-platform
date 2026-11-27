@@ -4,7 +4,7 @@ export function resolveAdminE2EMenus(allMenuIds, requestedFocus = '') {
   if (!Array.isArray(allMenuIds) || allMenuIds.length === 0) throw new Error('Admin menu registry is empty');
   const focus = String(requestedFocus ?? '').trim();
   if (!focus || focus === 'all') return [...allMenuIds];
-  if (!['social-accounts', 'architecture'].includes(focus)) throw new Error('Unsupported Admin E2E focus: ' + focus);
+  if (!['social-accounts', 'architecture', 'public-site-controls'].includes(focus)) throw new Error('Unsupported Admin E2E focus: ' + focus);
   if (!allMenuIds.includes(focus)) throw new Error('Admin E2E focus is not in the canonical menu registry');
   return [focus];
 }
