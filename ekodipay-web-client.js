@@ -17,7 +17,7 @@ export const WEB_PAY_CLIENT = String.raw`(function bootWebPay() {
     } catch {}
   }
   const money = n => Number.isSafeInteger(n) ? n.toLocaleString('ko-KR') + '원' : '확인 중';
-  const labels = { scheduled: '정산 예정', paid: '지급 확인', held: '지급 보류', failed: '지급 실패', cancelled: '취소', unconfirmed: '확인 중' };
+  const labels = { scheduled: '정산 예정', paid: '지급 확인', held: '지급 보류', failed: '지급 실패', cancelled: '취소', unconfirmed: '입금 미확인', refunded: '환불', partially_refunded: '부분 환불' };
   let readiness = {}, report = null, linkId = '', pending = false;
   function token() {
     // Same canonical EKODI session as the shared user auth UI. This is only a
@@ -53,6 +53,7 @@ export const WEB_PAY_CLIENT = String.raw`(function bootWebPay() {
     SELLER_FORBIDDEN: '이 운영공간의 판매·정산 내역을 조회할 권한이 없습니다.',
     INVALID_REPORT_RANGE: '운영공간과 조회 기간을 확인해 주세요. 한 번에 최대 31일 간격으로 조회할 수 있습니다.',
     PROVIDER_REQUEST_FAILED: '결제사 연결을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+    REPORT_SOURCE_UNAVAILABLE: '에코디몰 판매내역을 확인하지 못했습니다. 잠시 후 다시 조회해 주세요.',
   };
   function status(message) { $('#notice').textContent = message; }
   async function api(path, data) {
@@ -179,23 +180,32 @@ export const WEB_PAY_CLIENT = String.raw`(function bootWebPay() {
     };
     $('#gross').textContent = money(total('gross'));
     $('#net').textContent = money(total('net'));
-    $('#paid').textContent = money(total('net', r => r.status === 'paid'));
+    $('#paid').textContent = report.payoutVerificationAvailable === false ? '입금 자료 미연결' : money(total('net', r => r.status === 'paid'));
     $('#terms').textContent = report.settlementTerms;
     $('#source').textContent = '출처: ' + report.source + ' · 조회 시각: ' + new Date(report.fetchedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
     $('#export').disabled = !report.rows.length;
     $('#more').hidden = !report.nextCursor;
-    status(report.complete ? '정산 자료를 확인했습니다.' : '조회된 자료만 표시합니다. 전체 기간 합계는 아직 확정되지 않았습니다.');
+    status(report.complete ? '판매내역을 확인했습니다. 정산액은 주문 당시 예상액입니다.' : '조회된 자료만 표시합니다. 전체 기간 합계는 아직 확정되지 않았습니다.');
   }
   let reportQuery = '';
+  let reportPath = '/seller/report';
   $('#sellerForm')?.addEventListener('submit', e => {
     e.preventDefault();
     action(async () => {
-      reportQuery = '?' + new URLSearchParams({ workspaceId: $('#workspaceId').value.trim(), start: $('#start').value, end: $('#end').value });
-      renderReport(await api('/seller/report' + reportQuery));
+      report = null;
+      $('#export').disabled = true;
+      $('#more').hidden = true;
+      $('#reportRows').replaceChildren();
+      for (const selector of ['#gross', '#net', '#paid']) $(selector).textContent = '조회 중';
+      $('#source').textContent = '';
+      const input = { start: $('#start').value, end: $('#end').value };
+      if (!readiness.mallSellerReports) input.workspaceId = $('#workspaceId').value.trim();
+      reportQuery = '?' + new URLSearchParams(input);
+      renderReport(await api(reportPath + reportQuery));
     });
   });
   $('#more')?.addEventListener('click', () => action(async () => {
-    renderReport(await api('/seller/report' + reportQuery + '&cursor=' + encodeURIComponent(report.nextCursor)), true);
+    renderReport(await api(reportPath + reportQuery + '&cursor=' + encodeURIComponent(report.nextCursor)), true);
   }));
   $('#export')?.addEventListener('click', () => {
     if (!report) return;
@@ -210,8 +220,8 @@ export const WEB_PAY_CLIENT = String.raw`(function bootWebPay() {
   async function init() {
     login();
     readiness = await api('/status');
-    $('#connection').textContent = readiness.enabled ? '기능 연결 설정됨' : '서비스 연결 준비 중';
     const capability = mode === 'wallet' ? 'cardRegistration' : mode === 'seller' ? 'sellerReports' : 'delegatedPayment';
+    $('#connection').textContent = readiness[capability] ? '기능 연결 설정됨' : '서비스 연결 준비 중';
     if (!readiness[capability]) {
       status(messages.CONNECTION_NOT_READY);
       document.querySelectorAll('button[data-requires-connection]').forEach(b => b.disabled = true);
@@ -220,15 +230,21 @@ export const WEB_PAY_CLIENT = String.raw`(function bootWebPay() {
     document.querySelectorAll('button[data-requires-connection]').forEach(b => b.disabled = !token());
     if (!token()) { status('에코디 계정으로 로그인하면 이 화면에서 이어서 이용할 수 있습니다.'); return; }
     if (mode === 'seller') {
-      const data = await api('/seller/workspaces');
+      const data = readiness.mallSellerReports ? await api('/seller/mall/account') : await api('/seller/workspaces');
+      const workspaces = readiness.mallSellerReports ? [data.source] : data.workspaces;
+      if (readiness.mallSellerReports) reportPath = '/seller/mall/report';
       const select = $('#workspaceId');
       select.replaceChildren();
-      for (const workspace of data.workspaces) {
+      for (const workspace of workspaces) {
         const option = document.createElement('option');
         option.value = workspace.id; option.textContent = workspace.name;
         select.append(option);
       }
-      if (!data.workspaces.length) status('판매·정산을 조회할 수 있는 매장이 없습니다.');
+      if (!workspaces.length) { status('판매·정산을 조회할 수 있는 매장이 없습니다.'); return; }
+      if (readiness.mallSellerReports) {
+        reportQuery = '?' + new URLSearchParams({ start: $('#start').value, end: $('#end').value });
+        renderReport(await api(reportPath + reportQuery));
+      }
     }
     await wallet();
     await inspectRequest();

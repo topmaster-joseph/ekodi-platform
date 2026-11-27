@@ -207,3 +207,29 @@ its closure. A regression test imports the actual dry-run Worker, requests its
 browser asset and boots every view in an isolated VM with no bundler globals.
 This test now runs after the guarded release lane's bundle dry-run. A fresh live
 native run must still succeed before declaring account-screen acceptance.
+## Continuation: existing Mall owner-order report
+
+The read-only `EKODIPAY_MALL_REPORTS_ENABLED` switch is independent of financial
+activation and requires no new database or provider credentials. Pay verifies
+the canonical principal, forwards only the bearer to fixed same-origin Mall
+`/ekodimall/api/me`, verifies the same person, and then reads the existing
+seller-owned `/orders?limit=100`. Mall still authenticates and selects its own
+seller scope. The source selector `mall` is a routing locator, not a workspace
+identity. No caller-provided seller ID, workspace or URL is accepted.
+
+`/ekodipay/api/web/seller/mall/account` and `/seller/mall/report?start=YYYY-MM-DD&end=YYYY-MM-DD`
+are authenticated GET-only projections. They forward no cookies, follow no
+redirects, disclose no buyer, bank or payment credentials, and perform no writes.
+The report filters by customer approval date in Asia/Seoul, shows order-time
+estimates and reports the latest-100 coverage honestly. If the source reaches
+100 orders or has an undated approved order, period completeness is unknown.
+Refund amounts remain unknown; refunded orders have unknown fees/net until a
+verified ledger feed exists. Order `paidAt` is never a merchant deposit date.
+Payout verification is unavailable, so the UI displays “입금 자료 미연결” rather
+than a misleading zero paid amount. Source failure never falls back to demo data.
+
+Rollback: set only `EKODIPAY_MALL_REPORTS_ENABLED=false` through the guarded
+release path. The existing financial flags stay false throughout this change.
+Real account data still requires signed-in owner acceptance; anonymous native
+checks establish only public rendering, source availability and authentication
+denial, not authenticated production report correctness.

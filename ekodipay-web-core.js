@@ -1,6 +1,7 @@
 // Installation-free payment UX. Card vaults and order/payment truth remain with
 // their existing owners. This module never charges a card or transfers money.
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
+import { mallReportsEnabled, mallSellerAccount, mallSellerReport } from './ekodipay-web-mall.js';
 
 const ROOT = '/ekodipay/api/web';
 const ORIGIN = 'https://ekodi.kr';
@@ -43,8 +44,9 @@ export function webPayReadiness(env = {}) {
     delegatedPayment: base && enabled(env.EKODIPAY_DELEGATED_APPROVED) &&
       typeof env.EKODIPAY_ORDER_SERVICE?.authorizePaymentRequest === 'function' &&
       typeof env.EKODIPAY_ORDER_SERVICE?.createDelegatedCheckout === 'function',
-    sellerReports: base && typeof env.EKODIPAY_ORDER_SERVICE?.sellerSettlementReport === 'function' &&
-      typeof env.EKODIPAY_ORDER_SERVICE?.sellerWorkspaces === 'function',
+    sellerReports: mallReportsEnabled(env) || (base && typeof env.EKODIPAY_ORDER_SERVICE?.sellerSettlementReport === 'function' &&
+      typeof env.EKODIPAY_ORDER_SERVICE?.sellerWorkspaces === 'function'),
+    mallSellerReports: mallReportsEnabled(env),
     paymentExecution: false, payoutExecution: false,
     cardStorage: 'provider-only', thirdPartyCard: 'cardholder-authenticated-request',
     settlementSpeed: 'contract-dependent',
@@ -229,6 +231,9 @@ function date(value) {
 export function settlementProjection(report, userId, workspaceId) {
   if (report?.authorization?.allowed !== true || report.authorization.userId !== userId ||
       report.authorization.workspaceId !== workspaceId) fail('SELLER_FORBIDDEN', 403);
+  return reportProjection(report);
+}
+function reportProjection(report) {
   if (!Array.isArray(report.rows) || !text(report.source, 120) ||
       !Number.isFinite(Date.parse(report.fetchedAt))) fail('REPORT_INVALID', 502);
   const rows = report.rows.slice(0, 500).map(r => {
@@ -238,7 +243,7 @@ export function settlementProjection(report, userId, workspaceId) {
       orderId: text(r.orderId, 100), soldDate: date(r.soldDate) || null,
       gross: money(r.gross), refunds: money(r.refunds), fees: money(r.fees), net: money(r.net),
       scheduledDate: date(r.scheduledDate) || null, paidAt: paid ? r.paidAt : null,
-      status: paid ? 'paid' : ['scheduled', 'held', 'failed', 'cancelled'].includes(r.status) ? r.status : 'unconfirmed',
+      status: paid ? 'paid' : ['scheduled', 'held', 'failed', 'cancelled', 'refunded', 'partially_refunded'].includes(r.status) ? r.status : 'unconfirmed',
     };
   });
   return {
@@ -269,15 +274,30 @@ export async function handleWebPay(request, env = {}, deps = {}) {
     if (request.method === 'GET' && route === '/status' && !url.search) return json(webPayReadiness(env));
     if (request.method === 'GET' && route === '/brandpay/callback') return await registrationCallback(request, env, url, deps.network || fetch);
     const routes = { '/wallet': 'GET', '/wallet/start': 'POST', '/requests': 'POST',
-      '/requests/inspect': 'POST', '/requests/accept': 'POST', '/requests/cancel': 'POST', '/seller/report': 'GET', '/seller/workspaces': 'GET' };
+      '/requests/inspect': 'POST', '/requests/accept': 'POST', '/requests/cancel': 'POST', '/seller/report': 'GET', '/seller/workspaces': 'GET',
+      '/seller/mall/account': 'GET', '/seller/mall/report': 'GET' };
     if (!Object.hasOwn(routes, route)) return json({ code: 'NOT_FOUND' }, 404);
     if (routes[route] !== request.method) return json({ code: 'METHOD_NOT_ALLOWED' }, 405, { allow: routes[route] });
     if (request.method === 'POST' && (request.headers.get('origin') !== ORIGIN ||
         request.headers.get('sec-fetch-site') === 'cross-site')) fail('SAME_ORIGIN_REQUIRED', 403);
     const principal = await (deps.authenticate || principalFromSupabaseRequest)(request);
     if (!principal?.id) fail('LOGIN_REQUIRED', 401);
-    requireReady(env, 'enabled');
     const userId = principal.id;
+    if (route.startsWith('/seller/mall/')) {
+      if (!mallReportsEnabled(env)) fail('CONNECTION_NOT_READY', 503);
+      if (route === '/seller/mall/account') {
+        if (url.search) fail('UNSUPPORTED_FIELDS');
+        return json(await mallSellerAccount(request, userId, deps.network || fetch));
+      }
+      if ([...url.searchParams.keys()].some(k => !['start', 'end'].includes(k)) ||
+          [...url.searchParams.keys()].length !== 2) fail('UNSUPPORTED_FIELDS');
+      const start = date(url.searchParams.get('start')), end = date(url.searchParams.get('end'));
+      if (!start || !end || end < start || Date.parse(end) - Date.parse(start) > 31 * 86400000) fail('INVALID_REPORT_RANGE');
+      const report = await mallSellerReport(request, userId, start, end, deps.network || fetch);
+      return json({ ...reportProjection(report),
+        basis: 'order-estimate', payoutVerificationAvailable: false });
+    }
+    requireReady(env, 'enabled');
     if (route === '/wallet/start') return await startWallet(request, env, userId);
     if (route === '/wallet') {
       requireReady(env, 'cardRegistration');
