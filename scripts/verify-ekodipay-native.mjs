@@ -55,6 +55,40 @@ try{
  if(demoRequired&&!demoAvailable)failed=true;
  results.push({device:'demo-release-readiness',demoAvailable,demoRequired,
    status:demoAvailable?'deployed':'awaiting-guarded-deployment'});
+ const webAccountAvailable=json?.webAccountUi==='web-wallet-v1';
+ if(webAccountAvailable){
+  for(const viewport of [
+   {name:'desktop',width:1440,height:900,isMobile:false},
+   {name:'mobile',width:390,height:844,isMobile:true},
+  ]){
+   const context=await browser.newContext({viewport:{width:viewport.width,height:viewport.height},isMobile:viewport.isMobile,locale:'ko-KR'});
+   try{
+    for(const view of ['wallet','send','request','seller']){
+     const page=await context.newPage();
+     const pageErrors=[];page.on('pageerror',error=>pageErrors.push(error.message.slice(0,140)));
+     const response=await page.goto(base+'/'+view,{waitUntil:'networkidle',timeout:20000});
+     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-window.innerWidth);
+     const notice=await page.locator('#notice').textContent();
+     const inputs=await page.locator('input[id="cardNumber"],input[id="cvc"],input[type="password"]').count();
+     const financialButtons=await page.locator('button[data-requires-connection]:not([disabled])').count();
+     const ok=response?.status()===200&&overflow<=2&&inputs===0&&financialButtons===0&&
+       notice?.includes('서비스 연결을 준비')&&pageErrors.length===0;
+     if(!ok)failed=true;
+     await page.screenshot({path:output+'/'+viewport.name+'-web-'+view+'.png',fullPage:true,animations:'disabled'});
+     results.push({device:viewport.name+'-web-'+view,status:response?.status(),overflow,inputs,financialButtons,notice,pageErrors,ok});
+     await page.close();
+    }
+   }finally{await context.close();}
+  }
+  const status=await request.request.get(base+'/api/web/status',{timeout:20000});
+  const config=status.ok()?await status.json():null;
+  const financialSafety=config?.enabled===false&&config?.cardRegistration===false&&
+    config?.delegatedPayment===false&&config?.payoutExecution===false;
+  if(!financialSafety)failed=true;
+  results.push({device:'web-account-activation',status:status.status(),financialSafety});
+ }
+ results.push({device:'web-account-release-readiness',webAccountAvailable,
+   status:webAccountAvailable?'deployed':'awaiting-guarded-deployment'});
  if(demoAvailable){
   for(const viewport of [
    {name:'desktop',width:1440,height:900,isMobile:false},

@@ -2,8 +2,11 @@ import { ensureSiteDiscoveryHead } from './site-discovery-head.js';
 import { PREVIEW_HTML } from './ekodipay-preview.js';
 import { withFooterTraffic } from './footer-traffic-guarantee.js';
 import { withEdgeTrafficShield } from './edge-traffic-shield.js';
-// EKODI Pay public entry and non-financial experience demo.
-// This Worker NEVER makes PG requests, stores transactions, or confirms payment.
+import { handleWebPay } from './ekodipay-web-core.js';
+import { webPayPage, webPayAsset } from './ekodipay-web-page.js';
+// Public entry plus installation-free account UX. The account extension remains
+// off until its separately approved provider/storage/service bindings exist.
+// This Worker never confirms a payment or executes a payout.
 export const CANONICAL_PAYMENT_ROOT = 'https://ekodi.kr/ekodipay';
 const PREFIX = '/ekodipay';
 const ORDER_ID = /^EB-[A-Z0-9-]{6,80}$/;
@@ -130,7 +133,7 @@ function home(method) {
     '<h1>에코디의 모든 서비스를<br>하나의 결제 경험으로</h1>',
     '<p class="lead">EKODI Pay는 각 서비스가 함께 사용하는 청구·결제·환불·정산 공통 기반입니다. ',
     '고객은 별도 결제 사이트로 이동하지 않고 이용 중인 서비스에서 신청·주문합니다. 현재 이 공개 페이지에서는 실결제를 수행하지 않습니다.</p>',
-    '<div class="actions"><a class="primary" href="#services">연결 서비스에서 이용</a>',
+    '<div class="actions"><a class="primary" href="/ekodipay/wallet">내 카드</a><a class="secondary" href="/ekodipay/send">대신 결제 요청</a><a class="secondary" href="/ekodipay/seller">판매·정산</a><a class="secondary" href="#services">연결 서비스에서 이용</a>',
     '<a class="secondary" href="/ekodipay/admin">결제 운영관리</a><a class="secondary" href="/ekodipay/demo">테스트 결제 체험</a><a class="secondary" href="/ekodipay/preview">통합 운영 시안</a></div></div>',
     '<aside class="state"><span class="status-mark">TEST EXPERIENCE · 실결제 미사용</span><h2>안전한 테스트 환경</h2>',
     '<p class="muted">서비스 선택부터 결제수단 선택·결과 화면까지 직접 확인할 수 있습니다.</p>',
@@ -237,18 +240,27 @@ function checkout(request,url) {
     '<a href="'+back+'">에코디비즈 견적·결제 상태 확인</a></section></main>',request.method);
 }
 const searchExposureEntry= {
-  async fetch(request) {
+  async fetch(request,env={}) {
     const url=new URL(request.url);
     const path=url.pathname;
     if(url.hostname!=='ekodi.kr')return new Response('Not Found',{status:404,headers:{...headers('text/plain; charset=utf-8'),'x-robots-tag':'noindex'}});
+    const webApi=await handleWebPay(request,env);
+    if(webApi)return webApi;
     if(!['GET','HEAD'].includes(request.method))
       return new Response(null,{status:405,headers:{...headers('text/plain; charset=utf-8'),allow:'GET, HEAD'}});
+    const webView=/^\/ekodipay\/(wallet|send|request|seller)$/.exec(path);
+    if(webView) {
+      if(url.search)return new Response('Invalid page parameters',{status:400,headers:headers('text/plain; charset=utf-8')});
+      return webPayPage(webView[1],request.method);
+    }
+    if(path===PREFIX+'/web.js'||path===PREFIX+'/web.css')return webPayAsset(path,request.method);
     if(path===PREFIX)return new Response(null,{status:308,headers:{location:PREFIX+'/','cache-control':'no-store'}});
     if(path===PREFIX+'/'||path===PREFIX+'/index.html')return home(request.method);
     if(path===PREFIX+'/api/health')return new Response(request.method==='HEAD'?null:JSON.stringify({
       service:'ekodipay',canonical:CANONICAL_PAYMENT_ROOT,status:'public-entry-ready',
       realMoneyProcessing:'disabled-until-human-approved-pg-activation',
-      demoMode:'read-only-no-transactions',paymentSecretsExposed:false,consumerCheckout:'originating-service-only'
+      demoMode:'read-only-no-transactions',paymentSecretsExposed:false,consumerCheckout:'originating-service-only',
+      webAccountUi:'web-wallet-v1'
     }),{status:200,headers:headers('application/json; charset=utf-8')});
     if(path===PREFIX+'/api/services')return serviceDirectory(request,url);
     if(path===PREFIX+'/admin'||path===PREFIX+'/admin/')return centralFinanceAdmin(request,url);
