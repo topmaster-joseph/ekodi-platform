@@ -1,4 +1,4 @@
-import { bootWebPay } from './ekodipay-web-client.js';
+import { WEB_PAY_CLIENT } from './ekodipay-web-client.js';
 
 const CSS = [
   ':root{color-scheme:light;font:16px/1.6 system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;color:#162c3d;background:#f3f7fa}*{box-sizing:border-box}body{margin:0}a{color:#076d53;text-decoration:none}a:hover{text-decoration:underline}button,input,select{font:inherit}button,a,input,select{touch-action:manipulation}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #2475b9;outline-offset:3px}[hidden]{display:none!important}',
@@ -33,7 +33,7 @@ const pages = {
     main: '<section class="panel"><div class="bar"><h2>판매·정산 조회</h2><span class="badge" id="connection">연결 확인 중</span></div><form id="sellerForm"><label for="workspaceId">내 매장</label><select id="workspaceId" required><option value="">로그인 후 매장 선택</option></select><div class="field-row"><div><label for="start">시작일</label><input type="date" id="start" required></div><div><label for="end">종료일</label><input type="date" id="end" required></div></div><div class="actions"><button class="primary" data-requires-connection disabled>내역 조회</button><button type="button" id="export" disabled>조회 내역 CSV</button></div></form></section><div class="stats"><div class="stat"><span>조회된 총매출</span><strong id="gross">확인 전</strong></div><div class="stat"><span>조회된 순정산액</span><strong id="net">확인 전</strong></div><div class="stat"><span>지급 확인액</span><strong id="paid">확인 전</strong></div></div><section class="panel"><h2>주문별 내역</h2><p id="terms">정산 주기와 빠른 정산 가능 여부는 가맹 계약에 따라 달라집니다.</p><p class="hint">당일 매출과 결제사의 정산 자료 반영 시점은 다를 수 있습니다.</p><div class="table-wrap" tabindex="0" role="region" aria-label="주문별 정산 내역"><table><thead><tr><th>주문</th><th>판매일</th><th>매출</th><th>환불</th><th>수수료</th><th>순정산</th><th>예정일</th><th>지급 확인</th><th>상태</th></tr></thead><tbody id="reportRows"><tr><td colspan="9">조회 후 실제 연결된 자료가 표시됩니다.</td></tr></tbody></table></div><button id="more" hidden>더 보기</button><p id="source" class="hint"></p><div class="actions"><a class="button" href="/ekodimall/seller-studio/">에코디몰 판매자 스튜디오</a></div></section>',
   },
 };
-export function webPayClientSource() { return '(' + bootWebPay.toString() + ')();'; }
+export function webPayClientSource() { return WEB_PAY_CLIENT; }
 export function webPayPage(view, method = 'GET') {
   const p = pages[view];
   if (!p) return null;
