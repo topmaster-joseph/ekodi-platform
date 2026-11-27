@@ -63,6 +63,9 @@ const STYLES = [
   '.hero h1{font-size:37px}.grid,.steps{grid-template-columns:1fr}.section{padding:35px 0}.state{padding:21px}.card{padding:19px}}',
 ].join('');
 function headers(type='text/html; charset=utf-8') {
+  // Cloudflare JavaScript Detections reads response-header nonces for its
+  // injected challenge bootstrap. Never allow arbitrary inline script.
+  const nonce=crypto.randomUUID().replaceAll('-','');
   return {
     'content-type':type,
     'cache-control':'no-store',
@@ -70,7 +73,7 @@ function headers(type='text/html; charset=utf-8') {
     'x-frame-options':'DENY',
     'referrer-policy':'no-referrer',
     'permissions-policy':'camera=(), microphone=(), geolocation=(), payment=()',
-    'content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    'content-security-policy':"default-src 'none'; script-src 'self' 'nonce-"+nonce+"'; style-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
     'strict-transport-security':'max-age=31536000; includeSubDomains',
   };
 }

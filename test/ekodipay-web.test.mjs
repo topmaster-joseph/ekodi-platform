@@ -330,3 +330,16 @@ test('real worker serves mobile web pages and restrictive assets while existing 
   assert.match(css.headers.get('content-type'), /text\/css/);
   assert.match(await css.text(), /max-width:720px/);
 });
+test('response-header CSP uses fresh nonces for the edge challenge without unsafe-inline scripts', async () => {
+  for (const path of ['/', '/wallet', '/send', '/request', '/seller']) {
+    const policies = await Promise.all([1, 2].map(async () =>
+      (await worker.fetch(new Request(ORIGIN + '/ekodipay' + path))).headers.get('content-security-policy')));
+    const nonces = policies.map(csp => /script-src[^;]*'nonce-([a-f0-9]{32})'/.exec(csp)?.[1]);
+    assert.ok(nonces.every(Boolean), path);
+    assert.notEqual(nonces[0], nonces[1], path);
+    for (const csp of policies) {
+      assert.match(csp, /script-src 'self'/);
+      assert.doesNotMatch(/script-src[^;]*/.exec(csp)?.[0] || '', /unsafe-inline|unsafe-eval/);
+    }
+  }
+});

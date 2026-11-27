@@ -168,3 +168,22 @@ These are fixture tests, **not** a real provider sandbox or bank settlement.
 The public production extension remains disabled until the conditions above
 are independently evidenced. No external AI consultation is claimed from a
 locally generated plan or static policy check.
+
+## Official continuation and discovered production baseline
+
+EKODI's authoritative recovery created PR #10453 and issued task
+orch_recovery_80479d3ccee8f2d8e537c9b286a589ea. The public release-receipt endpoint
+verified this exact task/branch with authority ekodi-orchestrator, state assigned.
+Source PR #10452 was superseded automatically. No human approval is fabricated.
+
+The first native browser run 45918684398 reached the existing live homepage and
+demo on desktop/mobile, but correctly failed on a pre-existing inline-script CSP
+error. New account pages were not deployed yet. Cloudflare's documented JavaScript
+Detections behaviour matches this error and supports random response-header
+nonces. This continuation adds per-response nonces to the Pay HTML policies,
+retaining self-only/approved-provider sources and the ban on unsafe-inline script.
+It does not ignore the failed verification or disable bot detection. Verify the
+inference against actual postrelease native evidence before claiming resolution.
+
+Reference checked 2026-11-27:
+https://developers.cloudflare.com/cloudflare-challenges/challenge-types/javascript-detections/
