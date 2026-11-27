@@ -37,6 +37,7 @@ export function webPayClientSource() { return '(' + bootWebPay.toString() + ')()
 export function webPayPage(view, method = 'GET') {
   const p = pages[view];
   if (!p) return null;
+  const nonce = crypto.randomUUID().replaceAll('-', '');
   const tabs = [['wallet', '내 카드'], ['send', '대신 결제 요청'], ['seller', '판매·정산']].map(([key, label]) =>
     '<a href="/ekodipay/' + key + '"' + (view === key ? ' aria-current="page"' : '') + '>' + label + '</a>').join('');
   const html = '<!doctype html><html lang="ko" data-ekodi-service="pay"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>' + p.title + ' | EKODI Pay</title><link rel="stylesheet" href="/ekodipay/web.css"><script src="/ekodipay/web.js" defer></script></head><body data-pay-view="' + view + '"><header class="top"><div class="wrap"><a class="brand" href="/ekodipay/">EKODI <span>Pay</span></a><a id="login" class="auth" href="/auth/?site=portal&amp;return_to=https%3A%2F%2Fekodi.kr%2Fekodipay%2F' + view + '">로그인하고 이어서 이용</a></div></header><main class="wrap"><nav class="tabs" aria-label="에코디페이 메뉴">' + tabs + '</nav><span class="eyebrow">EKODI PAY</span><h1>' + p.heading + '</h1><p class="lead">' + p.lead + '</p><div id="notice" class="status" role="status" aria-live="polite">서비스 연결 상태를 확인하고 있습니다.</div>' + p.main + '</main><footer class="foot"><div class="wrap">에코디페이 · 카드 등록은 결제사 보안창에서 · 주문과 결제 결과는 이용한 서비스에서 확인</div></footer></body></html>';
@@ -46,7 +47,7 @@ export function webPayPage(view, method = 'GET') {
     'referrer-policy': 'no-referrer', 'x-robots-tag': 'noindex, nofollow',
     'strict-transport-security': 'max-age=31536000; includeSubDomains',
     'permissions-policy': 'camera=(), microphone=(), geolocation=()',
-    'content-security-policy': "default-src 'none'; script-src 'self' https://js.tosspayments.com; style-src 'self'; connect-src 'self' https://*.tosspayments.com; frame-src https://*.tosspayments.com; img-src 'self' data: https://*.tosspayments.com; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+    'content-security-policy': "default-src 'none'; script-src 'self' 'nonce-" + nonce + "' https://js.tosspayments.com; style-src 'self'; connect-src 'self' https://*.tosspayments.com; frame-src https://*.tosspayments.com; img-src 'self' data: https://*.tosspayments.com; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
   } });
 }
 export function webPayAsset(path, method = 'GET') {
