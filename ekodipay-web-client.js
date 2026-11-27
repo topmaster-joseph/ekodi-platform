@@ -1,5 +1,5 @@
-// Serialized and served by the owning Worker. No secrets or card input fields.
-export function bootWebPay() {
+// Browser program is a static text payload: bundlers must not rewrite its closure.
+export const WEB_PAY_CLIENT = String.raw`(function bootWebPay() {
   'use strict';
   const root = '/ekodipay/api/web';
   const $ = s => document.querySelector(s);
@@ -234,4 +234,4 @@ export function bootWebPay() {
     await inspectRequest();
   }
   action(init);
-}
+})();`;

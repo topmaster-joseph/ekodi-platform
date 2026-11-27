@@ -196,3 +196,14 @@ use the immutable PR head SHA, preserving source identity and making future
 postrelease reruns independent of PR closure. The verifier now requires the
 deployed account-UI marker and response-header nonces on every new view.
 This is a verification recovery, not evidence that the final browser run passed.
+
+Native run 45919803320 verified homepage/demo, all four desktop/mobile account
+routes (HTTP 200, no overflow), active response nonces and disabled financial
+gates. It still correctly failed: account JavaScript raised "__name is not
+defined". Wrangler's function-name preservation injected a helper into the
+function that had been serialized with toString, leaving that helper outside
+the browser payload. The client is now static text, so the bundler cannot rewrite
+its closure. A regression test imports the actual dry-run Worker, requests its
+browser asset and boots every view in an isolated VM with no bundler globals.
+This test now runs after the guarded release lane's bundle dry-run. A fresh live
+native run must still succeed before declaring account-screen acceptance.

@@ -15,6 +15,7 @@ on:
       - 'ekodipay-worker.js'
       - 'ekodipay-web-*.js'
       - 'test/ekodipay-web.test.mjs'
+      - 'test/ekodipay-web-bundle.test.mjs'
       - 'migrations/202611270900_ekodipay_web.sql'
       - 'site-discovery-head.js'
       - 'ekodipay-preview.js'
@@ -30,6 +31,7 @@ on:
       - 'ekodipay-worker.js'
       - 'ekodipay-web-*.js'
       - 'test/ekodipay-web.test.mjs'
+      - 'test/ekodipay-web-bundle.test.mjs'
       - 'migrations/202611270900_ekodipay_web.sql'
       - 'site-discovery-head.js'
       - 'ekodipay-preview.js'
@@ -72,6 +74,10 @@ jobs:
           node scripts/constitution-check.mjs
       - name: Cloudflare bundle dry-run
         run: npx --yes wrangler@4.127.1 deploy --dry-run --config wrangler.ekodipay.toml --outdir /tmp/ekodipay-dry-run
+      - name: Execute the bundled browser program in isolated fixtures
+        env:
+          EKODIPAY_WEB_BUNDLE: /tmp/ekodipay-dry-run/ekodipay-worker.js
+        run: node --test test/ekodipay-web-bundle.test.mjs
   deploy-production:
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.release_branch_ref != '' && inputs.release_task_id != ''))
     needs: validate
