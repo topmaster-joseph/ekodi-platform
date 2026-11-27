@@ -59,6 +59,10 @@ try{
  // The account UI is deployed; a missing marker is not a smaller success.
  if(!webAccountAvailable)failed=true;
  if(webAccountAvailable){
+  const status=await request.request.get(base+'/api/web/status',{timeout:20000});
+  const config=status.ok()?await status.json():null;
+  const mallReports=config?.mallSellerReports===true&&config?.sellerReports===true;
+  if(demoRequired&&!mallReports)failed=true;
   for(const viewport of [
    {name:'desktop',width:1440,height:900,isMobile:false},
    {name:'mobile',width:390,height:844,isMobile:true},
@@ -76,7 +80,7 @@ try{
      const csp=response?.headers()['content-security-policy']||'';
      const cspNonce=/script-src[^;]*'nonce-[a-f0-9]{32}'/.test(csp);
      const ok=response?.status()===200&&overflow<=2&&inputs===0&&financialButtons===0&&
-       notice?.includes('서비스 연결을 준비')&&pageErrors.length===0&&cspNonce;
+       notice?.includes(view==='seller'&&mallReports?'에코디 계정으로 로그인':'서비스 연결을 준비')&&pageErrors.length===0&&cspNonce;
      if(!ok)failed=true;
      await page.screenshot({path:output+'/'+viewport.name+'-web-'+view+'.png',fullPage:true,animations:'disabled'});
      results.push({device:viewport.name+'-web-'+view,status:response?.status(),overflow,inputs,financialButtons,notice,pageErrors,cspNonce,ok});
@@ -84,12 +88,18 @@ try{
     }
    }finally{await context.close();}
   }
-  const status=await request.request.get(base+'/api/web/status',{timeout:20000});
-  const config=status.ok()?await status.json():null;
   const financialSafety=config?.enabled===false&&config?.cardRegistration===false&&
     config?.delegatedPayment===false&&config?.payoutExecution===false;
   if(!financialSafety)failed=true;
   results.push({device:'web-account-activation',status:status.status(),financialSafety});
+  if(mallReports){
+   const anonymous=await request.request.get(base+'/api/web/seller/mall/report?start=2026-11-27&end=2026-11-27',{timeout:20000});
+   const source=await request.request.get('https://ekodi.kr/ekodimall/api/me',{timeout:20000});
+   const ownerIsolation=anonymous.status()===401&&source.status()===401;
+   if(!ownerIsolation)failed=true;
+   results.push({device:'mall-owner-report',mallReports,anonymous:anonymous.status(),source:source.status(),ownerIsolation,
+    authenticatedOwnerData:'not-accessed-in-anonymous-verification'});
+  }
  }
  results.push({device:'web-account-release-readiness',webAccountAvailable,
    status:webAccountAvailable?'deployed':'awaiting-guarded-deployment'});

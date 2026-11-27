@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 import vm from 'node:vm';
 import { webPayClientSource } from '../ekodipay-web-page.js';
 
-async function bootInFixture(source, mode) {
+async function bootInFixture(source, mode, mall = false) {
   class Element {
     constructor() { this.children = []; this.listeners = {}; this.disabled = true; this.value = ''; this.textContent = ''; }
     addEventListener(type, handler) { this.listeners[type] = handler; }
@@ -40,9 +40,12 @@ async function bootInFixture(source, mode) {
     async fetch(path) {
       calls.push(path);
       let result;
-      if (path.endsWith('/status')) result = { enabled: true, cardRegistration: true, delegatedPayment: true, sellerReports: true };
+      if (path.endsWith('/status')) result = { enabled: !mall, cardRegistration: !mall, delegatedPayment: !mall, sellerReports: true, mallSellerReports: mall };
       else if (path.endsWith('/wallet')) result = { cards: [{ label: '테스트카드', last4: '1234', type: '신용' }] };
       else if (path.endsWith('/seller/workspaces')) result = { workspaces: [{ id: 'workspace-1', name: '테스트매장' }] };
+      else if (path.endsWith('/seller/mall/account')) result = { source: { id: 'mall', name: '에코디몰 내 판매내역', scope: 'seller-account' } };
+      else if (path.includes('/seller/mall/report?')) result = { rows: [{ orderId: 'ORDER-A', gross: 10000, net: 9200, status: 'unconfirmed' }],
+        source: '에코디몰', fetchedAt: new Date().toISOString(), complete: true, payoutVerificationAvailable: false };
       else if (path.endsWith('/requests/inspect')) result = { merchant: '테스트상점', amount: 27000, expiresAt: new Date().toISOString() };
       else throw new Error('Unexpected fixture API call: ' + path);
       return { ok: true, json: async () => result };
@@ -62,11 +65,20 @@ async function bootInFixture(source, mode) {
     assert.equal(nodes['#requestAmount'].textContent, '27,000원');
     assert.equal(nodes['#acceptRequest'].disabled, false);
   }
-  if (mode === 'seller') assert.equal(nodes['#workspaceId'].children[0].textContent, '테스트매장');
+  if (mode === 'seller') {
+    assert.equal(nodes['#workspaceId'].children[0].textContent, mall ? '에코디몰 내 판매내역' : '테스트매장');
+    if (mall) {
+      assert.equal(nodes['#paid'].textContent, '입금 자료 미연결');
+      assert.equal(nodes['#net'].textContent, '9,200원');
+      assert.ok(calls.some(path => path.includes('/seller/mall/report?')));
+      assert.ok(!calls.some(path => path.includes('workspaceId=')));
+    }
+  }
 }
 
 test('browser payload is self-contained and boots all four views', async () => {
   for (const mode of ['wallet', 'send', 'request', 'seller']) await bootInFixture(webPayClientSource(), mode);
+  await bootInFixture(webPayClientSource(), 'seller', true);
 });
 test('actual Wrangler output preserves browser payload closure', { skip: !process.env.EKODIPAY_WEB_BUNDLE }, async () => {
   const bundle = await import(pathToFileURL(process.env.EKODIPAY_WEB_BUNDLE));
@@ -75,4 +87,5 @@ test('actual Wrangler output preserves browser payload closure', { skip: !proces
   const source = await response.text();
   assert.doesNotMatch(source, /__name\(/);
   for (const mode of ['wallet', 'send', 'request', 'seller']) await bootInFixture(source, mode);
+  await bootInFixture(source, 'seller', true);
 });

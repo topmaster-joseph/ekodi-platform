@@ -66,6 +66,84 @@ const auth = async req => {
   const value = req.headers.get('authorization')?.slice(7);
   return value && value !== 'anonymous' ? { id: value } : null;
 };
+function mallNetwork({ orders = [], account = 'buyer', failure = 0 } = {}) {
+  const calls = [];
+  const network = async (url, options) => {
+    calls.push({ url, options });
+    assert.equal(options.method, 'GET');
+    assert.equal(options.redirect, 'error');
+    assert.deepEqual(Object.keys(options.headers).sort(), ['accept', 'authorization']);
+    assert.ok(url === ORIGIN + '/ekodimall/api/me' || url === ORIGIN + '/ekodimall/api/orders?limit=100');
+    if (failure) return Response.json({ email: 'private' }, { status: failure });
+    return Response.json(url.endsWith('/me') ? { user: { id: account, email: 'private' }, profile: { bankAccount: 'private' } } : { orders });
+  };
+  return { calls, network };
+}
+const mallOrder = (override = {}) => ({ id: 'ORDER-A', status: 'paid', currency: 'KRW',
+  paidAt: '2026-11-26T15:30:00Z', grossAmount: 10000, platformFeeAmount: 800,
+  sellerSettlementAmount: 9200, buyerEmail: 'private', paymentKey: 'private', ...override });
+test('Mall read-only connection works without wallet DB or financial activation', async () => {
+  const env = { EKODIPAY_MALL_REPORTS_ENABLED: 'true' };
+  const ready = webPayReadiness(env);
+  assert.equal(ready.enabled, false); assert.equal(ready.sellerReports, true);
+  assert.equal(ready.cardRegistration, false); assert.equal(ready.delegatedPayment, false);
+  assert.equal(ready.paymentExecution, false); assert.equal(ready.payoutExecution, false);
+  const source = mallNetwork();
+  const response = await call(env, '/seller/mall/account', undefined, {}, source.network);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { source: { id: 'mall', name: '에코디몰 내 판매내역', scope: 'seller-account' } });
+  assert.equal(source.calls.length, 1);
+  assert.equal((await call(env, '/wallet', undefined, {}, source.network)).status, 503);
+});
+test('Mall reports verify same principal and never accept a caller seller/workspace', async () => {
+  const env = { EKODIPAY_MALL_REPORTS_ENABLED: 'true' };
+  const source = mallNetwork({ account: 'someone-else' });
+  assert.equal((await call(env, '/seller/mall/report?start=2026-11-27&end=2026-11-27', undefined, {}, source.network)).status, 403);
+  assert.equal(source.calls.length, 1); // No order read after identity mismatch.
+  for (const suffix of ['&sellerId=someone-else', '&workspaceId=elsewhere', '&cursor=100', '&start=2026-11-26']) {
+    assert.equal((await call(env, '/seller/mall/report?start=2026-11-27&end=2026-11-27' + suffix, undefined, {}, source.network)).status, 400);
+  }
+  assert.equal((await call(env, '/seller/mall/account', undefined, { user: 'anonymous' }, source.network)).status, 401);
+  assert.equal(source.calls.length, 1);
+});
+test('Mall projection uses Korean approval date, preserves uncertainty and omits private data', async () => {
+  const source = mallNetwork({ orders: [mallOrder(), mallOrder({ id: 'REFUND', status: 'partially_refunded' }),
+    mallOrder({ id: 'OLD', paidAt: '2026-11-26T14:59:59Z' }), mallOrder({ id: 'UNPAID', status: 'payment_pending' })] });
+  const r = await call({ EKODIPAY_MALL_REPORTS_ENABLED: 'true' }, '/seller/mall/report?start=2026-11-27&end=2026-11-27', undefined, {}, source.network);
+  assert.equal(r.status, 200);
+  const data = await r.json();
+  assert.equal(data.rows.length, 2); assert.equal(data.complete, true);
+  assert.equal(data.rows[0].soldDate, '2026-11-27');
+  assert.equal(data.rows[0].net, 9200); assert.equal(data.rows[0].refunds, null);
+  assert.equal(data.rows[0].paidAt, null); assert.equal(data.rows[0].scheduledDate, null);
+  assert.equal(data.rows[0].status, 'unconfirmed');
+  assert.equal(data.rows[1].net, null); assert.equal(data.rows[1].fees, null);
+  assert.equal(data.rows[1].status, 'partially_refunded');
+  assert.equal(data.basis, 'order-estimate'); assert.equal(data.payoutVerificationAvailable, false);
+  assert.equal(data.payoutExecution, false); assert.doesNotMatch(JSON.stringify(data), /private|buyerEmail|paymentKey|bankAccount|authorization/);
+});
+test('Mall latest-100 and undated orders never claim complete period coverage', async () => {
+  for (const orders of [Array.from({ length: 100 }, (_, i) => mallOrder({ id: 'ORDER-' + i })), [mallOrder({ paidAt: null })]]) {
+    const source = mallNetwork({ orders });
+    const r = await call({ EKODIPAY_MALL_REPORTS_ENABLED: 'true' }, '/seller/mall/report?start=2026-11-27&end=2026-11-27', undefined, {}, source.network);
+    assert.equal(r.status, 200); assert.equal((await r.json()).complete, false);
+  }
+});
+test('Mall source failure, duplicates, foreign currency and untrusted redirects fail closed', async () => {
+  const env = { EKODIPAY_MALL_REPORTS_ENABLED: 'true' };
+  for (const orders of [[mallOrder(), mallOrder()], [mallOrder({ currency: 'USD' })]]) {
+    const source = mallNetwork({ orders });
+    assert.equal((await call(env, '/seller/mall/report?start=2026-11-27&end=2026-11-27', undefined, {}, source.network)).status, 502);
+  }
+  for (const status of [401, 403, 500]) {
+    const source = mallNetwork({ failure: status });
+    const r = await call(env, '/seller/mall/account', undefined, {}, source.network);
+    assert.equal(r.status, status === 500 ? 503 : status);
+    assert.doesNotMatch(await r.text(), /private/);
+  }
+  const network = async () => new Response('<html>login</html>', { headers: { 'content-type': 'text/html' } });
+  assert.equal((await call(env, '/seller/mall/account', undefined, {}, network)).status, 502);
+});
 const call = (env, path, data, options, network) => handleWebPay(request(path, data, options), env, { authenticate: auth, network });
 async function createLink(f) {
   const r = await call(f.env, '/requests', { service: 'mall', orderId: f.order.orderId });

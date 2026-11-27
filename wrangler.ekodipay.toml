@@ -14,6 +14,7 @@ PAYMENT_EXECUTION_MODE = "disabled-until-approved"
 EKODIPAY_WEB_ENABLED = "false"
 EKODIPAY_BRANDPAY_APPROVED = "false"
 EKODIPAY_DELEGATED_APPROVED = "false"
+EKODIPAY_MALL_REPORTS_ENABLED = "true"
 # No new production DB/service binding or financial activation in this release.
 # See docs/operations/ekodipay-web-wallet-20261127.md for guarded activation.
 
