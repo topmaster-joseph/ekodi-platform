@@ -28,7 +28,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event_name == 'workflow_run' && 'main' || github.ref }}
+          # Immutable source survives closed and superseded PR merge refs.
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || (github.event_name == 'workflow_run' && 'main' || github.ref) }}
       - uses: actions/setup-node@v7
         with:
           node-version: '24'

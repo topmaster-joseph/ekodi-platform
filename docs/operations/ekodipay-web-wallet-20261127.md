@@ -187,3 +187,12 @@ inference against actual postrelease native evidence before claiming resolution.
 
 Reference checked 2026-11-27:
 https://developers.cloudflare.com/cloudflare-challenges/challenge-types/javascript-detections/
+
+Both #10453 and nonce correction #10455 subsequently merged through the official
+Orchestrator. Guarded Pay deployments 45918958445 and 45919406890 succeeded.
+Replaying the superseded source PR's browser job failed before executing a
+browser because refs/pull/10452/merge no longer existed. Native PR checkouts now
+use the immutable PR head SHA, preserving source identity and making future
+postrelease reruns independent of PR closure. The verifier now requires the
+deployed account-UI marker and response-header nonces on every new view.
+This is a verification recovery, not evidence that the final browser run passed.
