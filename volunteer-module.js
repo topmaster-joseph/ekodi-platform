@@ -153,7 +153,7 @@ export async function routeVolunteer(request,env,{json,withHeaders}){
   const action=String(data?.action||'');
   const roster=p==='/volunteer/api/admin/registrations';
   const result=roster&&action==='list'
-   ?await rpc(env,'activity_admin_snapshot',{p_workspace_slug:c.workspace,p_activity_key:c.key},token)
+   ?await rpc(env,'volunteer_admin_registration_snapshot',{p_workspace_slug:c.workspace,p_activity_key:c.key},token)
    :!roster&&action==='list'
     ?await rpc(env,'volunteer_pledge_admin_snapshot',{p_workspace_slug:c.workspace,p_activity_key:c.key},token)
     :!roster&&action==='confirm'&&/^[0-9a-f-]{36}$/i.test(String(data?.pledgeId||''))
