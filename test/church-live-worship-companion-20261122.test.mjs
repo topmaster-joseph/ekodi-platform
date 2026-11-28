@@ -17,7 +17,7 @@ test('canonical Church uses actual two-pane LIVE order/PPT + A/V layout, other t
   assert.match(html,/data-church-view="split"/);
   assert.match(html,/data-church-view="video"/);
   assert.match(html,/data-church-view="guide"/);
-  assert.match(html,/v=20261128-live-share/);
+  assert.match(html,/v=20261128-live-share-2/);
   for(const tenant of [make('/live/biz/','ekodibiz'),make('/ekodichurch/live/','ekodichurch')]){
     const other=await responseBody(tenant);
     assert.doesNotMatch(other,/id="churchLiveGuide"|id="churchHostGuide"/);
@@ -76,5 +76,5 @@ test('meeting and dated worship links retain context and authorized studio sees 
   assert.match(js,/query\.set\('date',date\)/);
   assert.match(js,/viewerRoomLink\(state\.room\.id\)/);
   assert.match(js,/\['church-host-guide','예배'\]/);
-  assert.match(js,/const worshipTab=cfg\.tenant==='ekodichurch'/);
+  assert.match(js,/const worshipTab=document\.body\.dataset\.tenant==='ekodichurch'/);
 });

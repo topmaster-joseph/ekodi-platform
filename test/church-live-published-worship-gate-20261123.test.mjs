@@ -76,7 +76,7 @@ test('authorization cannot be replaced by URL alone and presenter gets actual ma
   const html=await (await tenantLivePage(church)).text();
   assert.match(html,/href="\/ekodichurch\/mypage\/">교회 마이페이지 · 예배자료 검토·공개/);
   assert.match(html,/id="churchGuideFollow" aria-pressed="true"/);
-  assert.match(html,/v=20261128-live-share/);
+  assert.match(html,/v=20261128-live-share-2/);
   assert.match(live,/churchGuideFollow'\)\.setAttribute\('aria-pressed',String\(following\)\)/);
   assert.match(live,/if\(role!=='host'\|\|!room\|\|!deck\)return/);
   assert.match(live,/method:'PUT'.*authorization:'Bearer '/);

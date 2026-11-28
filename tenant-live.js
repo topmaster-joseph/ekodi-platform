@@ -418,6 +418,10 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
     if(document.visibilityState==='visible'&&!state.room&&!state.pc)void joinViewer();
   },45000);
 }else refreshLive()})}
+// After 방송 시작, show the public viewing link right under the button so the
+// host can copy it or send it (KakaoTalk etc.) without leaving the studio.
+function liveViewerUrl(){const u=new URL(location.pathname,location.origin);u.searchParams.set('mode','viewer');return u.href}
+function showLiveShare(on){const box=document.getElementById('liveShare');if(!box)return;box.classList.toggle('hidden',!on);if(!on)return;const url=liveViewerUrl();const input=document.getElementById('liveShareUrl');input.value=url;document.getElementById('liveShareOpen').href=url;const send=document.getElementById('liveShareSend');send.hidden=!navigator.share}
 })();
 /* Studio settings as tabs (2026-11-01): one section at a time so the whole panel fits one screen. */
 (()=>{
@@ -435,7 +439,7 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
   bar.addEventListener('keydown',e=>{const cur=buttons.indexOf(document.activeElement);if(cur<0)return;if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();select((cur+(e.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length,true)}});
   for(const d of sections)d.querySelector(':scope>summary')?.addEventListener('click',e=>e.preventDefault());
   const start=Math.max(0,buttons.findIndex(b=>b.dataset.tab===saved));
-  const worshipTab=cfg.tenant==='ekodichurch'?buttons.findIndex(b=>b.dataset.tab==='예배'):-1;
+  const worshipTab=document.body.dataset.tenant==='ekodichurch'?buttons.findIndex(b=>b.dataset.tab==='예배'):-1;
   select(saved?Math.max(0,start):(worshipTab>=0?worshipTab:0));
 })();
 
@@ -681,10 +685,6 @@ else if(churchInlineViewer || params.get('mode')==='viewer' || params.get('room'
   const poll=setInterval(()=>{if(role==='viewer')void readCursor()},15000);
   addEventListener('pagehide',()=>clearInterval(poll),{once:true});
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&role==='viewer')void readCursor()});
-// After 방송 시작, show the public viewing link right under the button so the
-// host can copy it or send it (KakaoTalk etc.) without leaving the studio.
-function liveViewerUrl(){const u=new URL(location.pathname,location.origin);u.searchParams.set('mode','viewer');return u.href}
-function showLiveShare(on){const box=document.getElementById('liveShare');if(!box)return;box.classList.toggle('hidden',!on);if(!on)return;const url=liveViewerUrl();const input=document.getElementById('liveShareUrl');input.value=url;document.getElementById('liveShareOpen').href=url;const send=document.getElementById('liveShareSend');send.hidden=!navigator.share}
 document.getElementById('liveShareCopy')?.addEventListener('click',async event=>{const url=liveViewerUrl();const btn=event.currentTarget;try{await navigator.clipboard.writeText(url);btn.textContent='복사됨 ✓'}catch{const input=document.getElementById('liveShareUrl');input.select();btn.textContent='길게 눌러 복사'}setTimeout(()=>{btn.textContent='링크 복사'},2000)});
 document.getElementById('liveShareSend')?.addEventListener('click',()=>{const title=document.title||'실시간 예배';navigator.share?.({title,text:title+' 실시간 방송',url:liveViewerUrl()}).catch(()=>{})});
 })();
