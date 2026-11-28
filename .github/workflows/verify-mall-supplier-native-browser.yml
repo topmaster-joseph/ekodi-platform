@@ -1,0 +1,94 @@
+name: Verify Mall Supplier with EKODI Native Browser
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/verify-mall-supplier-native-browser.mjs'
+      - 'test/mall-supplier-native-browser.test.mjs'
+      - '.github/workflows/verify-mall-supplier-native-browser.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/verify-mall-supplier-native-browser.mjs'
+      - 'test/mall-supplier-native-browser.test.mjs'
+      - '.github/workflows/verify-mall-supplier-native-browser.yml'
+  workflow_run:
+    workflows:
+      - 'EKODI Mall · Stage and Deploy'
+      - 'Deploy EKODI Shared Site Core'
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mall-supplier-native-${{ github.event.workflow_run.head_sha || github.sha }}-${{ github.event.workflow_run.name || github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  anonymous-readonly-canary:
+    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.event == 'push') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout protected EKODI browser source
+        uses: actions/checkout@v7
+
+      - name: Use Node 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Check anonymous-only native browser and supply safety contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/verify-mall-supplier-native-browser.mjs
+          node --test test/mall-supplier-native-browser.test.mjs
+          node scripts/verify-mall-supplier-native-browser.mjs --plan
+
+      - name: Install EKODI-owned isolated Chromium
+        if: ${{ github.event_name != 'pull_request' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.65.1
+          npx playwright install --with-deps chromium
+
+      - name: Inspect real Mall supplier and Seller Studio guest surfaces (read-only)
+        if: ${{ github.event_name != 'pull_request' }}
+        shell: bash
+        env:
+          EKODI_BROWSER_ARTIFACT_DIR: artifacts/mall-supplier-native-browser
+        run: |
+          set -euo pipefail
+          node scripts/verify-mall-supplier-native-browser.mjs --run
+
+      - name: Summarize verified scope and remaining authenticated work
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          {
+            echo '## EKODI Mall native browser production canary'
+            echo '- Browser: isolated EKODI-owned Chromium, canonical ekodi.kr only'
+            echo '- Scope: anonymous read-only DOM + production static/API safety checks'
+            echo '- No account cookies, tokens, payments, or supplier orders'
+            echo '- Authenticated operator and seller roles: **not tested** without authorized synthetic sessions'
+            echo '- CI and browser screenshots are not proof of a successful paid fulfillment or complete production role audit'
+            if [ -f artifacts/mall-supplier-native-browser/summary.json ]; then
+              node -e "const r=require('./artifacts/mall-supplier-native-browser/summary.json');console.log('- Result: '+(r.ok?'PASS':'FAIL')+', profiles='+r.checks.length+', reason='+(r.errorCode||'none'))"
+            else
+              echo '- Result: execution incomplete (no evidence artifact)'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload native browser evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mall-supplier-ekodi-native-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/mall-supplier-native-browser/
+          if-no-files-found: warn
+          retention-days: 7
