@@ -1,0 +1,14 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {analyzeContacts,nameProposal} from '../google-contacts-cleanup-core.js';
+const p=(id,name,phone,email,organizations=[])=>({resourceName:'people/c'+id,names:[{displayName:name}],phoneNumbers:phone?[{value:phone}]:[],emailAddresses:email?[{value:email}]:[],organizations});
+test('explicit delimiter proposal only',()=>assert.deepEqual(nameProposal(p('1','홍길동..목포대')).proposedName,'홍길동'));
+test('title proposal',()=>assert.equal(nameProposal(p('1','홍길동ㆍ목사')).field,'title'));
+test('preserve conflicting existing organization',()=>assert.equal(nameProposal(p('1','홍길동.목포대',null,null,[{name:'다른기관'}])).status,'review_conflict'));
+test('plain and Latin names unchanged',()=>{assert.equal(nameProposal(p('1','홍길동')),null);assert.equal(nameProposal(p('2','Dr. Kim')),null)});
+test('Korean phone normalization proposes duplicate only',()=>{const r=analyzeContacts([p('1','홍길동','010-1234-5678'),p('2','홍길동','+82 10 1234 5678')]);assert.equal(r.duplicates[0].status,'review_candidate');assert.equal(r.writeAllowed,false)});
+test('same name alone never merges',()=>assert.equal(analyzeContacts([p('1','홍길동'),p('2','홍길동')]).duplicates.length,0));
+test('shared phone is separately reviewed',()=>{const r=analyzeContacts([p('1','홍길동','01012345678'),p('2','김길동','01012345678'),p('3','박길동','01012345678')]);assert.equal(r.duplicates.length,0);assert.equal(r.shared.length,1)});
+test('conflicting names remain review',()=>assert.equal(analyzeContacts([p('1','홍길동',null,'a@example.invalid'),p('2','김길동',null,'a@example.invalid')]).duplicates[0].status,'review_name_conflict'));
+test('invalid resource fails closed',()=>assert.throws(()=>analyzeContacts([{resourceName:'people/123'}])));
+test('duplicate resources fail closed',()=>assert.throws(()=>analyzeContacts([p('1','홍길동'),p('1','홍길동')])));
