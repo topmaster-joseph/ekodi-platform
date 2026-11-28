@@ -549,6 +549,67 @@ jobs:
           ready "$tmp/prod-after.json" || { echo "Volunteer production schema contract not satisfied"; cat "$tmp/prod-after.json"; exit 1; }
           echo 'Volunteer DEV -> PROD scoped schema proof passed before Worker release.'
 
+      - name: Guarded Volunteer site admin DEV-to-PROD scoped grants schema promotion
+        if: github.event_name != 'pull_request'
+        shell: bash
+        env:
+          VOLUNTEER_ADMIN_DEV_PROJECT: lxcxwbdwwojjkgybbqii
+          VOLUNTEER_ADMIN_MIGRATION: supabase/migrations/20261128143000_volunteer_site_scoped_admin_grants.sql
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "${SUPABASE_SCHEMA_PREFLIGHT_MODE:-}" = management
+          test -n "${SUPABASE_ACCESS_TOKEN:-}"
+          test -f "$VOLUNTEER_ADMIN_MIGRATION"
+          ! grep -Eiq 'drop[[:space:]]+(table|function)|truncate[[:space:]]|delete[[:space:]]+from' "$VOLUNTEER_ADMIN_MIGRATION"
+          temp="$(mktemp -d)"
+          trap 'rm -rf "$temp"' EXIT
+          cat > "$temp/proof.sql" <<'SQL'
+          select
+            to_regclass('public.volunteer_site_admin_grants') is not null as grants_table,
+            to_regclass('public.volunteer_site_admin_audit') is not null as audit_table,
+            to_regprocedure('public.volunteer_is_site_admin()') is not null as site_role_helper,
+            to_regprocedure('public.volunteer_admin_registration_snapshot(text,text)') is not null as roster_rpc,
+            coalesce((select relrowsecurity from pg_class where oid=to_regclass('public.volunteer_site_admin_grants')),false) as grants_rls,
+            coalesce((select relrowsecurity from pg_class where oid=to_regclass('public.volunteer_site_admin_audit')),false) as audit_rls,
+            not coalesce(has_table_privilege('anon',to_regclass('public.volunteer_site_admin_grants'),'SELECT'),false) as anon_blocked,
+            not coalesce(has_table_privilege('authenticated',to_regclass('public.volunteer_site_admin_grants'),'SELECT'),false) as members_blocked,
+            coalesce(has_function_privilege('authenticated',to_regprocedure('public.volunteer_admin_registration_snapshot(text,text)'),'EXECUTE'),false) as operator_rpc_executable,
+            not coalesce(has_function_privilege('anon',to_regprocedure('public.volunteer_admin_registration_snapshot(text,text)'),'EXECUTE'),false) as anon_rpc_blocked,
+            coalesce(strpos(pg_get_functiondef('public.volunteer_pledge_admin_snapshot(text,text)'::regprocedure),'volunteer_is_site_admin'),0)>0 as pledge_scope_applied,
+            coalesce(strpos(pg_get_functiondef('public.volunteer_pledge_admin_confirm(uuid)'::regprocedure),'volunteer_is_site_admin'),0)>0 as confirm_scope_applied;
+          SQL
+          check_project() {
+            local project="$1" outfile="$2" code
+            jq -Rs '{query:.,read_only:true}' "$temp/proof.sql" > "$temp/read.json"
+            code=$(curl -sS --retry 2 --max-time 75 -o "$outfile" -w '%{http_code}' \
+              -X POST "https://api.supabase.com/v1/projects/$project/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              -H "Content-Type: application/json" --data-binary @"$temp/read.json")
+            test "$code" = 201 || { echo "Volunteer admin proof query failed (HTTP $code)"; exit 1; }
+          }
+          schema_ready() {
+            jq -e 'length==1 and (.[0] | all(.[]; .==true))' "$1" >/dev/null
+          }
+          promote() {
+            local project="$1" prefix="$2" code
+            check_project "$project" "$temp/$prefix-before.json"
+            if ! schema_ready "$temp/$prefix-before.json"; then
+              jq -Rs '{query:.,read_only:false}' "$VOLUNTEER_ADMIN_MIGRATION" > "$temp/write.json"
+              code=$(curl -sS --retry 2 --max-time 75 -o "$temp/$prefix-apply.json" -w '%{http_code}' \
+                -X POST "https://api.supabase.com/v1/projects/$project/database/query" \
+                -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+                -H "Content-Type: application/json" --data-binary @"$temp/write.json")
+              test "$code" = 201 || { echo "Volunteer site admin schema promotion failed (HTTP $code)"; cat "$temp/$prefix-apply.json"; exit 1; }
+            fi
+            check_project "$project" "$temp/$prefix-after.json"
+            schema_ready "$temp/$prefix-after.json" || { echo "Volunteer site admin guards failed"; cat "$temp/$prefix-after.json"; exit 1; }
+          }
+          promote "$VOLUNTEER_ADMIN_DEV_PROJECT" dev
+          promote "$SUPABASE_PROJECT_REF" prod
+          echo 'Scoped Volunteer site admin DEV and PROD RLS/RPC proof passed. No user role has been auto-granted.'
+
       - name: Stage and verify approved BBQ store workspace before production
         if: github.event_name != 'pull_request'
         shell: bash
