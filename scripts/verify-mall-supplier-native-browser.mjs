@@ -83,7 +83,7 @@ function safeError(error){
 async function getPublic(pathname,request){
   const url=pathname.startsWith('https://')?pathname:ORIGIN+pathname;
   const u=new URL(url);
-  if(![ORIGIN,'https://mall-api.ekodi.kr'].includes(u.origin))throw Error('MALL_EXTERNAL_ORIGIN_FORBIDDEN');
+  if(u.origin!==ORIGIN)throw Error('MALL_EXTERNAL_ORIGIN_FORBIDDEN');
   const response=await request(url,{
     method:'GET',headers:{accept:'text/html,application/json,text/javascript;q=0.7'},
     redirect:'follow',signal:AbortSignal.timeout(18000),cache:'no-store'
@@ -100,7 +100,7 @@ export async function verifyMallSupplierPublicAssets({request=fetch}={}){
     const url=new URL(response?.url||(
       location.startsWith('https://')?location:ORIGIN+location
     ));
-    if(![ORIGIN,'https://mall-api.ekodi.kr'].includes(url.origin))
+    if(url.origin!==ORIGIN)
       throw Error('MALL_UNEXPECTED_REDIRECT_ORIGIN');
     const text=await response.text();
     const detail=await verify({status,body:text,url});
@@ -139,7 +139,7 @@ export async function verifyMallSupplierPublicAssets({request=fetch}={}){
     if(status!==401&&status!==403)throw Error('MALL_PRIVATE_API_NOT_GUEST_DENIED');
     return {guestDenied:true,serverOperatorVerified:false};
   });
-  await check('supplier-health','https://mall-api.ekodi.kr/health',({status,body})=>{
+  await check('supplier-health','/ekodimall/api/api/public/health',({status,body})=>{
     if(status!==200)throw Error('MALL_SUPPLIER_HEALTH_UNAVAILABLE');
     let health;try{health=JSON.parse(body)}catch{throw Error('MALL_SUPPLIER_HEALTH_BAD_JSON')}
     if(health?.ok!==true)throw Error('MALL_SUPPLIER_HEALTH_NOT_OK');
