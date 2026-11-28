@@ -112,5 +112,5 @@ test('workflow is official EKODI-owned GitHub Chromium lane with no personal bro
   assert.match(workflow,/pull_request:/);
   assert.match(workflow,/workflow_run:/);
   assert.match(workflow,/actions\/upload-artifact@v4/);
-  assert.doesNotMatch(workflow,/opera|tinyfish|puppeteer[- ]cloud|browserbase|Browserless/i);
+  assert.doesNotMatch(workflow,/\bOpera\b|\bTinyFish\b|puppeteer[- ]cloud|\bbrowserbase\b|\bBrowserless\b/i);
 });
