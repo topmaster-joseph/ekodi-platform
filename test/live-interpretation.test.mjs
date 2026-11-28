@@ -336,6 +336,8 @@ test('after 방송 시작 the studio shows the viewing link with copy and share 
   for(const id of ['liveShareUrl','liveShareCopy','liveShareSend','liveShareOpen'])assert.match(page,new RegExp(`id="${id}"`));
   assert.match(studio,/state\.isLive=true;void keepAwake\(true\);showLiveShare\(true\);/);
   assert.match(studio,/void keepAwake\(false\);showLiveShare\(false\);/);
-  assert.ok(studio.indexOf('function showLiveShare')<studio.lastIndexOf('})();'),'helper lives inside the studio closure');
+  const mainEnd=studio.indexOf('\n})();');
+  assert.ok(studio.indexOf('function showLiveShare')<mainEnd&&studio.indexOf('function keepAwake')<mainEnd,'share helper must live in the same closure as goLive/endLive (production ReferenceError 2026-11-28)');
+  assert.doesNotMatch(studio.slice(mainEnd),/\bcfg\./,'later closures cannot see the studio cfg');
   assert.match(studio,/searchParams\.set\('mode','viewer'\)/);
 });

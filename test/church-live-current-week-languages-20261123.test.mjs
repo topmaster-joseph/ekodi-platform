@@ -46,7 +46,7 @@ test('only canonical Church viewer has six-language guide and verified original-
   assert.match(live,/event\.target\.value==='original'\?'ko':event\.target\.value/);
   assert.match(live,/Only guide labels are translated/);
   assert.match(live,/button\[data-church-view\]/);
-  assert.match(html,/v=20261128-live-share/);
+  assert.match(html,/v=20261128-live-share-2/);
   const css=await (await churchLiveCss()).text();
   assert.match(css,/\.church-guide-language select\{/);
   assert.match(css,/@media\(max-width:480px\)/);
