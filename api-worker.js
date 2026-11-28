@@ -18,6 +18,7 @@ import { handleLearningControl } from './learning-control.js';
 import { buildEkodiOwnerReport, latestEkodiOwnerReport, listEkodiOwnerReports, persistEkodiOwnerReport } from './ekodi-owner-report.js';
 import { ensureSitePublicationRows, getSitePublicationSetting, handleSitePublicationApi, listSitePublicationSettings, putSitePublicationSetting, sitePublicationGuard } from './site-publication-runtime.js';
 import { handleAdminConfirmations, handleConfirmationPublic, handleWorkspaceConfirmations } from './payment-receipt-confirmation-control.js';
+import { handlePartnerNewsAdmin, handlePartnerNewsPublic } from './church-partner-news.js';
 
 // Provider service registry only. Customer organizations and their sites are managed as
 // customer tenants/workspaces through the customer directory, never as EKODI services.
@@ -776,6 +777,13 @@ export default {
     if (ageVerificationResponse) return ageVerificationResponse;
     const confirmationPublicResponse = await handleConfirmationPublic(request, env);
     if (confirmationPublicResponse) return confirmationPublicResponse;
+    // 교회 협력소식: 공개 조회는 무인증, 관리는 사이트관리자·최고관리자.
+    const partnerNewsPublicResponse = await handlePartnerNewsPublic(request, env);
+    if (partnerNewsPublicResponse) return partnerNewsPublicResponse;
+    const partnerNewsAdminResponse = await handlePartnerNewsAdmin(request, env, {
+      onAudit: payload => writeAudit(env, { email: payload.actor, role: payload.authority }, payload.action, payload.resource, payload.detail),
+    });
+    if (partnerNewsAdminResponse) return partnerNewsAdminResponse;
     const workspaceConfirmationResponse = await handleWorkspaceConfirmations(request, env);
     if (workspaceConfirmationResponse) return workspaceConfirmationResponse;
 
