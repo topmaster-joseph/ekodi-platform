@@ -131,9 +131,16 @@ export async function verifyMallSupplierPublicAssets({request=fetch}={}){
     return {loadedInGuestBrowser:false,adminCodePath:adminScript.pathname};
   });
   await check('admin-runtime-code',adminScript.href,({status,body,url})=>{
+    // Wrangler can stringify the route branch using either quote style,
+    // different whitespace or shortened local variable/function identifiers.
+    // Require an actual if(...) return function() supplier branch, not simply
+    // a supplier navigation label (which can coexist with a broken router).
+    const routeBranch=/if\s*\(\s*[^)]*['"]suppliers['"][^)]*\)\s*return\s+[$a-zA-Z_][$a-zA-Z0-9_]*\s*\(/.test(body);
     const deployed={status,path:url.pathname,bytes:body.length,
       hasSupplierRenderer:body.includes('renderMallSupplierAdmin'),
-      hasSupplierRoute:body.includes("section==='suppliers'"),
+      hasSupplierRoute:routeBranch,
+      hasExactSourceRoute:body.includes("section==='suppliers'"),
+      hasSupplierCallName:body.includes('mallSuppliers('),
       appearsHtml:/^\s*<!doctype html/i.test(body)};
     // Only safe origin-local asset metadata is logged: no user, cookies or DOM text.
     console.log('MALL_EKODI_ADMIN_ASSET_DIAGNOSTIC='+JSON.stringify(deployed));
