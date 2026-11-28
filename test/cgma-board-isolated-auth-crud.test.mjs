@@ -40,7 +40,7 @@ function isolatedEnvironment() {
               ? 'other@example.invalid'
               : '';
           return identity
-            ? Response.json({authenticated:true,email:identity,role:'super_admin'})
+            ? Response.json({authenticated:true,email:identity,role:identity==='owner@example.invalid'?'super_admin':'admin'})
             : Response.json({authenticated:false}, {status:401});
         }
         if (path === '/api/reauth/verify') {
@@ -94,7 +94,8 @@ test('CGMA isolated real-handler CRUD respects account sessions, local membershi
     const anonymousWrites=db.prepare('SELECT COUNT(*) AS total FROM ekodi_board_posts').get();
     assert.equal(anonymousWrites.total,0);
 
-    // An authenticated platform admin is NOT automatically a board owner.
+    // An authenticated platform admin (not super_admin) is NOT automatically a board owner.
+    // Only a verified platform super_admin manages every board (owner decision 2026-11-29).
     assert.equal((await request(root+'/api/memberships',{identity:'other'})).status,403);
     assert.equal((await request(root+'/api/memberships/bootstrap',{identity:'owner',method:'POST'})).status,401);
 
