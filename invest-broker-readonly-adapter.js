@@ -112,6 +112,55 @@ function kisExpiry(data, now) {
 }
 
 class BrokerError extends Error { constructor(code, provider = null) { super(code); this.code = code; this.provider = provider; } }
+// Bound both provider latency and untrusted response size before parsing; never log
+// raw KIS payloads, bearer tokens, app keys or account-identifying query parameters.
+const KIS_REQUEST_TIMEOUT_MS = 8_000;
+const KIS_MAX_RESPONSE_BYTES = 1_048_576;
+async function readBoundedKisJson(response) {
+  const declared = Number(response.headers?.get('content-length') || 0);
+  if (Number.isFinite(declared) && declared > KIS_MAX_RESPONSE_BYTES)
+    throw new BrokerError('KIS_RESPONSE_TOO_LARGE');
+  if (!response.body || typeof response.body.getReader !== 'function')
+    throw new BrokerError('KIS_RESPONSE_INVALID');
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  let bytes = 0, decoded = '';
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (!(value instanceof Uint8Array)) throw new BrokerError('KIS_RESPONSE_INVALID');
+      bytes += value.byteLength;
+      if (bytes > KIS_MAX_RESPONSE_BYTES) throw new BrokerError('KIS_RESPONSE_TOO_LARGE');
+      decoded += decoder.decode(value, { stream: true });
+    }
+    decoded += decoder.decode();
+  } catch (error) {
+    void reader.cancel().catch(() => {});
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+  try {
+    const data = JSON.parse(decoded);
+    if (data && typeof data === 'object' && !Array.isArray(data)) return data;
+  } catch {}
+  throw new BrokerError('KIS_RESPONSE_INVALID');
+}
+async function requestBoundedKisJson(fetchImpl, endpoint, init) {
+  const signal = AbortSignal.timeout(KIS_REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetchImpl(endpoint, { ...init, signal });
+    assertDirectKisResponse(response, endpoint);
+    const data = await readBoundedKisJson(response);
+    return { response, data };
+  } catch (error) {
+    if (signal.aborted || error?.name === 'TimeoutError' || error?.name === 'AbortError')
+      throw new BrokerError('KIS_REQUEST_TIMEOUT');
+    throw error;
+  }
+}
+
 // Never permit OAuth or balance requests to follow a provider redirect. Redirects can
 // forward app credentials or account-specific request material to unapproved hosts.
 // A redirected 2xx response is also refused in case an injected fetch implementation
@@ -148,12 +197,10 @@ async function kisAccessToken({ db, cfg, fetchImpl, now, force = false }) {
   if (last && now - last < TOKEN_MIN_REISSUE_MS) throw new BrokerError('KIS_TOKEN_REISSUE_TOO_SOON');
   const origin = READONLY_BROKER_TARGETS.kis[cfg.environment].origin;
   const endpoint = origin + '/oauth2/tokenP';
-  const response = await fetchImpl(endpoint, {
+  const { response, data } = await requestBoundedKisJson(fetchImpl, endpoint, {
     method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/json; charset=utf-8' },
     body: JSON.stringify({ grant_type: 'client_credentials', appkey: cfg.appKey, appsecret: cfg.appSecret }),
   });
-  assertDirectKisResponse(response, endpoint);
-  const data = await response.json().catch(() => ({}));
   if (!response.ok || typeof data?.access_token !== 'string' || data.access_token.length < 20) throw new BrokerError('KIS_TOKEN_REFUSED', kisProviderReason({ msg_cd: data?.error_code, msg1: data?.error_description }));
   await storeToken(db, cfg, data.access_token, new Date(kisExpiry(data, now)).toISOString(), new Date(now).toISOString());
   return data.access_token;
@@ -177,15 +224,13 @@ async function kisBalancePages({ cfg, token, fetchImpl }) {
     const url = new URL(target.canonicalUrl);
     const query = { CANO: cfg.cano, ACNT_PRDT_CD: cfg.productCode, ...KIS_QUERY, CTX_AREA_FK100: fk, CTX_AREA_NK100: nk };
     for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
-    const response = await fetchImpl(url.toString(), {
+    const { response, data } = await requestBoundedKisJson(fetchImpl, url.toString(), {
       method: 'GET', redirect: 'manual',
       headers: {
         'content-type': 'application/json; charset=utf-8', authorization: 'Bearer ' + token,
         appkey: cfg.appKey, appsecret: cfg.appSecret, tr_id: KIS_TR_ID[cfg.environment], custtype: 'P', tr_cont: cont,
       },
     });
-    assertDirectKisResponse(response, target.canonicalUrl);
-    const data = await response.json().catch(() => ({}));
     if (response.status === 401 || data?.msg_cd === 'EGW00121' || data?.msg_cd === 'EGW00123') throw new BrokerError('KIS_TOKEN_EXPIRED');
     if (!response.ok || String(data?.rt_cd) !== '0') throw new BrokerError('KIS_BALANCE_REFUSED', kisProviderReason(data));
     for (const row of Array.isArray(data.output1) ? data.output1 : []) rows.push(row);
