@@ -48,7 +48,7 @@ test('roster API is tenant operator only: rejects anonymous, forged origin and n
  assert.equal(forbiddenAction.status,400);
 });
 
-test('roster API invokes the canonical tenant-scoped activity snapshot, not the donor pledge RPC',async()=>{
+test('roster API invokes volunteer-scoped admin snapshot, not the tenant-wide activity snapshot',async()=>{
  const existing=globalThis.fetch;
  const requests=[];
  globalThis.fetch=async(url,opts)=>{
@@ -66,7 +66,7 @@ test('roster API invokes the canonical tenant-scoped activity snapshot, not the 
   assert.equal(data.ok,true);
   assert.equal(data.participants.length,1);
   assert.equal(requests.length,1);
-  assert.equal(requests[0].url,'https://example.supabase.co/rest/v1/rpc/activity_admin_snapshot');
+  assert.equal(requests[0].url,'https://example.supabase.co/rest/v1/rpc/volunteer_admin_registration_snapshot');
   assert.equal(requests[0].authorization,'Bearer '+'f'.repeat(36));
   assert.equal(requests[0].body.p_workspace_slug,'ekodimission');
   assert.equal(requests[0].body.p_activity_key,'261205-coal-delivery');
