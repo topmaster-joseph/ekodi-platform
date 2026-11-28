@@ -217,3 +217,12 @@ test('Shell-rendered public pages still get the public surface marker', async ()
   assert.equal(shouldMarkShellSurface(shell(), new Request('https://ekodi.kr/ekodichurch/admin/')), false);
   assert.equal(shouldMarkShellSurface(new Response('<html></html>', {headers: {'content-type': 'text/html'}}), new Request('https://ekodi.kr/sosik')), false);
 });
+
+test('footer stats and beacon accept any declared non-private surface (/cgma/ audit)', async () => {
+  const footer = await readFile('shell/user-ui-footer.js', 'utf8');
+  const scope = footer.slice(footer.indexOf('function footerTrafficScope'), footer.indexOf('function footerTrafficScope') + 400);
+  assert.match(scope, /if\(!declaredSurface\|\|\['admin','data','document','form','control','auth','my'\]\.includes\(declaredSurface\)\)return '';/);
+  assert.match(scope, /\['admin','auth','api','my'\]\.includes\(root\)/, 'private paths stay excluded');
+  const beacon = await readFile('shell/native-visit-beacon.js', 'utf8');
+  assert.match(beacon, /if\(!surface\|\|\['admin','data','document','form','control','auth','my'\]\.includes\(surface\)\)return;/);
+});
