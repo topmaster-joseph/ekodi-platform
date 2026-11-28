@@ -328,3 +328,14 @@ test('a translation that times out or errors once is retried before falling back
   const [en]=await translateSegment(down,'은혜','ko',['en']);
   assert.deepEqual(en,{lang:'en',text:'은혜',status:'failed'});
 });
+
+test('after 방송 시작 the studio shows the viewing link with copy and share right under the button',()=>{
+  const page=fs.readFileSync(new URL('../tenant-live-page.js',import.meta.url),'utf8');
+  const studio=fs.readFileSync(new URL('../tenant-live.js',import.meta.url),'utf8');
+  assert.match(page,/id="endLiveButton" disabled>방송 종료<\/button><\/div>\n    <div id="liveShare" class="live-share hidden"/);
+  for(const id of ['liveShareUrl','liveShareCopy','liveShareSend','liveShareOpen'])assert.match(page,new RegExp(`id="${id}"`));
+  assert.match(studio,/state\.isLive=true;void keepAwake\(true\);showLiveShare\(true\);/);
+  assert.match(studio,/void keepAwake\(false\);showLiveShare\(false\);/);
+  assert.ok(studio.indexOf('function showLiveShare')<studio.lastIndexOf('})();'),'helper lives inside the studio closure');
+  assert.match(studio,/searchParams\.set\('mode','viewer'\)/);
+});
