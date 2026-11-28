@@ -77,7 +77,7 @@ export function verifyMallSupplierNativeReceipt(actual,profile){
   };
 }
 function safeError(error){
-  const code=String(error?.code||'MALL_NATIVE_PROBE_FAILED');
+  const code=String(error?.code||error?.message||'MALL_NATIVE_PROBE_FAILED').split(':')[0];
   return /^[A-Z][A-Z0-9_]{2,72}$/.test(code)?code:'MALL_NATIVE_PROBE_FAILED';
 }
 async function getPublic(pathname,request){
