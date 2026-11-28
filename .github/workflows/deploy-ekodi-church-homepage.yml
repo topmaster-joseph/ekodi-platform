@@ -1,6 +1,6 @@
 name: Deploy EKODI Church Homepage
 # Release reconciliation marker: church-operating-space-20260924
-# Reconcile Church public Pages to source commit 4ef3ea275899c51694591957979e0bd4616c08ea (일정 버튼 고정 헤더 가림 수정, ekodi-church#205).
+# Reconcile Church public Pages to source commit fceef3f05f3417237b4aa4fee4f96b9c78061efd (방송실 휴대폰 화면공유 안내·통역 자막 상태, ekodi-church#206).
 
 on:
   workflow_dispatch:
