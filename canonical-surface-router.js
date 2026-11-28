@@ -239,7 +239,7 @@ async function proxyAdminRuntime(request,legacyFetch){
 }
 // 영상서재 is served from an external origin under the apex, so it gets a
 // strict policy: no third-party connections, no framing, no plugins.
-const VIDEO_CSP=["default-src 'none'","script-src 'unsafe-inline'","style-src 'unsafe-inline' https://fonts.googleapis.com","font-src https://fonts.gstatic.com","img-src 'self' data: blob:","media-src 'self' blob: https:","connect-src 'none'","frame-ancestors 'none'","base-uri 'none'","form-action 'none'","object-src 'none'"].join('; ');
+const VIDEO_CSP=["default-src 'none'","script-src 'unsafe-inline'","style-src 'unsafe-inline' https://fonts.googleapis.com","font-src https://fonts.gstatic.com","img-src 'self' data: blob:","media-src 'self' blob: https:","connect-src 'none'","manifest-src 'self'","frame-ancestors 'none'","base-uri 'none'","form-action 'none'","object-src 'none'"].join('; ');
 function withVideoSecurityHeaders(response){
   const headers=new Headers(response.headers);
   if(String(headers.get('content-type')||'').includes('text/html'))headers.set('content-security-policy',VIDEO_CSP);
