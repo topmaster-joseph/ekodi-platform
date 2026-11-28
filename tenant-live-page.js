@@ -6,7 +6,7 @@ export function tenantLivePage(tenant){
   const name=esc(tenant.name),title=esc(tenant.title),home=esc(tenant.home),path=esc(tenant.path),robots=esc(tenant.robots||'index,follow');
   const missionShell=tenant.workspace==='ekodimission';
   const churchShell=tenant.apiTenant==='ekodichurch'&&tenant.path==='/live/church/';
-  const assetVersion=churchShell?'20261123-publication-gate':'20261107-1';
+  const assetVersion=churchShell?'20261128-live-share':'20261128-live-share-1';
   const shellHead=churchShell?'<link rel="stylesheet" href="/tenant-live-church.css">':missionShell?'<link rel="stylesheet" href="/ekodimission/assets/shell.css">':'';
   const header=churchShell?"<header class=\"church-live-site-header site-header\" id=\"top\">\n    <a class=\"church-live-brand\" href=\"/ekodichurch/\" aria-label=\"에코디교회 홈\"><span class=\"brand-mark\" aria-hidden=\"true\">E</span><span><strong>에코디교회</strong><small>EKODI CHURCH</small></span></a>\n    <button type=\"button\" id=\"churchLiveMenu\" class=\"church-live-menu\" aria-controls=\"churchLiveNav\" aria-expanded=\"false\" aria-label=\"메뉴 열기\"><span></span><span></span></button>\n    <nav id=\"churchLiveNav\" aria-label=\"에코디교회 주요 메뉴\">\n      <a href=\"/ekodichurch/#worship\">예배안내</a>\n      <a href=\"/ekodichurch/#online\" aria-current=\"page\">온라인</a>\n      <a href=\"/ekodichurch/#location\">오시는 길</a>\n      <a href=\"/qtin/church\">큐티인 신청</a>\n      <a href=\"/ekodichurch/my/\">마이페이지</a>\n    </nav>\n    <div class=\"church-live-actions\"><span id=\"liveState\">방송 확인 중</span><a href=\"/ekodichurch/#online\">교회 홈</a></div>\n  </header>"
     :missionShell
@@ -98,6 +98,7 @@ ${header}
     ${churchHostGuide}
     ${rehearsalPanel}
     <div class="broadcast-actions"><button class="primary" id="goLiveButton">방송 시작</button><button class="danger hidden" id="endLiveButton" disabled>방송 종료</button></div>
+    <div id="liveShare" class="live-share hidden" role="region" aria-label="방송 시청 링크"><strong>방송 시청 링크</strong><small>이 링크를 보내면 누구나 바로 시청할 수 있습니다.</small><input id="liveShareUrl" readonly aria-label="방송 시청 링크"><div class="live-share-actions"><button id="liveShareCopy" type="button">링크 복사</button><button id="liveShareSend" type="button">공유하기</button><a id="liveShareOpen" href="#" target="_blank" rel="noopener">시청 화면 열기</a></div></div>
     <div id="hostAccessStatus" class="studio-host-status hidden" role="status" aria-live="polite"></div>
     <a id="hostAccessLogin" class="studio-host-login hidden" href="#" rel="nofollow">Google 계정 선택 · 진행자 권한 확인</a>
     <div id="statusLog" class="status" aria-live="polite">준비</div>
