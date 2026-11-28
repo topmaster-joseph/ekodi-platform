@@ -106,13 +106,14 @@ test('independent board: verified admin session permits own create/edit/soft-del
   } finally {globalThis.fetch=originalFetch;db.close();}
 });
 
-test('independent board: platform admin has no implicit board manage right; bootstrap needs real reauthentication',async()=>{
+test('independent board: only a verified platform super_admin has implicit board manage right (owner decision 2026-11-29); other admins do not; bootstrap needs real reauthentication',async()=>{
   const originalFetch=globalThis.fetch;
   globalThis.fetch=async()=>Response.json({message:'untrusted'},{status:401});
   const {env,db,validated}=fixture();
   try{
     await worker.fetch(request('/api/health'),env);
-    assert.equal((await worker.fetch(request('/api/memberships','GET','admin1'),env)).status,403);
+    assert.equal((await worker.fetch(request('/api/memberships','GET','admin1'),env)).status,200,'verified super_admin manages every board');
+    assert.equal((await worker.fetch(request('/api/memberships','GET','admin2'),env)).status,403,'plain admin role is not enough');
     const bootstrapWithoutProof=await worker.fetch(request('/api/memberships/bootstrap','POST','admin1'),env);
     assert.equal(bootstrapWithoutProof.status,401);
     const bootstrap=await worker.fetch(request('/api/memberships/bootstrap','POST','admin1',undefined,'reauth-ok'),env);

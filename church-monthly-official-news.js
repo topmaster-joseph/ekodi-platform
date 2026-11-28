@@ -30,36 +30,100 @@ export function previousCompletedChurchSunday(at=new Date()){
   return date.toISOString().slice(0,10);
 }
 
+// Weekly Church news is published every Sunday at 10:00 KST (one hour before
+// the 11:00 Sunday service). Before 10:00 on a Sunday the previous week is due.
+export const CHURCH_NEWS_PUBLISH_HOUR_KST=10;
+export function dueChurchNewsSunday(at=new Date()){
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:KST,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).formatToParts(at);
+  const value=type=>parts.find(part=>part.type===type)?.value||'';
+  const date=new Date([value('year'),value('month'),value('day')].join('-')+'T00:00:00Z');
+  const dow=date.getUTCDay();
+  const back=dow===0?(Number(value('hour'))>=CHURCH_NEWS_PUBLISH_HOUR_KST?0:7):dow;
+  date.setUTCDate(date.getUTCDate()-back);
+  return date.toISOString().slice(0,10);
+}
+const publishStamp=day=>new Date(day+'T'+String(CHURCH_NEWS_PUBLISH_HOUR_KST).padStart(2,'0')+':00:00+09:00').toISOString();
+const REGULAR_LINES=[
+  '• 새로 나오신 분과 오랜만에 나오신 분을 주님의 이름으로 환영합니다.',
+  '• 매주 화요일 오전 10시, 평공목(평생공부하는목회자) 모임이 있습니다.',
+  '• 매주 토요일 오전 11시, 에코디 토요모임을 위해 기도합니다.'
+];
+function composeChurchNews(date,items,{hamchansa=true,source='주보 「Community Announce」'}={}){
+  const body=[
+    '2026년 '+dayLabel(date)+' 에코디교회 교회소식','','[공동체 정기 안내]',...REGULAR_LINES,
+    ...(hamchansa?['• 매주 일요일, 함께찬양하는사람들(함찬사) 모임을 위해 기도합니다.']:[]),
+    ...(items.length?['','[이번 주 주보 안내]',...items.map(item=>'• '+item)]:[]),
+    '',date.slice(0,4)+'년 '+dayLabel(date)+' '+source+'를 기준으로 정리했습니다.'
+  ].join('\n').trim();
+  return Object.freeze({sourceKey:date,title:dayLabel(date)+' 교회소식',body,weekCount:1,publishedAt:publishStamp(date)});
+}
+
 export function approvedChurchWeeklyPublications(at=new Date()){
-  const previousSunday=previousCompletedChurchSunday(at);
+  const previousSunday=dueChurchNewsSunday(at);
   return CHURCH_WEEKLY_NEWS_2026
     .filter(week=>week.date<=previousSunday&&week.date>=CHURCH_NEWS_FIRST_SUNDAY)
-    .map(week=>{
-      const body=[
-        '2026년 '+dayLabel(week.date)+' 에코디교회 교회소식',
-        '',
-        '[공동체 정기 안내]',
-        '• 새로 나오신 분과 오랜만에 나오신 분을 주님의 이름으로 환영합니다.',
-        '• 매주 화요일 오전 10시, 평공목(평생공부하는목회자) 모임이 있습니다.',
-        '• 매주 토요일 오전 11시, 에코디 토요모임을 위해 기도합니다.',
-        ...(week.date==='2026-11-15'?[]:['• 매주 일요일, 함께찬양하는사람들(함찬사) 모임을 위해 기도합니다.']),
-        '',
-        '[이번 주 주보 안내]',
-        ...week.items.map(item=>'• '+item),
-        '',
-        '2026년 '+dayLabel(week.date)+' 주보 「Community Announce」를 기준으로 정리했습니다.'
-      ].join('\n').trim();
-      return Object.freeze({sourceKey:week.date,title:dayLabel(week.date)+' 교회소식',body,weekCount:1});
-    });
+    .map(week=>composeChurchNews(week.date,week.items,{hamchansa:week.date!=='2026-11-15'}));
 }
+// Automatic weekly news: from 2026-11-22 the Sunday bulletin itself is the
+// source. At 10:00 KST each Sunday the "Community Announce" list of that day's
+// bulletin is read from the canonical public Church source and published.
+// Placeholders ("확인필요"), standing lines and personal prayer requests that
+// name an individual are never published.
+export const CHURCH_BULLETIN_SOURCE_DEFAULT='https://raw.githubusercontent.com/topmaster-joseph/ekodi-church/main/worship/';
+export const CHURCH_AUTO_NEWS_FIRST_SUNDAY='2026-11-22';
+const PUBLISHABLE_BULLETIN_STATES=new Set(['prepared','published','final','archived']);
+const STANDING_ITEM=/환영합니다|평공목|토요모임|함찬사|함께찬양하는사람들/;
+const PERSONAL_PRAYER=/(형제|자매|성도|집사|권사|장로|청년|학생|님|씨)(을|를|의)?\s*[^.。]{0,20}위해\s*기도/;
+const decode=v=>v.replace(/&nbsp;/g,' ').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');
+export function extractBulletinAnnouncements(html){
+  const block=String(html||'').match(/data-b="announce"[^>]*>([\s\S]*?)<\/div>/);
+  if(!block)return null;
+  return [...block[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/g)]
+    .map(m=>decode(m[1].replace(/<[^>]+>/g,'')).replace(/\s+/g,' ').trim())
+    .filter(item=>item&&item.length<=300&&!/확인\s*필요/.test(item)&&!STANDING_ITEM.test(item)&&!PERSONAL_PRAYER.test(item));
+}
+export function automaticChurchNewsSundays(at=new Date(),covered=new Set(CHURCH_WEEKLY_NEWS_2026.map(w=>w.date))){
+  const due=dueChurchNewsSunday(at),out=[];
+  const d=new Date(due+'T00:00:00Z');
+  for(let i=0;i<4&&d.toISOString().slice(0,10)>=CHURCH_AUTO_NEWS_FIRST_SUNDAY;i++,d.setUTCDate(d.getUTCDate()-7)){
+    const day=d.toISOString().slice(0,10);
+    if(!covered.has(day))out.push(day);
+  }
+  return out.reverse();
+}
+const recentAttempts=new Map();
+export async function bulletinChurchWeeklyPublication(env,date,{fetcher=globalThis.fetch,now=Date.now()}={}){
+  if(recentAttempts.has(date)&&now-recentAttempts.get(date)<10*60*1000)return null;
+  recentAttempts.set(date,now);
+  const base=String(env?.CHURCH_BULLETIN_SOURCE||CHURCH_BULLETIN_SOURCE_DEFAULT).replace(/\/?$/,'/');
+  const get=async path=>{
+    const r=await fetcher(base+path,{signal:AbortSignal.timeout(6000),headers:{accept:'text/html,application/json'}}).catch(()=>null);
+    return r?.ok?r.text():null;
+  };
+  const index=await get('weekly.json').then(t=>t&&JSON.parse(t)).catch(()=>null);
+  const entry=index?.services?.find?.(svc=>svc?.date===date);
+  if(!entry||!PUBLISHABLE_BULLETIN_STATES.has(String(entry.status||'').toLowerCase()))return null;
+  const items=extractBulletinAnnouncements(await get(date+'/index.html'));
+  if(!items)return null;
+  recentAttempts.delete(date);
+  return composeChurchNews(date,items);
+}
+
 // Durable system publications on the already authorized Church board only.
 // No HTTP write route is added. Incoming human POST/PATCH/DELETE still require
 // an authenticated *board-local* editor/owner; anonymous writes remain forbidden.
-export async function syncApprovedChurchWeeklyNotices(env,instance,at=new Date()){
+export async function syncApprovedChurchWeeklyNotices(env,instance,at=new Date(),options={}){
   if(instance?.site_id!=='ekodichurch'||instance.status!=='active'||!env?.DB?.prepare)return {published:0,updated:0};
-  const publications=approvedChurchWeeklyPublications(at);
-  if(!publications.length)return {published:0,updated:0};
+  const publications=[...approvedChurchWeeklyPublications(at)];
   const DB=env.DB;
+  for(const day of (String(env.CHURCH_BULLETIN_AUTO||'').toLowerCase()==='off'?[]:automaticChurchNewsSundays(at))){
+    const exists=await DB.prepare(`SELECT id FROM ekodi_board_posts WHERE board_id=? AND author_person_id=? LIMIT 1`)
+      .bind(instance.board_id,CHURCH_NEWS_PUBLISHER+':'+day).first().catch(()=>null);
+    if(exists)continue;
+    const item=await bulletinChurchWeeklyPublication(env,day,options).catch(()=>null);
+    if(item)publications.push(item);
+  }
+  if(!publications.length)return {published:0,updated:0};
   await DB.batch([
     DB.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_ekodi_board_church_weekly_news
       ON ekodi_board_posts(board_id,author_person_id)
@@ -88,7 +152,7 @@ export async function syncApprovedChurchWeeklyNotices(env,instance,at=new Date()
     if(!old){
       const result=await DB.prepare(`INSERT OR IGNORE INTO ekodi_board_posts
         (board_id,author_person_id,author_email,title,body,status,created_at,updated_at)
-        VALUES (?,?,'',?,?,'published',?,?)`).bind(boardId,author,item.title,item.body,stamp,stamp).run();
+        VALUES (?,?,'',?,?,'published',?,?)`).bind(boardId,author,item.title,item.body,item.publishedAt||stamp,item.publishedAt||stamp).run();
       createdNow=Number(result?.meta?.changes||0)>0;
       if(createdNow)published++;
     }

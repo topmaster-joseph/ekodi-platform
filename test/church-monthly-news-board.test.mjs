@@ -25,7 +25,7 @@ function fixture(){
     },
     async batch(statements){for(const statement of statements)await statement.run()}
   };
-  const env={DB};
+  const env={DB,CHURCH_BULLETIN_AUTO:'off'};
   const call=async (path,method='GET',body)=>{
     const r=await handleSiteBoardRequest(new Request('https://ekodi.kr/ekodichurch/board'+path,{
       method,
@@ -51,7 +51,8 @@ test('11 verified completed Sunday bulletins each publish one dated notice, neve
   assert.match(items.find(x=>x.sourceKey==='2026-09-27').body,/한가위 열린식탁/);
   assert.match(items.find(x=>x.sourceKey==='2026-10-18').body,/기독교교육주간/);
   assert.match(items.find(x=>x.sourceKey==='2026-11-15').body,/추수감사주일/);
-  assert.deepEqual(approvedChurchWeeklyPublications(new Date('2026-09-06T12:00:00+09:00')),[]);
+  assert.deepEqual(approvedChurchWeeklyPublications(new Date('2026-09-06T09:59:00+09:00')),[]);
+  assert.deepEqual(approvedChurchWeeklyPublications(new Date('2026-09-06T10:00:00+09:00')).map(x=>x.sourceKey),['2026-09-06'],'Sunday 10:00 KST publishes that Sunday');
 });
 
 test('Church official news is stored in the existing tenant-scoped board, categorized and audited once',async()=>{

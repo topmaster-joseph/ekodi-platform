@@ -227,8 +227,12 @@ async function ensureInstance(env,route){
 }
 
 // The independent board accepts an EKODI administrator only after the internal
-// CONTROL_API validates the real bearer session. A claimed email, header or
-// platform role never grants board-local owner/admin/moderator permissions.
+// CONTROL_API validates the real bearer session. A claimed email or header never
+// grants permissions. Exception (owner decision 2026-11-29): the platform
+// super administrators hold every permission on every site board. Their status
+// is proven server-side only — a verified CONTROL_API super_admin session, or a
+// verified (email-confirmed) EKODI login whose email is an active super_admin
+// in both admins and admin_google_accounts (same rule as seonammedi admin).
 async function verifiedAdminPrincipal(request,env){
   if(!env?.CONTROL_API?.fetch)return null;
   const authorization=String(request.headers.get('authorization')||'');
@@ -246,7 +250,16 @@ async function verifiedAdminPrincipal(request,env){
   const email=lower(session.email);
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return null;
   const personId='admin:'+email;
-  return Object.freeze({id:personId,email,subject:{key:personId}});
+  return Object.freeze({id:personId,email,subject:{key:personId},platformRole:lower(session.role)});
+}
+
+const PLATFORM_SUPER_ADMIN_SQL="SELECT a.role FROM admins a JOIN admin_google_accounts g ON lower(trim(g.email))=lower(trim(a.email)) WHERE lower(trim(a.email))=? AND a.role='super_admin' AND g.role='super_admin' AND g.status='active' LIMIT 1";
+async function isPlatformSuperAdmin(env,principal){
+  if(principal?.platformRole==='super_admin')return true;
+  const email=lower(principal?.email);
+  if(!email||!env?.DB?.prepare)return false;
+  const row=await env.DB.prepare(PLATFORM_SUPER_ADMIN_SQL).bind(email).first().catch(()=>null);
+  return lower(row?.role)==='super_admin';
 }
 
 async function actor(request,env,instance){
@@ -258,6 +271,9 @@ async function actor(request,env,instance){
   const membership=await env.DB.prepare(`SELECT role,status FROM ekodi_board_memberships
     WHERE board_id=? AND person_id=? LIMIT 1`).bind(instance.board_id,personId).first().catch(()=>null);
   const boardMember=membership?.status==='active';
+  if(await isPlatformSuperAdmin(env,principal)){
+    return Object.freeze({authenticated:true,personId,email,role:'owner',boardMember:true,manage:true,platformSuperAdmin:true});
+  }
   const role=boardMember?(lower(membership.role)||'member'):'member';
   const manage=boardMember&&BOARD_MANAGE_ROLES.has(role);
   return Object.freeze({authenticated:true,personId,email,role,boardMember,manage});
