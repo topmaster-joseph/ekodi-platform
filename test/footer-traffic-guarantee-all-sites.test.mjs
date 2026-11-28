@@ -187,3 +187,33 @@ test('shared legal pages show the root site summary instead of no stats', async 
   assert.match(footer, /url\.searchParams\.set\('site_path',sharedLegal\?'':root\+child\)/);
   assert.doesNotMatch(footer, /\['admin','auth','api','my','privacy','terms'\]\.includes\(root\)/);
 });
+
+// 2026-11-29 production audit: /office/ kept connect-src 'none' because a second
+// rule for an already-listed pattern was ignored; /ekodichurch/ and /cgma/ lost
+// stats because Shell-rendered pages skipped the guarantee and had no surface marker.
+test('page-specific CSP rules are patched in place instead of duplicated', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ekodi-footer-csp-'));
+  try {
+    await mkdir(join(root, 'dist/office'), {recursive: true});
+    await writeFile(join(root, 'wrangler.site.toml'), 'run_worker_first = ["/"]\n');
+    const strict = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'";
+    await writeFile(join(root, 'dist/_headers'), `/*\n  Content-Security-Policy: default-src 'none'; script-src 'none'\n\n/office\n  ! Content-Security-Policy\n  Content-Security-Policy: ${strict}\n\n/office/\n  ! Content-Security-Policy\n  Content-Security-Policy: ${strict}\n\n/office/*\n  ! Content-Security-Policy\n  Content-Security-Policy: ${strict}\n`);
+    await writeFile(join(root, 'dist/office/index.html'), '<html><body><footer class="site-foot">o</footer></body></html>');
+    await runFooterTrafficPostbuild({root});
+    const headers = await readFile(join(root, 'dist/_headers'), 'utf8');
+    assert.equal(headers.split('\n').filter(line => line === '/office/').length, 1, 'no duplicate /office/ rule');
+    assert.equal((headers.match(/connect-src 'none'/g) || []).length, 0);
+    assert.equal((headers.match(/connect-src 'self'/g) || []).length, 3, '/office, /office/ and /office/* all allow same-origin telemetry');
+    assert.match(headers, /^\/\*\n  Content-Security-Policy: default-src 'none'; script-src 'none'$/m, 'global default untouched');
+  } finally { await rm(root, {recursive: true, force: true}); }
+});
+
+test('Shell-rendered public pages still get the public surface marker', async () => {
+  const {shouldMarkShellSurface} = await import('../footer-traffic-guarantee.js');
+  const shell = (surface = 'public', extra = {}) => new Response('<html><body></body></html>', {headers: {'content-type': 'text/html', 'x-ekodi-user-ui': 'v9', 'x-ekodi-user-ui-surface': surface, ...extra}});
+  assert.equal(shouldMarkShellSurface(shell(), new Request('https://ekodi.kr/ekodichurch/')), true);
+  assert.equal(shouldMarkShellSurface(shell(), new Request('https://ekodi.kr/cgma/')), true);
+  assert.equal(shouldMarkShellSurface(shell('workspace'), new Request('https://ekodi.kr/space/')), false);
+  assert.equal(shouldMarkShellSurface(shell(), new Request('https://ekodi.kr/ekodichurch/admin/')), false);
+  assert.equal(shouldMarkShellSurface(new Response('<html></html>', {headers: {'content-type': 'text/html'}}), new Request('https://ekodi.kr/sosik')), false);
+});
