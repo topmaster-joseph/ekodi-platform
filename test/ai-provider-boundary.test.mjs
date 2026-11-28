@@ -23,6 +23,15 @@ test('feature modules do not call AI vendors directly', () => {
   assert.deepEqual(offenders, []);
 });
 
+test('Workers AI binding is used only through the common runner or routers', () => {
+  const root = new URL('..', import.meta.url).pathname;
+  const allowed = new Set(['ekodi-workers-ai.js', 'ai-provider-control.js', 'ai-control-provider-router.js']);
+  const offenders = readdirSync(root)
+    .filter(name => name.endsWith('.js') && !/provider-adapters?\.js$/.test(name) && !allowed.has(name))
+    .filter(name => /\bAI\??\.run\s*\(/.test(readFileSync(root + name, 'utf8')));
+  assert.deepEqual(offenders, []);
+});
+
 test('ministry and community reports draft through the central router', () => {
   const root = new URL('..', import.meta.url).pathname;
   for (const name of ['church-reports-control.js', 'community-reports-control.js']) {

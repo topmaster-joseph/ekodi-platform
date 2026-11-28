@@ -1,3 +1,4 @@
+import { runWorkersAi } from './ekodi-workers-ai.js';
 import { buildEpub, AI_NOTICE } from './publishing-ai-epub.js';
 import { QUALITY_RULES, fixForeignScript, polishChapter, stripReviewMarkers } from './publishing-ai-quality.js';
 import { releaseBook, journalTick, refreshReleaseFiles } from './publishing-ai-release.js';
@@ -98,7 +99,7 @@ export async function generate(env, system, prompt, maxTokens, stage = 'draft') 
   if ((await usedToday(db)) + worst > AI_FACTORY.dailyNeuronCap) return null;
   const hold = await reservePool(env, worst); if (!hold) return null;
   let out;
-  try { out = await env.AI.run(m.id, { messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }], max_tokens: maxTokens, temperature: stage === 'edit' ? 0.5 : 0.8 });
+  try { out = await runWorkersAi(env, m.id, { messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }], max_tokens: maxTokens, temperature: stage === 'edit' ? 0.5 : 0.8 }, { capability: 'documents', module: `publishing-${stage}` });
   } catch (e) { await settlePool(env, hold, 0); throw e; }
   // Workers AI는 모델이 JSON을 내면 response를 이미 객체로 돌려줄 때가 있다 → 문자열로 되돌린다.
   const raw = out?.response ?? out?.result?.response ?? '';
@@ -145,7 +146,7 @@ export async function illustrate(env, prompt) {
   if ((await usedToday(db)) + MODELS.image.perImage > AI_FACTORY.dailyNeuronCap) return null;
   const hold = await reservePool(env, MODELS.image.perImage); if (!hold) return null;
   let out;
-  try { out = await env.AI.run(MODELS.image.id, { prompt: String(prompt).slice(0, 1800), steps: MODELS.image.steps }); }
+  try { out = await runWorkersAi(env, MODELS.image.id, { prompt: String(prompt).slice(0, 1800), steps: MODELS.image.steps }, { capability: 'marketing', module: 'publishing-image' }); }
   catch (e) { await settlePool(env, hold, 0); throw e; }
   await addUsage(db, MODELS.image.perImage);
   return typeof out?.image === 'string' ? out.image : null;
