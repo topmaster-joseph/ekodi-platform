@@ -233,3 +233,18 @@ release path. The existing financial flags stay false throughout this change.
 Real account data still requires signed-in owner acceptance; anonymous native
 checks establish only public rendering, source availability and authentication
 denial, not authenticated production report correctness.
+
+## Continuation: Mall accounting ledger (all recorded periods)
+
+Pay reads the existing Mall authenticated GET /api/settlements only after
+the canonical principal matches the source /api/me identity. The new
+/ekodipay/api/web/seller/mall/ledger accepts no caller-provided parameters.
+The existing seller-scoped source aggregates all recorded ledger entries,
+pendingAmount and paidAmount; the latter is a recorded status, not bank
+deposit evidence. Pay projects only these three numeric fields with source,
+scope, observation time and explicit payout verification/execution=false.
+The separate seller card does not change period-filtered orders or CSV totals.
+Read failures or malformed amounts are not replaced with zero or demo data.
+No Mall schema, payout, financial activation or new permissions are changed.
+Production signed-in owner acceptance remains distinct from fixture and
+anonymous PC/mobile verification.
