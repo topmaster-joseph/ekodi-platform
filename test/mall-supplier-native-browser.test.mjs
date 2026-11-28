@@ -31,7 +31,7 @@ function fakeRequestFactory({guestStatus=401,healthAutoOrder=false,missingRegist
     '/ekodimall/admin/suppliers':'<!doctype html><html><script src="/workspace-admin.js"></script></html>',
     '/workspace-admin.js':'const renderMallSupplierAdmin=function(){}; if(section===\x27suppliers\x27){}',
     '/ekodimall/api/api/internal/products/by-provider':'{"error":"unauthorized"}',
-    '/health':JSON.stringify({ok:true,domeggookAutoOrderReady:healthAutoOrder,
+    '/ekodimall/api/api/public/health':JSON.stringify({ok:true,domeggookAutoOrderReady:healthAutoOrder,
       buyerPiiReleaseEnabled:false,supplierForwardEnabled:false})
   };
   const calls=[];
