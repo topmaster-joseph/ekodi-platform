@@ -325,7 +325,12 @@ test('payer explicitly consents, is atomically bound, and receives own source ch
   f.db.sqlite.close();
 });
 test('untrusted external checkout, buyer credentials or changed order ownership fail closed', async () => {
-  for (const patch of [{ checkoutUrl: 'https://evil.test/pay' }, { usesPayerCredentials: false },
+  for (const patch of [{ checkoutUrl: 'https://evil.test/pay' },
+    { checkoutUrl: ORIGIN + '/ekodimall/checkout?orderId=OTHER-ORDER' },
+    { checkoutUrl: ORIGIN + '/ekodimall/checkout?orderId=ORDER-123&orderId=OTHER-ORDER' },
+    { checkoutUrl: ORIGIN + '/ekodimall/checkout' },
+    { checkoutUrl: ORIGIN + '/ekodimall/checkout?checkoutId=%0A' },
+    { usesPayerCredentials: false },
     { orderOwnerChanged: true }, { userId: 'person:buyer' }]) {
     const f = fixture(), link = await createLink(f);
     const original = f.env.EKODIPAY_ORDER_SERVICE.createDelegatedCheckout;
@@ -337,6 +342,30 @@ test('untrusted external checkout, buyer credentials or changed order ownership 
     ORIGIN + '/ekodimall/?paymentKey=secret', ORIGIN + '/ekodimall/%2fadmin', 'https://user:pass@ekodi.kr/ekodimall/']) {
     assert.throws(() => safeCheckoutUrl(url, 'mall'));
   }
+});
+test('checkout URL accepts only unique opaque identifiers for the original order', () => {
+  const url = ORIGIN + '/ekodimall/checkout?orderId=ORDER-123&checkoutId=checkout-1';
+  assert.equal(safeCheckoutUrl(url, 'mall', 'ORDER-123'), url);
+  const opaque = ORIGIN + '/ekodimall/checkout?checkoutId=checkout-1';
+  assert.equal(safeCheckoutUrl(opaque, 'mall', 'ORDER-123'), opaque);
+  for (const query of ['', '?orderId=OTHER', '?orderId=ORDER-123&orderId=ORDER-123',
+    '?checkoutId=', '?checkoutId=%2Fadmin', '?checkoutId=a&checkoutId=b', '?orderId=ORDER-123&checkoutId=%20']) {
+    assert.throws(() => safeCheckoutUrl(ORIGIN + '/ekodimall/checkout' + query, 'mall', 'ORDER-123'));
+  }
+});
+test('ambiguous settlement query is rejected before the source is called', async () => {
+  const f = fixture();
+  try {
+    let calls = 0;
+    f.env.EKODIPAY_ORDER_SERVICE.sellerSettlementReport = async () => { calls++; throw new Error('unexpected'); };
+    const base = '/seller/report?workspaceId=workspace-1&start=2026-11-01&end=2026-11-27';
+    for (const suffix of ['&workspaceId=other', '&start=2026-11-01', '&end=2026-11-27', '&cursor=a&cursor=b']) {
+      const result = await call(f.env, base + suffix);
+      assert.equal(result.status, 400);
+      assert.equal((await result.json()).code, 'UNSUPPORTED_FIELDS');
+    }
+    assert.equal(calls, 0);
+  } finally { f.db.sqlite.close(); }
 });
 test('seller reports require verified exact user/workspace, valid range and preserve unknown amounts', async () => {
   const f = fixture();
