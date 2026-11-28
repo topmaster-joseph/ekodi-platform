@@ -84,7 +84,7 @@ import { handleMediaShieldRequest, isMediaShieldPath, mediaShieldPlayerResponse 
 import { mediaShieldPageResponse } from './ekodi-media-shield-pages.js';
 import { applyCspReportOnly, handleCspReport, isCspReportPath } from './csp-report-policy.js';
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
-import { ensureFooterTraffic } from './footer-traffic-guarantee.js';
+import { ensureFooterTraffic, withFooterTraffic } from './footer-traffic-guarantee.js';
 import { withPublicEdgeCache } from './public-edge-cache.js';
 import { applyTrafficResponsePolicy, assessTrafficTier, recordTrafficOutcome, trafficRequestGuard } from './traffic-governor.js';
 // EKODI-EDGE-TRAFFIC-SHIELD-001: fetch() isolates a flooding client before the site-wide tier assessment.
@@ -795,7 +795,7 @@ async function routePlatform(request,env,ctx){
     return legacyResponse;
 }
 
-export default {
+const ekodiSharedSiteEntry={
   async fetch(request,env,ctx){
     const guard=await enforcePlatformRequestSecurity(request,env);
     if(guard)return applyPlatformSecurityHeaders(guard,request);
@@ -886,3 +886,7 @@ export default {
     }
   },
 };
+// FOOTER-TRAFFIC-GUARANTEE (2026-11-29 audit): many routes return before finalize
+// (/cgma/, routeCanonicalSurface, mission/church pages), so the guarantee also
+// wraps the whole Shared Site entry. It is idempotent with the finalize pass.
+export default withFooterTraffic(ekodiSharedSiteEntry);

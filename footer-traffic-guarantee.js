@@ -134,6 +134,7 @@ export function shouldGuaranteeFooterTraffic(response, request) {
 // Upstream sources (e.g. Church Pages) may omit it, so guarantee the marker.
 export function shouldMarkShellSurface(response, request) {
   if (!response || !request || !response.headers.has('x-ekodi-user-ui')) return false;
+  if (response.headers.has(FOOTER_TRAFFIC_HEADER)) return false;
   if (String(request.method || 'GET').toUpperCase() !== 'GET' || response.status !== 200) return false;
   if (!String(response.headers.get('content-type') || '').toLowerCase().includes('text/html')) return false;
   const declared = String(response.headers.get('x-ekodi-user-ui-surface') || '').toLowerCase();
@@ -142,6 +143,9 @@ export function shouldMarkShellSurface(response, request) {
 }
 
 function markShellSurface(response) {
+  const headers = new Headers(response.headers);
+  headers.set(FOOTER_TRAFFIC_HEADER, `${FOOTER_TRAFFIC_VERSION}-shell`);
+  response = new Response(response.body, {status: response.status, statusText: response.statusText, headers});
   if (typeof HTMLRewriter === 'undefined') return response;
   return new HTMLRewriter()
     .on('html', {element(element) {
