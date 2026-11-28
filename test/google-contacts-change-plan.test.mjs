@@ -1,0 +1,12 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {prepareNameCorrection,assertFreshPlan} from '../google-contacts-change-plan.js';
+const person=()=>({resourceName:'people/c1',metadata:{sources:[{type:'CONTACT',id:'1',etag:'v1'}]},names:[{displayName:'홍길동.목포대',unstructuredName:'홍길동.목포대'}],organizations:[{title:'교수',department:'연구실',formattedType:'Work'}],phoneNumbers:[{value:'01012345678'}],biographies:[{value:'synthetic note'}]});
+test('only approved field mask and contact source etag',()=>{const plan=prepareNameCorrection(person());assert.equal(plan.updateMask,'names,organizations');assert.equal(plan.body.metadata.sources[0].etag,'v1');assert.deepEqual(plan.body.names,[{unstructuredName:'홍길동'}]);assert.deepEqual(plan.body.organizations,[{title:'교수',department:'연구실',name:'목포대'}]);assert.equal(plan.body.phoneNumbers,undefined);assert.equal(plan.preimage.biographies[0].value,'synthetic note');assert.equal(plan.deleteAllowed,false)});
+test('unchanged original accepted',()=>{const p=person();assert.deepEqual(assertFreshPlan(prepareNameCorrection(p),p).body,prepareNameCorrection(p).body)});
+test('etag conflict fails closed',()=>{const p=person(),plan=prepareNameCorrection(p);p.metadata.sources[0].etag='v2';assert.throws(()=>assertFreshPlan(plan,p),{code:'STALE_OR_TAMPERED_PLAN'})});
+test('tampered mask fails closed',()=>{const p=person(),plan=prepareNameCorrection(p);plan.updateMask='phoneNumbers';assert.throws(()=>assertFreshPlan(plan,p),{code:'STALE_OR_TAMPERED_PLAN'})});
+test('structured name must be reviewed',()=>{const p=person();p.names[0].familyName='홍';assert.throws(()=>prepareNameCorrection(p),{code:'STRUCTURED_NAME_REVIEW_REQUIRED'})});
+test('missing contact etag fails closed',()=>{const p=person();delete p.metadata.sources[0].etag;assert.throws(()=>prepareNameCorrection(p),{code:'CONTACT_ETAG_REQUIRED'})});
+test('mixed source fails closed',()=>{const p=person();p.metadata.sources.push({type:'PROFILE'});assert.throws(()=>prepareNameCorrection(p),{code:'CONTACT_ETAG_REQUIRED'})});
+test('different existing affiliation is not overwritten',()=>{const p=person();p.organizations[0].name='다른기관';assert.throws(()=>prepareNameCorrection(p),{code:'MANUAL_REVIEW_REQUIRED'})});

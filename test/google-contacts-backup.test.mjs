@@ -1,0 +1,13 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {sealContactSnapshot,openContactSnapshot} from '../google-contacts-backup.js';
+const key=()=>crypto.subtle.generateKey({name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+const ctx={ownerId:'owner-A',googleSubject:'subject-A',operationId:'operation-A',keyId:'key-A',resourceName:'people/c1'};
+const person={resourceName:'people/c1',metadata:{sources:[{type:'CONTACT',id:'1',etag:'v1'}]},names:[{givenName:'홍길동'}],phoneNumbers:[{value:'01012345678'}],biographies:[{value:'synthetic note'}]};
+test('encrypted snapshot round trip and no plaintext',async()=>{const k=await key(),e=await sealContactSnapshot(k,ctx,person);assert.deepEqual(await openContactSnapshot(k,ctx,e),person);assert(!JSON.stringify(e).includes('synthetic note'))});
+test('random IV per snapshot',async()=>{const k=await key(),a=await sealContactSnapshot(k,ctx,person),b=await sealContactSnapshot(k,ctx,person);assert.notEqual(a.iv,b.iv)});
+test('wrong owner, account, operation, resource, key id rejected',async()=>{const k=await key(),e=await sealContactSnapshot(k,ctx,person);for(const [field,value] of Object.entries({ownerId:'owner-B',googleSubject:'subject-B',operationId:'operation-B',resourceName:'people/c2',keyId:'key-B'}))await assert.rejects(openContactSnapshot(k,{...ctx,[field]:value},e))});
+test('different key rejected',async()=>{const k=await key(),e=await sealContactSnapshot(k,ctx,person);await assert.rejects(openContactSnapshot(await key(),ctx,e),{code:'BACKUP_AUTHENTICATION_FAILED'})});
+test('tampered ciphertext rejected',async()=>{const k=await key(),e=await sealContactSnapshot(k,ctx,person);e.ciphertext=(e.ciphertext[0]==='A'?'B':'A')+e.ciphertext.slice(1);await assert.rejects(openContactSnapshot(k,ctx,e),{code:'BACKUP_AUTHENTICATION_FAILED'})});
+test('wrong resource and missing etag rejected',async()=>{const k=await key();await assert.rejects(sealContactSnapshot(k,ctx,{...person,resourceName:'people/c2'}),{code:'BACKUP_CONTACT_REQUIRED'});await assert.rejects(sealContactSnapshot(k,ctx,{...person,metadata:{sources:[]}}),{code:'BACKUP_CONTACT_REQUIRED'})});
+test('extractable keys rejected',async()=>{const k=await crypto.subtle.generateKey({name:'AES-GCM',length:256},true,['encrypt','decrypt']);await assert.rejects(sealContactSnapshot(k,ctx,person),{code:'BACKUP_KEY_REQUIRED'})});
