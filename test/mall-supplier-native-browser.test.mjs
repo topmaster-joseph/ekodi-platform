@@ -29,7 +29,7 @@ function fakeRequestFactory({guestStatus=401,healthAutoOrder=false,missingRegist
     '/ekodimall/assets/provider-registry.json':JSON.stringify(registry),
     '/ekodimall/assets/seller-server.js':'function renderProviderProducts(){const className="seller-inventory-table"}',
     '/ekodimall/admin/suppliers':'<!doctype html><html><script src="/workspace-admin.js"></script></html>',
-    '/workspace-admin.js':'const renderMallSupplierAdmin=function(){}; if(section===\x27suppliers\x27){}',
+    '/workspace-admin.js':'const renderMallSupplierAdmin=function(){}; if(section===\x27suppliers\x27)return mallSuppliers();',
     '/ekodimall/api/api/internal/products/by-provider':'{"error":"unauthorized"}',
     '/ekodimall/api/api/public/health':JSON.stringify({ok:true,domeggookAutoOrderReady:healthAutoOrder,
       buyerPiiReleaseEnabled:false,supplierForwardEnabled:false})
@@ -111,6 +111,8 @@ test('workflow is official EKODI-owned GitHub Chromium lane with no personal bro
   assert.match(workflow,/playwright@1\.65\.1/);
   assert.match(workflow,/pull_request:/);
   assert.match(workflow,/workflow_run:/);
+  assert.match(workflow,/Deploy EKODI Shared Site Core/);
+  assert.match(workflow,/if: \$\{\{ github\.event_name != 'pull_request' \}\}/);
   assert.match(workflow,/actions\/upload-artifact@v4/);
   assert.doesNotMatch(workflow,/\bOpera\b|\bTinyFish\b|puppeteer[- ]cloud|\bbrowserbase\b|\bBrowserless\b/i);
 });

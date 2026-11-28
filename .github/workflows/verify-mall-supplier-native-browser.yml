@@ -16,6 +16,7 @@ on:
   workflow_run:
     workflows:
       - 'EKODI Mall · Stage and Deploy'
+      - 'Deploy EKODI Shared Site Core'
     types:
       - completed
 
@@ -23,7 +24,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: mall-supplier-native-${{ github.event.workflow_run.head_sha || github.sha }}-${{ github.event_name }}
+  group: mall-supplier-native-${{ github.event.workflow_run.head_sha || github.sha }}-${{ github.event.workflow_run.name || github.event_name }}
   cancel-in-progress: true
 
 jobs:
@@ -49,6 +50,7 @@ jobs:
           node scripts/verify-mall-supplier-native-browser.mjs --plan
 
       - name: Install EKODI-owned isolated Chromium
+        if: ${{ github.event_name != 'pull_request' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -56,6 +58,7 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Inspect real Mall supplier and Seller Studio guest surfaces (read-only)
+        if: ${{ github.event_name != 'pull_request' }}
         shell: bash
         env:
           EKODI_BROWSER_ARTIFACT_DIR: artifacts/mall-supplier-native-browser
