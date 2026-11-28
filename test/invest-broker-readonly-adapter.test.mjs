@@ -30,7 +30,7 @@ function kisServer({ pages = [[{ pdno: '005930', prdt_name: '테스트전자', h
   const calls = [];
   let page = 0, expired = expireFirst;
   const fetchImpl = async (url, init = {}) => {
-    calls.push({ url: String(url), method: init.method || 'GET', redirect: init.redirect, headers: init.headers || {}, body: init.body });
+    calls.push({ url: String(url), method: init.method || 'GET', redirect: init.redirect, signal: init.signal, headers: init.headers || {}, body: init.body });
     const u = new URL(url);
     if (u.pathname === '/oauth2/tokenP') {
       if (tokenStatus !== 200) return new Response('{}', { status: tokenStatus });
@@ -112,11 +112,13 @@ test('real KIS read-only inquiry hits only the canonical GET target and never ex
   // Network surface: one token POST to the fixed OAuth endpoint, GETs only to the canonical balance URL.
   assert.equal(calls[0].url, PAPER + '/oauth2/tokenP'); assert.equal(calls[0].method, 'POST');
   assert.equal(calls[0].redirect, 'manual', 'OAuth may not automatically follow redirects');
+  assert.equal(typeof calls[0].signal?.addEventListener, 'function', 'OAuth is time-bounded');
   const gets = calls.slice(1);
   assert.equal(gets.length, 2);
   for (const c of gets) {
     const u = new URL(c.url);
     assert.equal(c.method, 'GET'); assert.equal(c.redirect, 'manual', 'balance inquiry may not follow redirects');
+    assert.equal(typeof c.signal?.addEventListener, 'function', 'holdings request is time-bounded');
     assert.equal(u.origin + u.pathname, PAPER + '/uapi/domestic-stock/v1/trading/inquire-balance');
     assert.equal(c.headers.tr_id, 'VTTC8434R');
     assert.equal(u.searchParams.get('CANO'), '50000000');
@@ -203,6 +205,73 @@ test('unexpected redirected 2xx response cannot be accepted as a broker snapshot
   assert.equal(r.error,'KIS_REDIRECT_FORBIDDEN');
   assert.equal(r.snapshot,null);
   assert.equal(calls.length,2);
+});
+
+test('KIS timeout fails closed with no cached token or simulated balance substitution', async () => {
+  let requests=0;
+  const db=d1();
+  const fetchImpl=async(_url,init)=>{
+    requests++;
+    assert.equal(typeof init.signal?.addEventListener,'function');
+    assert.equal(init.redirect,'manual');
+    throw new DOMException('synthetic timeout','TimeoutError');
+  };
+  const v=await buildBrokerReadOnlyView({brokerId:'kis',env:ENV,db,fetchImpl,now:NOW,strongMfaVerified:true});
+  assert.equal(requests,1);
+  assert.equal(v.error,'KIS_REQUEST_TIMEOUT');
+  assert.equal(v.connection,'error');
+  assert.equal(v.dataMode,'kis-paper');
+  assert.equal(v.snapshot,null);
+  assert.equal(v.liveOrdersEnabled,false);
+  assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM investment_broker_token_cache').get().n,0);
+});
+
+test('KIS OAuth response size guard rejects advertised and streamed oversized bodies before token caching', async () => {
+  for(const oversized of ['content-length','chunked']){
+    let called=0;
+    const db=d1();
+    const fetchImpl=async (_url,init)=>{
+      called++;
+      assert.equal(init.redirect,'manual');
+      assert.equal(typeof init.signal?.addEventListener,'function');
+      if(oversized==='content-length')
+        return new Response('{"access_token":"abc"}',{headers:{'content-length':'1048577'}});
+      const body=new ReadableStream({start(controller){
+        controller.enqueue(new Uint8Array(700_000));
+        controller.enqueue(new Uint8Array(400_000));
+        controller.close();
+      }});
+      return new Response(body,{headers:{'content-type':'application/json'}});
+    };
+    const v=await buildBrokerReadOnlyView({brokerId:'kis',env:ENV,db,fetchImpl,now:NOW,strongMfaVerified:true});
+    assert.equal(called,1);
+    assert.equal(v.error,'KIS_RESPONSE_TOO_LARGE');
+    assert.equal(v.snapshot,null);
+    assert.equal(v.connection,'error');
+    assert.equal(db.sqlite.prepare('SELECT COUNT(*) n FROM investment_broker_token_cache').get().n,0);
+  }
+});
+
+test('KIS oversized balance response refuses real holdings without replacing them with mock',async()=>{
+  const requests=[];
+  const db=d1();
+  const fetchImpl=async(url,init)=>{
+    requests.push({url:String(url),method:init.method,hasSignal:typeof init.signal?.addEventListener==='function'});
+    if(String(url).endsWith('/oauth2/tokenP'))
+      return Response.json({access_token:'tok_'+'x'.repeat(43),expires_in:86400});
+    return new Response('{}',{headers:{'content-length':'2000000'}});
+  };
+  const v=await buildBrokerReadOnlyView({brokerId:'kis',env:ENV,db,fetchImpl,now:NOW,strongMfaVerified:true});
+  assert.equal(requests.length,2);
+  assert.ok(requests.every(r=>r.hasSignal));
+  assert.equal(requests[0].method,'POST');
+  assert.equal(requests[1].method,'GET');
+  assert.equal(v.error,'KIS_RESPONSE_TOO_LARGE');
+  assert.equal(v.dataMode,'kis-paper');
+  assert.equal(v.connection,'error');
+  assert.equal(v.snapshot,null);
+  assert.equal(v.liveOrdersEnabled,false);
+  assert.doesNotMatch(JSON.stringify(v),/fake-secret|PSfakeAppKey|50000000|tok_/);
 });
 
 test('provider failures never fall back to mock data', async () => {
