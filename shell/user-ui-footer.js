@@ -220,8 +220,12 @@ function createFooter(config){
 }
 // One shared summary widget serves a native service footer or the shared footer.
 // This is only a read-only public projection of the existing browser telemetry.
+// Visit totals belong to every public page. The Shell may re-label a public
+// tenant page with its own surface name (2026-11-29 audit: /cgma/), so only
+// private surfaces opt out here; private paths are excluded just below.
 function footerTrafficScope(){
-  if(!USER_SURFACES.has(surface()))return '';
+  const declaredSurface=surface();
+  if(!declaredSurface||['admin','data','document','form','control','auth','my'].includes(declaredSurface))return '';
   const segments=location.pathname.split('/').filter(Boolean).map(value=>value.toLowerCase());
   const root=segments[0]||'';
   if(['admin','auth','api','my'].includes(root)||['admin','auth','my'].includes(serviceId()))return '';

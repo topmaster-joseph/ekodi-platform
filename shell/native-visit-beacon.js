@@ -11,7 +11,8 @@ function send(detail){
   if(window.__EKODI_SHELL_BOOTED)return; // Full Shell already records this visit.
   if(navigator.globalPrivacyControl===true||navigator.doNotTrack==='1')return;
   const surface=String(document.documentElement.dataset.ekodiShellSurface||document.body?.dataset?.ekodiShellSurface||'').toLowerCase();
-  if(surface!=='public'&&surface!=='workspace')return;
+  // Same rule as the shared footer: any declared non-private surface counts.
+  if(!surface||['admin','data','document','form','control','auth','my'].includes(surface))return;
   const siteId=String(detail?.siteId||'').trim().toLowerCase();
   if(!/^[a-z0-9][a-z0-9-]{0,63}$/.test(siteId))return;
   let url;
