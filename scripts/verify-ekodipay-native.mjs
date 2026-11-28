@@ -95,6 +95,13 @@ try{
   if(mallReports){
    const anonymous=await request.request.get(base+'/api/web/seller/mall/report?start=2026-11-27&end=2026-11-27',{timeout:20000});
    const source=await request.request.get('https://ekodi.kr/ekodimall/api/me',{timeout:20000});
+   const ledger=await request.request.get(base+'/api/web/seller/mall/ledger',{timeout:20000});
+   const sourceLedger=await request.request.get('https://ekodi.kr/ekodimall/api/settlements',{timeout:20000});
+   const ledgerAvailable=ledger.status()===401;
+   const ledgerIsolation=ledgerAvailable&&sourceLedger.status()===401;
+   if((demoRequired||ledgerAvailable)&&!ledgerIsolation)failed=true;
+   results.push({device:'mall-owner-ledger',ledgerAvailable,ledgerAnonymous:ledger.status(),
+    sourceLedgerAnonymous:sourceLedger.status(),ledgerIsolation,authenticatedOwnerData:'not-accessed-in-anonymous-verification'});
    const ownerIsolation=anonymous.status()===401&&source.status()===401;
    if(!ownerIsolation)failed=true;
    results.push({device:'mall-owner-report',mallReports,anonymous:anonymous.status(),source:source.status(),ownerIsolation,

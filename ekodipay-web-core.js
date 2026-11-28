@@ -1,7 +1,7 @@
 // Installation-free payment UX. Card vaults and order/payment truth remain with
 // their existing owners. This module never charges a card or transfers money.
 import { principalFromSupabaseRequest } from './ekodi-principal.js';
-import { mallReportsEnabled, mallSellerAccount, mallSellerReport } from './ekodipay-web-mall.js';
+import { mallReportsEnabled, mallSellerAccount, mallSellerReport, mallSellerLedger } from './ekodipay-web-mall.js';
 
 const ROOT = '/ekodipay/api/web';
 const ORIGIN = 'https://ekodi.kr';
@@ -282,7 +282,7 @@ export async function handleWebPay(request, env = {}, deps = {}) {
     if (request.method === 'GET' && route === '/brandpay/callback') return await registrationCallback(request, env, url, deps.network || fetch);
     const routes = { '/wallet': 'GET', '/wallet/start': 'POST', '/requests': 'POST',
       '/requests/inspect': 'POST', '/requests/accept': 'POST', '/requests/cancel': 'POST', '/seller/report': 'GET', '/seller/workspaces': 'GET',
-      '/seller/mall/account': 'GET', '/seller/mall/report': 'GET' };
+      '/seller/mall/account': 'GET', '/seller/mall/report': 'GET', '/seller/mall/ledger': 'GET' };
     if (!Object.hasOwn(routes, route)) return json({ code: 'NOT_FOUND' }, 404);
     if (routes[route] !== request.method) return json({ code: 'METHOD_NOT_ALLOWED' }, 405, { allow: routes[route] });
     if (request.method === 'POST' && (request.headers.get('origin') !== ORIGIN ||
@@ -292,6 +292,10 @@ export async function handleWebPay(request, env = {}, deps = {}) {
     const userId = principal.id;
     if (route.startsWith('/seller/mall/')) {
       if (!mallReportsEnabled(env)) fail('CONNECTION_NOT_READY', 503);
+      if (route === '/seller/mall/ledger') {
+        if (url.search) fail('UNSUPPORTED_FIELDS');
+        return json(await mallSellerLedger(request, userId, deps.network || fetch));
+      }
       if (route === '/seller/mall/account') {
         if (url.search) fail('UNSUPPORTED_FIELDS');
         return json(await mallSellerAccount(request, userId, deps.network || fetch));

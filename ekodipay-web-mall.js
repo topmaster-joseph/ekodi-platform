@@ -57,3 +57,20 @@ export async function mallSellerReport(request, userId, start, end, network = fe
     settlementTerms: '최근 주문 최대 100건 중 선택 기간의 결제 승인일 기준입니다. 순정산은 주문 당시 예상액이며, 환불액·정산 예정일·통장 입금은 별도 확인이 필요합니다.',
   };
 }
+
+export async function mallSellerLedger(request, userId, network = fetch) {
+  await mallSellerAccount(request, userId, network);
+  const data = await read(request, '/settlements', network);
+  const s = data?.settlement;
+  if (!s || !Number.isSafeInteger(s.entries) || s.entries < 0 ||
+      !Number.isSafeInteger(s.pendingAmount) || !Number.isSafeInteger(s.paidAmount) ||
+      (s.entries === 0 && (s.pendingAmount !== 0 || s.paidAmount !== 0))) problem('REPORT_INVALID');
+  // Ledger status is not evidence of a bank transfer. This source aggregates
+  // every recorded period; never add it to the date-filtered order report.
+  return {
+    entries: s.entries, pendingAmount: s.pendingAmount, recordedPaidAmount: s.paidAmount,
+    scope: 'all-recorded-periods', basis: 'internal-settlement-ledger',
+    source: '에코디몰 판매자 정산원장', fetchedAt: new Date().toISOString(),
+    payoutVerificationAvailable: false, payoutExecution: false,
+  };
+}
