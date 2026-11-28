@@ -76,7 +76,8 @@ test('exemptions stay honest: exempt configs must still exist', async () => {
 
 test('Shared Site entry applies the guarantee to every finalized response', async () => {
   const source = await readFile('platform-router-entry-worker.js', 'utf8');
-  assert.match(source, /import \{ ensureFooterTraffic \} from '\.\/footer-traffic-guarantee\.js'/);
+  assert.match(source, /import \{ ensureFooterTraffic, withFooterTraffic \} from '\.\/footer-traffic-guarantee\.js'/);
+  assert.match(source, /export default withFooterTraffic\(ekodiSharedSiteEntry\);/, 'early-return routes are covered too');
   const finalize = source.slice(source.indexOf('const finalize=response=>{'), source.indexOf('const incomingUrl=new URL(request.url);'));
   assert.match(finalize, /ensureFooterTraffic\(response,request\)/);
   assert.ok(finalize.indexOf('ensureFooterTraffic') < finalize.indexOf('applyPlatformSecurityHeaders'));
