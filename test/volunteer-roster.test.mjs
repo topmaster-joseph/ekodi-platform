@@ -38,6 +38,33 @@ test('operator page prominently separates applicants and donors without exposing
  assert.match(css,/\.volunteer-admin-summary/);
 });
 
+test('volunteer-only administrator grants are database-isolated from EKODI Mission and other sites',async()=>{
+ const sql=await readFile(new URL('../supabase/migrations/20261128143000_volunteer_site_scoped_admin_grants.sql',import.meta.url),'utf8');
+ assert.match(sql,/create table if not exists public\.volunteer_site_admin_grants/);
+ assert.match(sql,/auth\.uid\(\) is not null/);
+ assert.match(sql,/g\.user_id=auth\.uid\(\)/);
+ assert.match(sql,/create or replace function public\.volunteer_admin_registration_snapshot/);
+ assert.match(sql,/a\.activity_type='volunteer'/);
+ assert.match(sql,/p\.activity_id=v_activity\.id/);
+ assert.match(sql,/create or replace function public\.volunteer_pledge_admin_confirm/);
+ assert.match(sql,/volunteer_is_site_admin\(\)/);
+ assert.match(sql,/volunteer_site_admin_audit/);
+ assert.match(sql,/enable row level security/);
+ assert.match(sql,/revoke all on table public\.volunteer_site_admin_grants from public,anon,authenticated/);
+ assert.match(sql,/revoke all on function public\.volunteer_admin_registration_snapshot\(text,text\) from public,anon,authenticated/);
+ assert.match(sql,/grant execute on function public\.volunteer_admin_registration_snapshot\(text,text\) to authenticated,service_role/);
+ assert.doesNotMatch(sql,/insert into public\.tenant_members/);
+ assert.doesNotMatch(sql,/update public\.site_access_registry/);
+ assert.doesNotMatch(sql,/ohwon69@gmail\.com/i);
+ const worker=await readFile(new URL('../volunteer-module.js',import.meta.url),'utf8');
+ assert.match(worker,/rpc\(env,'volunteer_admin_registration_snapshot'/);
+ assert.doesNotMatch(worker,/rpc\(env,'activity_admin_snapshot'/);
+ const flow=await readFile(new URL('../.github/workflows/deploy-space.yml',import.meta.url),'utf8');
+ assert.match(flow,/VOLUNTEER_ADMIN_MIGRATION: supabase\/migrations\/20261128143000_volunteer_site_scoped_admin_grants\.sql/);
+ assert.match(flow,/promote "\$VOLUNTEER_ADMIN_DEV_PROJECT" dev/);
+ assert.match(flow,/promote "\$SUPABASE_PROJECT_REF" prod/);
+});
+
 test('roster API is tenant operator only: rejects anonymous, forged origin and nonsnapshot actions',async()=>{
  const absent=await route(rosterRoute,request());
  assert.equal(absent.status,401);
@@ -48,7 +75,7 @@ test('roster API is tenant operator only: rejects anonymous, forged origin and n
  assert.equal(forbiddenAction.status,400);
 });
 
-test('roster API invokes the canonical tenant-scoped activity snapshot, not the donor pledge RPC',async()=>{
+test('roster API invokes volunteer-scoped admin snapshot, not the tenant-wide activity snapshot',async()=>{
  const existing=globalThis.fetch;
  const requests=[];
  globalThis.fetch=async(url,opts)=>{
@@ -66,7 +93,7 @@ test('roster API invokes the canonical tenant-scoped activity snapshot, not the 
   assert.equal(data.ok,true);
   assert.equal(data.participants.length,1);
   assert.equal(requests.length,1);
-  assert.equal(requests[0].url,'https://example.supabase.co/rest/v1/rpc/activity_admin_snapshot');
+  assert.equal(requests[0].url,'https://example.supabase.co/rest/v1/rpc/volunteer_admin_registration_snapshot');
   assert.equal(requests[0].authorization,'Bearer '+'f'.repeat(36));
   assert.equal(requests[0].body.p_workspace_slug,'ekodimission');
   assert.equal(requests[0].body.p_activity_key,'261205-coal-delivery');
