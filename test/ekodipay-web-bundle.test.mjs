@@ -19,7 +19,7 @@ async function bootInFixture(source, mode, mall = false) {
     wallet: ['cards', 'addCard', 'manageCards'],
     send: ['requestForm', 'service', 'orderId', 'requestLink', 'requestResult', 'expiry', 'copyLink', 'cancelLink'],
     request: ['requestMerchant', 'requestAmount', 'requestExpiry', 'acceptRequest', 'payerConsent'],
-    seller: ['sellerForm', 'workspaceId', 'start', 'end', 'reportRows', 'gross', 'net', 'paid', 'terms', 'source', 'export', 'more'],
+    seller: ['sellerForm', 'workspaceId', 'start', 'end', 'reportRows', 'gross', 'net', 'paid', 'terms', 'source', 'export', 'more', 'ledgerPanel', 'ledgerEntries', 'ledgerPending', 'ledgerRecordedPaid', 'ledgerNotice'],
   };
   const nodes = Object.fromEntries(['login', 'notice', 'connection', ...pageIds[mode]].map(id => ['#' + id, new Element()]));
   const readyButtons = mode === 'wallet' ? [nodes['#addCard'], nodes['#manageCards']] : [];
@@ -46,6 +46,7 @@ async function bootInFixture(source, mode, mall = false) {
       else if (path.endsWith('/seller/mall/account')) result = { source: { id: 'mall', name: '에코디몰 내 판매내역', scope: 'seller-account' } };
       else if (path.includes('/seller/mall/report?')) result = { rows: [{ orderId: 'ORDER-A', gross: 10000, net: 9200, status: 'unconfirmed' }],
         source: '에코디몰', fetchedAt: new Date().toISOString(), complete: true, payoutVerificationAvailable: false };
+      else if (path.endsWith('/seller/mall/ledger')) result = { entries: 3, pendingAmount: 9200, recordedPaidAmount: 2500, source: '원장', fetchedAt: new Date().toISOString(), payoutVerificationAvailable: false };
       else if (path.endsWith('/requests/inspect')) result = { merchant: '테스트상점', amount: 27000, expiresAt: new Date().toISOString() };
       else throw new Error('Unexpected fixture API call: ' + path);
       return { ok: true, json: async () => result };
@@ -70,6 +71,10 @@ async function bootInFixture(source, mode, mall = false) {
     if (mall) {
       assert.equal(nodes['#paid'].textContent, '입금 자료 미연결');
       assert.equal(nodes['#net'].textContent, '9,200원');
+      assert.equal(nodes['#ledgerPanel'].hidden, false);
+      assert.equal(nodes['#ledgerEntries'].textContent, '3건');
+      assert.equal(nodes['#ledgerPending'].textContent, '9,200원');
+      assert.equal(nodes['#ledgerRecordedPaid'].textContent, '2,500원');
       assert.ok(calls.some(path => path.includes('/seller/mall/report?')));
       assert.ok(!calls.some(path => path.includes('workspaceId=')));
     }
