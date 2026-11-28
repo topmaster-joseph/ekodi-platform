@@ -187,12 +187,31 @@ export const WEB_PAY_CLIENT = String.raw`(function bootWebPay() {
     $('#more').hidden = !report.nextCursor;
     status(report.complete ? '판매내역을 확인했습니다. 정산액은 주문 당시 예상액입니다.' : '조회된 자료만 표시합니다. 전체 기간 합계는 아직 확정되지 않았습니다.');
   }
+  function resetLedger() {
+    for (const selector of ['#ledgerEntries', '#ledgerPending', '#ledgerRecordedPaid']) $(selector).textContent = '확인 전';
+    $('#ledgerNotice').textContent = '';
+  }
+  async function refreshLedger() {
+    if (!readiness.mallSellerReports) return;
+    resetLedger();
+    $('#ledgerPanel').hidden = false;
+    try {
+      const data = await api('/seller/mall/ledger');
+      $('#ledgerEntries').textContent = Number.isSafeInteger(data.entries) ? data.entries.toLocaleString('ko-KR') + '건' : '확인 중';
+      $('#ledgerPending').textContent = money(data.pendingAmount);
+      $('#ledgerRecordedPaid').textContent = money(data.recordedPaidAmount);
+      $('#ledgerNotice').textContent = '출처: ' + data.source + ' · 조회 시각: ' + new Date(data.fetchedAt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+    } catch {
+      $('#ledgerNotice').textContent = '정산원장 조회 불가 · 실제 입금 여부는 확인되지 않았습니다.';
+    }
+  }
   let reportQuery = '';
   let reportPath = '/seller/report';
   $('#sellerForm')?.addEventListener('submit', e => {
     e.preventDefault();
     action(async () => {
       report = null;
+      if (readiness.mallSellerReports) resetLedger();
       $('#export').disabled = true;
       $('#more').hidden = true;
       $('#reportRows').replaceChildren();
@@ -202,6 +221,7 @@ export const WEB_PAY_CLIENT = String.raw`(function bootWebPay() {
       if (!readiness.mallSellerReports) input.workspaceId = $('#workspaceId').value.trim();
       reportQuery = '?' + new URLSearchParams(input);
       renderReport(await api(reportPath + reportQuery));
+      await refreshLedger();
     });
   });
   $('#more')?.addEventListener('click', () => action(async () => {
@@ -244,6 +264,7 @@ export const WEB_PAY_CLIENT = String.raw`(function bootWebPay() {
       if (readiness.mallSellerReports) {
         reportQuery = '?' + new URLSearchParams({ start: $('#start').value, end: $('#end').value });
         renderReport(await api(reportPath + reportQuery));
+        await refreshLedger();
       }
     }
     await wallet();
