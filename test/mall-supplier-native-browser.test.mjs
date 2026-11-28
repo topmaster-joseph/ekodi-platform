@@ -112,6 +112,9 @@ test('workflow is official EKODI-owned GitHub Chromium lane with no personal bro
   assert.match(workflow,/pull_request:/);
   assert.match(workflow,/workflow_run:/);
   assert.match(workflow,/Deploy EKODI Shared Site Core/);
+  assert.match(workflow,/github\.event\.workflow_run\.event == 'workflow_dispatch'/);
+  assert.match(workflow,/github\.event\.workflow_run\.head_branch == 'main'/);
+  assert.match(workflow,/github\.event\.workflow_run\.conclusion == 'success'/);
   assert.match(workflow,/if: \$\{\{ github\.event_name != 'pull_request' \}\}/);
   assert.match(workflow,/actions\/upload-artifact@v4/);
   assert.doesNotMatch(workflow,/\bOpera\b|\bTinyFish\b|puppeteer[- ]cloud|\bbrowserbase\b|\bBrowserless\b/i);
