@@ -129,7 +129,30 @@ export function shouldGuaranteeFooterTraffic(response, request) {
   return isFooterTrafficPublicPath(url.pathname);
 }
 
+// Shell-rendered pages boot the shared footer themselves, but the footer and
+// beacon stay silent unless <html> carries a public/workspace surface marker.
+// Upstream sources (e.g. Church Pages) may omit it, so guarantee the marker.
+export function shouldMarkShellSurface(response, request) {
+  if (!response || !request || !response.headers.has('x-ekodi-user-ui')) return false;
+  if (String(request.method || 'GET').toUpperCase() !== 'GET' || response.status !== 200) return false;
+  if (!String(response.headers.get('content-type') || '').toLowerCase().includes('text/html')) return false;
+  const declared = String(response.headers.get('x-ekodi-user-ui-surface') || '').toLowerCase();
+  if (declared !== 'public') return false;
+  try { return isFooterTrafficPublicPath(new URL(request.url).pathname); } catch { return false; }
+}
+
+function markShellSurface(response) {
+  if (typeof HTMLRewriter === 'undefined') return response;
+  return new HTMLRewriter()
+    .on('html', {element(element) {
+      if (element.getAttribute('data-ekodi-shell-surface') || element.getAttribute('data-ekodi-user-surface')) return;
+      element.setAttribute('data-ekodi-shell-surface', 'public');
+    }})
+    .transform(response);
+}
+
 export function ensureFooterTraffic(response, request) {
+  if (shouldMarkShellSurface(response, request)) return markShellSurface(response);
   if (!shouldGuaranteeFooterTraffic(response, request)) return response;
   const headers = new Headers(response.headers);
   headers.set(FOOTER_TRAFFIC_HEADER, FOOTER_TRAFFIC_VERSION);

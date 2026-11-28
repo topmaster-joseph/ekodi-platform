@@ -82,6 +82,16 @@ export function footerTrafficPageCsp(csp) {
   return [...map.values()].join('; ');
 }
 
+export function patchHeaderCsp(text, patterns) {
+  let current = '';
+  return String(text || '').split('\n').map(line => {
+    if (line && !/^\s/.test(line) && !line.trim().startsWith('#')) current = line.trim();
+    const match = line.match(/^(\s+)Content-Security-Policy:\s*(.*)$/i);
+    if (!match || !patterns.has(current) || cspAllowsFooterTraffic(match[2])) return line;
+    return `${match[1]}Content-Security-Policy: ${footerTrafficPageCsp(match[2])}`;
+  }).join('\n');
+}
+
 export function urlPathsForDistFile(relPath) {
   const posix = relPath.split(sep).join('/');
   if (posix === 'index.html') return ['/'];
@@ -111,6 +121,7 @@ export async function runFooterTrafficPostbuild({root = fileURLToPath(new URL('.
   const headerRules = parseHeaderRules(headersText);
   const report = {injected: [], alreadyPresent: [], workerFirst: [], excluded: [], cspScoped: []};
   const extraHeaders = [];
+  const patchRules = new Set();
   for (const file of (await htmlFiles(distDir)).sort()) {
     const rel = relative(distDir, file);
     const paths = urlPathsForDistFile(rel);
@@ -121,13 +132,25 @@ export async function runFooterTrafficPostbuild({root = fileURLToPath(new URL('.
     if (htmlHasFooterTraffic(html)) report.alreadyPresent.push(primary);
     else { await writeFile(file, injectFooterTrafficIntoHtml(html)); report.injected.push(primary); }
     // Directory pages are canonical with a trailing slash (the bare path redirects).
-    for (const path of rel.endsWith('index.html') ? [primary] : paths) {
+    for (const path of paths) {
       const csp = effectiveCsp(path, headerRules);
       if (cspAllowsFooterTraffic(csp)) continue;
-      extraHeaders.push(`${path}\n  ! Content-Security-Policy\n  Content-Security-Policy: ${footerTrafficPageCsp(csp.split(',')[0])}`);
+      const bareDirectory = rel.endsWith('index.html') && path !== primary;
+      // Cloudflare does not reliably honour a second rule for an already-listed
+      // pattern, so page-specific rules are patched in place; only paths that
+      // inherit the global default get a new page-scoped rule.
+      const specific = headerRules.filter(rule => rule.pattern !== '/*' && globRegex(rule.pattern).test(path) &&
+        rule.headers.some(([name]) => name === 'content-security-policy'));
+      if (specific.length) {
+        for (const rule of specific) patchRules.add(rule.pattern);
+      } else if (!bareDirectory) {
+        // Bare directory paths redirect to the canonical trailing-slash page.
+        extraHeaders.push(`${path}\n  ! Content-Security-Policy\n  Content-Security-Policy: ${footerTrafficPageCsp(csp.split(',')[0])}`);
+      }
       report.cspScoped.push(path);
     }
   }
+  if (patchRules.size) headersText = patchHeaderCsp(headersText, patchRules);
   if (extraHeaders.length) headersText = `${headersText.trimEnd()}\n\n${MARK}\n${extraHeaders.join('\n\n')}\n`;
   if (headersText) await writeFile(headersPath, headersText);
   return report;
