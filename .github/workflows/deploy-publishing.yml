@@ -19,6 +19,7 @@ on:
       - 'publishing-worker.js'
       - 'publishing-workflow-api.js'
       - 'publishing-ai-factory.js'
+      - 'ekodi-workers-ai.js'
       - 'publishing-ai-epub.js'
       - 'publishing-ai-quality.js'
       - 'publishing-ai-release.js'

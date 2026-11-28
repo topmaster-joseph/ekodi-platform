@@ -1,3 +1,4 @@
+import { runWorkersAi } from './ekodi-workers-ai.js';
 // EKODI Live add-ons shared by every realtime tenant (church, mission, and any
 // site registered in realtime-tenant-registry.js):
 //   1. Multilingual interpretation captions: a host device sends source-language
@@ -132,7 +133,7 @@ export async function transcribeChunk(env,audio,sourceLang){
   let timer;
   const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('stt_timeout')),STT_TIMEOUT_MS)});
   try{
-    const result=await Promise.race([env.AI.run(LIVE_STT_MODEL,{audio,task:'transcribe',language:sourceLang,vad_filter:true,condition_on_previous_text:false}),timeout]);
+    const result=await Promise.race([runWorkersAi(env,LIVE_STT_MODEL,{audio,task:'transcribe',language:sourceLang,vad_filter:true,condition_on_previous_text:false},{capability:'translation',module:'live-stt',sampleRate:0.1}),timeout]);
     const text=normalizeCaptionText(result?.text??result?.transcription??'');
     return STT_NOISE.test(text)?'':text;
   }finally{clearTimeout(timer)}
@@ -147,7 +148,7 @@ export async function translateSegment(env,text,sourceLang,targets){
       let timer;
       const timeout=new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('translation_timeout')),TRANSLATION_TIMEOUT_MS)});
       try{
-        const result=await Promise.race([env.AI.run(LIVE_TRANSLATION_MODEL,{text,source_lang:source,target_lang:targetName}),timeout]);
+        const result=await Promise.race([runWorkersAi(env,LIVE_TRANSLATION_MODEL,{text,source_lang:source,target_lang:targetName},{capability:'translation',module:'live-translate',sampleRate:0.1}),timeout]);
         return normalizeCaptionText(result?.translated_text??result?.response??'');
       }finally{clearTimeout(timer)}
     };
