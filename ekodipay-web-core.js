@@ -188,12 +188,17 @@ async function loadInvitation(env, token) {
       current.workspaceId !== row.workspace_id || current.profileId !== row.profile_id) fail('ORDER_CHANGED', 409);
   return row;
 }
-export function safeCheckoutUrl(value, service) {
+export function safeCheckoutUrl(value, service, expectedOrderId) {
   let url;
   try { url = new URL(value); } catch { fail('CHECKOUT_RESPONSE_INVALID', 502); }
   if (url.origin !== ORIGIN || !Object.hasOwn(SERVICES, service) || !url.pathname.startsWith(SERVICES[service]) ||
       url.username || url.password || url.hash || /%|\\/.test(url.pathname) ||
       [...url.searchParams.keys()].some(k => !['orderId', 'checkoutId'].includes(k))) fail('CHECKOUT_RESPONSE_INVALID', 502);
+  const params = [...url.searchParams.entries()];
+  if (!params.length || new Set(params.map(([key]) => key)).size !== params.length ||
+      params.some(([, value]) => !id(value)) ||
+      (expectedOrderId !== undefined && url.searchParams.has('orderId') &&
+        url.searchParams.get('orderId') !== expectedOrderId)) fail('CHECKOUT_RESPONSE_INVALID', 502);
   return url.href;
 }
 async function invitation(request, env, userId, action) {
@@ -220,7 +225,7 @@ async function invitation(request, env, userId, action) {
   if (checkout?.allowed !== true || checkout.userId !== userId || checkout.requestId !== row.id ||
       checkout.orderId !== row.order_id || checkout.usesPayerCredentials !== true ||
       checkout.orderOwnerChanged !== false) fail('CHECKOUT_RESPONSE_INVALID', 502);
-  const checkoutUrl = safeCheckoutUrl(checkout.checkoutUrl, row.service);
+  const checkoutUrl = safeCheckoutUrl(checkout.checkoutUrl, row.service, row.order_id);
   await audit(db, userId, 'request.checkout-opened', row.id);
   return json({ checkoutUrl, status: 'claimed', paymentCompleted: false });
 }
@@ -256,7 +261,9 @@ function reportProjection(report) {
 }
 async function sellerReport(request, env, userId, url) {
   requireReady(env, 'sellerReports');
-  if ([...url.searchParams.keys()].some(k => !['workspaceId', 'start', 'end', 'cursor'].includes(k))) fail('UNSUPPORTED_FIELDS');
+  const params = [...url.searchParams.keys()];
+  if (params.some(k => !['workspaceId', 'start', 'end', 'cursor'].includes(k)) ||
+      new Set(params).size !== params.length) fail('UNSUPPORTED_FIELDS');
   const workspaceId = url.searchParams.get('workspaceId');
   const start = date(url.searchParams.get('start')), end = date(url.searchParams.get('end'));
   if (!id(workspaceId) || !start || !end || end < start || Date.parse(end) - Date.parse(start) > 31 * 86400000) fail('INVALID_REPORT_RANGE');
