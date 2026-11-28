@@ -130,9 +130,17 @@ export async function verifyMallSupplierPublicAssets({request=fetch}={}){
     if(adminScript.origin!==ORIGIN)throw Error('MALL_ADMIN_SCRIPT_EXTERNAL');
     return {loadedInGuestBrowser:false,adminCodePath:adminScript.pathname};
   });
-  await check('admin-runtime-code',adminScript.href,({status,body})=>{
-    if(status!==200||!body.includes('renderMallSupplierAdmin')||!body.includes("section==='suppliers'"))
-      throw Error('MALL_ADMIN_SUPPLIER_RUNTIME_MISSING');
+  await check('admin-runtime-code',adminScript.href,({status,body,url})=>{
+    const deployed={status,path:url.pathname,bytes:body.length,
+      hasSupplierRenderer:body.includes('renderMallSupplierAdmin'),
+      hasSupplierRoute:body.includes("section==='suppliers'"),
+      appearsHtml:/^\s*<!doctype html/i.test(body)};
+    // Only safe origin-local asset metadata is logged: no user, cookies or DOM text.
+    console.log('MALL_EKODI_ADMIN_ASSET_DIAGNOSTIC='+JSON.stringify(deployed));
+    if(status!==200)throw Error('MALL_ADMIN_SUPPLIER_RUNTIME_HTTP_ERROR');
+    if(deployed.appearsHtml)throw Error('MALL_ADMIN_RUNTIME_HTML_FALLBACK');
+    if(!deployed.hasSupplierRenderer)throw Error('MALL_ADMIN_RENDERER_NOT_DEPLOYED');
+    if(!deployed.hasSupplierRoute)throw Error('MALL_ADMIN_ROUTE_NOT_DEPLOYED');
     return {supplierRouteCodeDeployed:true};
   });
   await check('private-api-guest-denied','/ekodimall/api/api/internal/products/by-provider',({status})=>{
@@ -159,7 +167,8 @@ export async function runMallSupplierNativeCanary({runner=runTask,request=fetch,
     supplierOrderPerformed:false,personalBrowserReused:false,ok:false,checks:[]};
   await fs.mkdir(artifactRoot,{recursive:true});
   try{
-    result.publicAssets=await verifyMallSupplierPublicAssets({request});
+    // Execute real first-party Chromium before static asset probes, so a stale
+    // bundle cannot prevent a browser-level guest screenshot and receipt.
     for(const profile of MALL_SUPPLIER_PROFILES){
       const actual=await runner(mallSupplierNativeTask(profile),{artifactRoot});
       const verified=verifyMallSupplierNativeReceipt(actual,profile);
@@ -168,6 +177,7 @@ export async function runMallSupplierNativeCanary({runner=runTask,request=fetch,
         guestOutcome:verified.adminGuestOutcome,checks:verified.flags}));
       if(!verified.ok)throw Error('MALL_NATIVE_PROFILE_CHECK_FAILED');
     }
+    result.publicAssets=await verifyMallSupplierPublicAssets({request});
     result.ok=result.publicAssets.ok&&result.checks.every(x=>x.ok);
   }catch(error){
     result.errorCode=safeError(error);
