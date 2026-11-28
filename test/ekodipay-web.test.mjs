@@ -66,16 +66,16 @@ const auth = async req => {
   const value = req.headers.get('authorization')?.slice(7);
   return value && value !== 'anonymous' ? { id: value } : null;
 };
-function mallNetwork({ orders = [], account = 'buyer', failure = 0 } = {}) {
+function mallNetwork({ orders = [], account = 'buyer', failure = 0, settlement = { entries: 3, pendingAmount: 9200, paidAmount: 2500 } } = {}) {
   const calls = [];
   const network = async (url, options) => {
     calls.push({ url, options });
     assert.equal(options.method, 'GET');
     assert.equal(options.redirect, 'error');
     assert.deepEqual(Object.keys(options.headers).sort(), ['accept', 'authorization']);
-    assert.ok(url === ORIGIN + '/ekodimall/api/me' || url === ORIGIN + '/ekodimall/api/orders?limit=100');
+    assert.ok(url === ORIGIN + '/ekodimall/api/me' || url === ORIGIN + '/ekodimall/api/orders?limit=100' || url === ORIGIN + '/ekodimall/api/settlements');
     if (failure) return Response.json({ email: 'private' }, { status: failure });
-    return Response.json(url.endsWith('/me') ? { user: { id: account, email: 'private' }, profile: { bankAccount: 'private' } } : { orders });
+    return Response.json(url.endsWith('/me') ? { user: { id: account, email: 'private' }, profile: { bankAccount: 'private' } } : url.endsWith('/settlements') ? { settlement } : { orders });
   };
   return { calls, network };
 }
@@ -105,6 +105,29 @@ test('Mall reports verify same principal and never accept a caller seller/worksp
   }
   assert.equal((await call(env, '/seller/mall/account', undefined, { user: 'anonymous' }, source.network)).status, 401);
   assert.equal(source.calls.length, 1);
+});
+test('Mall ledger uses verified seller identity, all recorded periods and no payout claim', async () => {
+  const env = { EKODIPAY_MALL_REPORTS_ENABLED: 'true' };
+  const path = '/seller/mall/ledger';
+  const source = mallNetwork({ settlement: { entries: 4, pendingAmount: 9200, paidAmount: -1000, bankAccount: 'private', payoutExecutionEnabled: true } });
+  const r = await call(env, path, undefined, {}, source.network);
+  assert.equal(r.status, 200);
+  const d = await r.json();
+  assert.equal(d.entries, 4); assert.equal(d.pendingAmount, 9200); assert.equal(d.recordedPaidAmount, -1000);
+  assert.equal(d.scope, 'all-recorded-periods'); assert.equal(d.basis, 'internal-settlement-ledger');
+  assert.equal(d.payoutVerificationAvailable, false); assert.equal(d.payoutExecution, false);
+  assert.doesNotMatch(JSON.stringify(d), /private|bankAccount|payoutExecutionEnabled/);
+  assert.equal(source.calls.length, 2);
+  assert.ok(source.calls[1].url.endsWith('/settlements'));
+  assert.equal((await call(env, path + '?sellerId=other', undefined, {}, source.network)).status, 400);
+  assert.equal((await call(env, path, undefined, { user: 'anonymous' }, source.network)).status, 401);
+  assert.equal(source.calls.length, 2);
+  const mismatch = mallNetwork({ account: 'other' });
+  assert.equal((await call(env, path, undefined, {}, mismatch.network)).status, 403);
+  assert.equal(mismatch.calls.length, 1);
+  for (const settlement of [null, {}, { entries: -1, pendingAmount: 0, paidAmount: 0 }, { entries: 0, pendingAmount: 1, paidAmount: 0 }, { entries: 2, pendingAmount: '1', paidAmount: 0 }]) {
+    assert.equal((await call(env, path, undefined, {}, mallNetwork({ settlement }).network)).status, 502);
+  }
 });
 test('Mall projection uses Korean approval date, preserves uncertainty and omits private data', async () => {
   const source = mallNetwork({ orders: [mallOrder(), mallOrder({ id: 'REFUND', status: 'partially_refunded' }),
